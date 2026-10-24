@@ -22,7 +22,7 @@ function resolveSource(env, version) {
 
 /**
  * Arguments for uvx: uv flags first, the Python console script, then any extra
- * arguments the user passed through (for example `--http --port 8080`).
+ * arguments the user passed through (for example `--help`).
  */
 function buildUvxArgs({ version, env, extraArgs }) {
   const passthrough = Array.isArray(extraArgs) ? extraArgs : [];
