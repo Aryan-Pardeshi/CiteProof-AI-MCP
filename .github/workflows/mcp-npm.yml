@@ -47,7 +47,7 @@ jobs:
       - name: Verify the Python server is in the package
         working-directory: MCP/npm
         run: >-
-          node -e "const{execFileSync}=require('node:child_process');const out=execFileSync('npm',['pack','--dry-run'],{encoding:'utf8',shell:true});for(const need of ['python/citeproof_mcp/__main__.py','python/citeproof_mcp/compat.py','python/NOTICE.md','python/LICENSES/Apache-2.0.txt']){if(!out.includes(need))throw new Error('package is missing '+need)}"
+          node -e "const{execFileSync}=require('node:child_process');const out=execFileSync('npm',['pack','--dry-run','--json'],{encoding:'utf8',shell:true});for(const need of ['python/citeproof_mcp/__main__.py','python/citeproof_mcp/compat.py','python/NOTICE.md','python/LICENSES/Apache-2.0.txt']){if(!out.includes(need))throw new Error('package is missing '+need)}"
 
       - uses: actions/setup-python@v5
         with:
