@@ -2,7 +2,8 @@
 """Server assembly. Every tool module exposes ``register(server)``."""
 
 import inspect
-from importlib.metadata import PackageNotFoundError, version as package_version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 
 from citeproof_mcp import __version__
 from citeproof_mcp.compat import MCPServer
@@ -40,8 +41,6 @@ def _server_version() -> str:
     try:
         return package_version("citeproof-mcp")
     except PackageNotFoundError:
-        return __version__
-    except Exception:  # a broken metadata backend must not stop the server
         return __version__
 
 
