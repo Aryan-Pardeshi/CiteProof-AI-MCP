@@ -1,0 +1,79 @@
+name: MCP npm launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'MCP/**'
+      - '.github/workflows/mcp-npm.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'MCP/**'
+      - '.github/workflows/mcp-npm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: MCP
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Launcher tests
+        working-directory: MCP/npm
+        run: node --test
+
+      - name: Package contents
+        working-directory: MCP/npm
+        run: npm pack --dry-run
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: MCP/pyproject.toml
+
+      - name: Install MCP server
+        run: pip install ".[test]"
+
+      - name: MCP Python tests
+        run: python -m pytest -q
+
+  publish:
+    name: publish to npm
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: MCP/npm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
