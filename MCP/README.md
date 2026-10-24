@@ -68,7 +68,7 @@ The package supports the `mcp` 1.27 API used by the tested Claude Science setup 
 npx -y citeproof-mcp
 ```
 
-The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package finds or installs [uv](https://docs.astral.sh/uv/) and runs this server from the wheel on the matching [GitHub release](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest). Requirements: Node.js 18 or newer. Python and git are not required. Launcher options and environment variables are in [`npm/README.md`](npm/README.md).
+The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package ships the Python server source. The launcher uses, in order: `CITEPROOF_MCP_PYTHON` (or `--python`), `uvx` if it is present, a Python 3.12+ already on `PATH` that has `mcp`, `pydantic` and `httpx`, and only then installs [uv](https://docs.astral.sh/uv/) and downloads the wheel from the matching [GitHub release](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest). Requirements: Node.js 18 or newer, plus either such a Python or network access on the first run. Git is not required. Launcher options and environment variables are in [`npm/README.md`](npm/README.md).
 
 ```json
 {
@@ -82,7 +82,7 @@ The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package f
 }
 ```
 
-- **Claude Science:** Customize → Connectors → Add connector → Local command, name `citeproof`, command `npx -y citeproof-mcp`. If the sandbox cannot read uv's files, set `CITEPROOF_UV_HOME` to a folder inside the connector's workspace, or use the bundle install in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md).
+- **Claude Science:** Customize → Connectors → Add connector → Local command, name `citeproof`, command `npx -y citeproof-mcp`. The launcher runs the bundled server with the sandbox's own `python3`, so it needs no uv and no network when that interpreter has the required packages. If the npx setup is unavailable in your Claude Science setup, see the bundle method in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md). `CITEPROOF_UV_HOME` only helps when uv is available or can be installed with network access.
 - **Claude Desktop:** open [`citeproof.mcpb`](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest/download/citeproof.mcpb) from the latest release (Settings → Extensions).
 - **Claude Code:** `claude mcp add citeproof -- npx -y citeproof-mcp`.
 
@@ -94,9 +94,9 @@ python -m pip install ./MCP
 
 The installation provides the `citeproof-mcp` command; configure your client with `"command": "citeproof-mcp"`. You can also run `python -m citeproof_mcp`.
 
-### Claude Science on Windows (bundle)
+### Claude Science on Windows (bundle fallback)
 
-Claude Science's local-command connector runs inside its own sandbox, so a Python environment elsewhere on your computer may not be accessible. The bundle workflow in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md) copies the server into the connector's workspace and is the tested fallback.
+Claude Science's local-command connector runs inside its own sandbox. The npx launcher works there when the sandbox's `python3` has `mcp`, `pydantic` and `httpx` (it does in the tested setup) because the npm package now ships the server source. If npx cannot stage or read that source, the bundle workflow in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md) copies it into the connector's workspace. The bundle still needs the sandbox's Python and the same packages.
 
 ### Local data directory
 
