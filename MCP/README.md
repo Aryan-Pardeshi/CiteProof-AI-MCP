@@ -62,42 +62,41 @@ The package supports the `mcp` 1.27 API used by the tested Claude Science setup 
 
 ## Install
 
-### General MCP clients
-
-From the repository root, install the local package:
+### Any MCP client (npx)
 
 ```bash
-python -m pip install ./MCP
+npx -y citeproof-mcp
 ```
 
-The installation provides the `citeproof-mcp` command. Configure your MCP client to launch it over stdio.
-
-Example configuration for clients that accept a JSON `mcpServers` object:
+The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package finds or installs [uv](https://docs.astral.sh/uv/) and runs this server from the wheel on the matching [GitHub release](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest). Requirements: Node.js 18 or newer. Python and git are not required. Launcher options and environment variables are in [`npm/README.md`](npm/README.md).
 
 ```json
 {
   "mcpServers": {
     "citeproof": {
-      "command": "citeproof-mcp",
-      "env": {
-        "CITEPROOF_MCP_HOME": "/path/to/your/review-data"
-      }
+      "command": "npx",
+      "args": ["-y", "citeproof-mcp"],
+      "env": { "CITEPROOF_MCP_HOME": "/path/to/your/review-data" }
     }
   }
 }
 ```
 
-Replace `/path/to/your/review-data` with a directory where you want CiteProof to keep its local review files. On Windows, use a valid path for your environment.
+- **Claude Science:** Customize → Connectors → Add connector → Local command, name `citeproof`, command `npx -y citeproof-mcp`. If the sandbox cannot read uv's files, set `CITEPROOF_UV_HOME` to a folder inside the connector's workspace, or use the bundle install in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md).
+- **Claude Desktop:** open [`citeproof.mcpb`](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest/download/citeproof.mcpb) from the latest release (Settings → Extensions).
+- **Claude Code:** `claude mcp add citeproof -- npx -y citeproof-mcp`.
 
-You can also run the server directly from the installed package:
+### From source (pip)
 
 ```bash
-python -m citeproof_mcp
+python -m pip install ./MCP
 ```
 
-### Claude Science on Windows
+The installation provides the `citeproof-mcp` command; configure your client with `"command": "citeproof-mcp"`. You can also run `python -m citeproof_mcp`.
 
-Claude Science's local-command connector runs inside its own sandbox, so a Python environment elsewhere on your computer may not be accessible. Use the dedicated bundle workflow documented in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md). It covers creating the connector workspace, building the self-contained bundle, configuring the command and data directory, updating the connector, and troubleshooting.
+### Claude Science on Windows (bundle)
+
+Claude Science's local-command connector runs inside its own sandbox, so a Python environment elsewhere on your computer may not be accessible. The bundle workflow in [`docs/CLAUDE_SCIENCE.md`](docs/CLAUDE_SCIENCE.md) copies the server into the connector's workspace and is the tested fallback.
 
 ### Local data directory
 

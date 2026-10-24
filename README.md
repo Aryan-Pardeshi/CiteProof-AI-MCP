@@ -3,6 +3,15 @@
 **Audit tools for AI literature reviews.** CiteProof checks that a review's citations, quotes, counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
 
 
+[![npm](https://img.shields.io/npm/v/citeproof-mcp?label=npm%20citeproof-mcp)](https://www.npmjs.com/package/citeproof-mcp)
+[![Release](https://img.shields.io/github/v/release/Aryan-Pardeshi/CiteProof-AI-MCP)](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest)
+[![CI](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml/badge.svg)](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+```bash
+npx -y citeproof-mcp
+```
+
 **🔗 Research Web → [CiteProof.top](https://citeproof.top/)**
 
 ## Contents
@@ -10,8 +19,8 @@
 - [What is CiteProof?](#what-is-citeproof)
 - [CiteProof MCP](#citeproof-mcp)
   - [What it checks](#what-it-checks)
-  - [Install for Claude Science](#install-for-claude-science)
-  - [Install for other MCP clients](#install-for-other-mcp-clients)
+  - [Quick start](#quick-start)
+  - [Companion skill](#companion-skill)
   - [The 24 tools](#the-24-tools)
   - [What it does not do](#what-it-does-not-do)
 - [CiteProof Research (the app)](#citeproof-research-the-app)
@@ -67,36 +76,52 @@ Full documentation: [MCP/README.md](MCP/README.md) · tool reference: [MCP/docs/
 | Risk-of-bias overall judgements follow the published rules | RoB 2, ROBINS-I and Newcastle-Ottawa (AHRQ thresholds). |
 | Duplicates | Deterministic clustering by DOI, PMID, then title plus year plus first author. |
 
-### Install for Claude Science
+### Quick start
 
-Claude Science runs a Local command connector inside a sandbox that cannot read your project folder. The install therefore copies the server into the connector's own workspace folder and starts it with Claude Science's own `python3`:
-
-```bash
-python MCP/scripts/build_claude_science_bundle.py "<connector workspace folder>/bundle"
-```
-
-Then add a connector with the command `python3 <connector workspace folder>/bundle/run.py`. The exact steps, the folder path and troubleshooting are in [MCP/docs/CLAUDE_SCIENCE.md](MCP/docs/CLAUDE_SCIENCE.md). The server was checked on Claude Science 0.1.67 on Windows: it starts, and all 24 tools are listed. A full review run with every tool in Claude Science has not been benchmarked yet.
-
-### Install for other MCP clients
+One command, in any MCP client that runs local (stdio) servers:
 
 ```bash
-pip install ./MCP
+npx -y citeproof-mcp
 ```
 
-Point the client at the `citeproof-mcp` command (stdio):
+The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package is a small launcher. It finds [uv](https://docs.astral.sh/uv/) (or installs it, unless `CITEPROOF_NO_AUTO_INSTALL=1`), then runs the Python server from the wheel attached to the matching [GitHub release](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest). You need Node.js 18 or newer. Python and git are not required: uv downloads Python 3.12 when needed.
+
+| Client | How to add CiteProof MCP | Status |
+|---|---|---|
+| **Claude Science** | Customize → Connectors → Add connector → **Local command**. Name `citeproof`, command `npx -y citeproof-mcp`. | Bundle install tested on 0.1.67 (Windows); npx install new in 0.2.0 |
+| **Claude Desktop** | Download [`citeproof.mcpb`](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest/download/citeproof.mcpb) and open it (Settings → Extensions), or add the JSON below to `claude_desktop_config.json`. | New in 0.2.0 |
+| **Claude Code** | `claude mcp add citeproof -- npx -y citeproof-mcp` | New in 0.2.0 |
+| **Cursor, VS Code, Windsurf, other clients** | Add the JSON below to the client's MCP settings. | Not yet tested |
 
 ```json
 {
   "mcpServers": {
     "citeproof": {
-      "command": "citeproof-mcp",
-      "env": { "CITEPROOF_MCP_HOME": "/path/to/your/review-data" }
+      "command": "npx",
+      "args": ["-y", "citeproof-mcp"]
     }
   }
 }
 ```
 
-Review files go to `CITEPROOF_MCP_HOME`, or to `~/.citeproof-mcp` when it is not set. Other clients were not tested for this release.
+Everything runs on your computer. Review files go to `CITEPROOF_MCP_HOME`, or to `~/.citeproof-mcp` when it is not set. The only network calls are DOI and retraction lookups to Crossref and doi.org. claude.ai custom connectors need a remote server, so they are not supported.
+
+If Claude Science reports that a file is not readable inside its sandbox, set `CITEPROOF_UV_HOME` (Advanced settings → environment variables) to a folder inside the connector's workspace, so uv keeps its cache and Python there. The older bundle install in [MCP/docs/CLAUDE_SCIENCE.md](MCP/docs/CLAUDE_SCIENCE.md) still works.
+
+<details>
+<summary>Install from source with pip</summary>
+
+```bash
+pip install ./MCP
+```
+
+Then point the client at the `citeproof-mcp` command (stdio), optionally with `"env": { "CITEPROOF_MCP_HOME": "/path/to/your/review-data" }`.
+
+</details>
+
+### Companion skill
+
+[`MCP/skills/citeproof-review`](MCP/skills/citeproof-review/SKILL.md) teaches an agent the review workflow and the tool order. Install steps for Claude Code, Claude Desktop and Claude Science are in [MCP/skills/README.md](MCP/skills/README.md). A reviewer-instructions snippet for Claude Science is in [MCP/docs/REVIEWER_SNIPPET.md](MCP/docs/REVIEWER_SNIPPET.md).
 
 ### The 24 tools
 
@@ -297,7 +322,7 @@ uvicorn backend.app.main:app --reload --port 8000
 
 | Folder | What is in it |
 |---|---|
-| [`MCP/`](MCP/) | CiteProof MCP: the server package `citeproof_mcp`, its tests, docs and the Claude Science install script |
+| [`MCP/`](MCP/) | CiteProof MCP: the server package `citeproof_mcp`, its tests and docs, the npm launcher (`MCP/npm`), the Claude Desktop extension (`MCP/mcpb`), the companion skill (`MCP/skills`) and the Claude Science install script |
 | `backend/` | CiteProof Research: FastAPI app, LangGraph agents, academic API adapters |
 | `frontend/` | The web UI (vanilla JS, no build step) |
 | `tests/` | Offline tests for the app (`pytest`) |
