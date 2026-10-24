@@ -1,0 +1,149 @@
+{
+  "manifest_version": "0.3",
+  "name": "citeproof",
+  "display_name": "CiteProof",
+  "version": "0.2.0",
+  "description": "Local audit trail for AI-assisted systematic reviews: PRISMA counts, screening decisions, evidence and risk-of-bias records, DOI and quote checks.",
+  "long_description": "CiteProof records and checks what your research agent supplies during a systematic review: the protocol, PRISMA 2020 search and screening counts, extracted evidence, risk-of-bias judgements, claim support, and citation checks, then exports the whole audit trail as one document.\n\nEverything runs on your computer. Review data is stored in a local SQLite database (default `~/.citeproof-mcp`) and is never uploaded. The only network calls are DOI lookups in `verify_dois` (Crossref, then doi.org). The extension does not search the literature, read papers or make scientific judgements for you, and it contains no language model.\n\nThe extension runs the same Node launcher as the npm package and downloads the Python server and uv on first use, so an internet connection is required the first time.",
+  "author": {
+    "name": "CiteProof"
+  },
+  "homepage": "https://citeproof.top/mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP"
+  },
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": [
+    "mcp",
+    "systematic-review",
+    "prisma",
+    "citations",
+    "research"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/bin/citeproof-mcp.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/bin/citeproof-mcp.js"],
+      "env": {
+        "CITEPROOF_MCP_HOME": "${user_config.data_dir}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "review_create",
+      "description": "Start a new review and get the review_id every other review tool needs."
+    },
+    {
+      "name": "review_list",
+      "description": "List existing reviews, newest first, to recover a review_id."
+    },
+    {
+      "name": "verify_dois",
+      "description": "Check that DOIs exist in a registry (Crossref, then doi.org) and are not retracted."
+    },
+    {
+      "name": "resolve_citations",
+      "description": "Match the inline citations in a text against your reference list, and find references never cited."
+    },
+    {
+      "name": "lint_prose",
+      "description": "Advisory style check of report prose with fixed rules."
+    },
+    {
+      "name": "claim_record",
+      "description": "Record your judgement of whether one paper supports one claim, and check the quote you rely on."
+    },
+    {
+      "name": "claim_report",
+      "description": "Summarise the recorded claim judgements and list the ones that need attention."
+    },
+    {
+      "name": "rob_record",
+      "description": "Record one risk-of-bias domain judgement for one paper and check its supporting quote."
+    },
+    {
+      "name": "rob_summary",
+      "description": "Overall risk-of-bias judgement per paper by the tool's published rule, plus traffic-light table rows."
+    },
+    {
+      "name": "prisma_record_search",
+      "description": "Log one database or register search for the PRISMA identification box."
+    },
+    {
+      "name": "dedup_papers",
+      "description": "Find duplicate records deterministically so the PRISMA duplicate count is computed, not guessed."
+    },
+    {
+      "name": "prisma_record_dedup",
+      "description": "Record a duplicate count you computed elsewhere (replaces any earlier count)."
+    },
+    {
+      "name": "screening_record",
+      "description": "Record one screening decision for one paper; re-sending the same paper_ref, stage and reviewer replaces it."
+    },
+    {
+      "name": "screening_record_many",
+      "description": "Record up to 500 screening decisions in one all-or-nothing transaction."
+    },
+    {
+      "name": "screening_list",
+      "description": "List recorded screening decisions, newest first, one page at a time."
+    },
+    {
+      "name": "screening_agreement",
+      "description": "Cohen's kappa between two reviewers' include/exclude decisions at one stage."
+    },
+    {
+      "name": "prisma_status",
+      "description": "Compute the PRISMA 2020 flow counts from the recorded searches, dedup and screening decisions."
+    },
+    {
+      "name": "prisma_flow_diagram",
+      "description": "Render the PRISMA 2020 flow diagram from the counts prisma_status computes."
+    },
+    {
+      "name": "prisma_checklist",
+      "description": "Keyword check of a report against the 27 PRISMA 2020 items, plus a check of the PRISMA numbers it states."
+    },
+    {
+      "name": "evidence_record",
+      "description": "Record one evidence-table row (one study, one outcome) with its source quote checked."
+    },
+    {
+      "name": "evidence_table",
+      "description": "Export the evidence table and report extraction gaps."
+    },
+    {
+      "name": "protocol_record",
+      "description": "Record or update the review protocol and check that it is complete."
+    },
+    {
+      "name": "review_status",
+      "description": "One-call overview of a review: what is recorded, what is missing, warnings and the next steps in order."
+    },
+    {
+      "name": "export_bundle",
+      "description": "Export the whole audit trail as one text document for the review's supplementary material."
+    }
+  ],
+  "user_config": {
+    "data_dir": {
+      "type": "directory",
+      "title": "Data folder",
+      "description": "Where CiteProof keeps its local SQLite records. Leave empty for the default (~/.citeproof-mcp).",
+      "required": false,
+      "default": "${HOME}/.citeproof-mcp"
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

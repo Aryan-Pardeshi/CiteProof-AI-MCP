@@ -12,6 +12,7 @@ const { spawn: spawnDefault } = require('node:child_process');
 const pkg = require('../package.json');
 const { installUv, installerCommand, MANUAL_INSTALL_URL } = require('./install');
 const { buildUvxArgs } = require('./source');
+const { createUvHomeDirs, parseUvHomeArgs, uvHomeDir, withInstallerEnv, withUvHomeEnv } = require('./uv-home');
 const { resolveUvx } = require('./uvx');
 
 const NAME = 'citeproof-mcp';
@@ -37,7 +38,9 @@ function parseArgs(argv) {
   const args = Array.isArray(argv) ? argv : [];
   if (args.length === 1 && (args[0] === '--version' || args[0] === '-v')) return { mode: 'version' };
   if (args.length === 1 && (args[0] === '--help' || args[0] === '-h')) return { mode: 'help' };
-  return { mode: 'run', args };
+  const uvHome = parseUvHomeArgs(args);
+  if (uvHome.error) return { mode: 'error', error: uvHome.error };
+  return { mode: 'run', args: uvHome.args, uvHome: uvHome.uvHome };
 }
 
 function helpText(version) {
@@ -53,10 +56,12 @@ function helpText(version) {
     'Options:',
     '  -h, --help     Show this help and exit.',
     '  -v, --version  Show the launcher version and exit.',
+    '  --uv-home <dir>  Keep every uv file (cache, tools, Python, binaries) in <dir>.',
     '',
     'Environment:',
     '  CITEPROOF_MCP_SOURCE       uvx --from value (default: this repo at the matching version tag)',
     '  CITEPROOF_UVX              full path to the uvx executable',
+    '  CITEPROOF_UV_HOME          single folder for uv cache, tools, Python and binaries',
     '  CITEPROOF_NO_AUTO_INSTALL  set to 1 to never install uv automatically',
     '  CITEPROOF_MCP_HOME         data directory used by the server (default ~/.citeproof-mcp)',
     '',
@@ -70,10 +75,10 @@ function signalExitCode(signal) {
   return SIGNAL_EXIT_CODES[signal] || 1;
 }
 
-async function ensureUvx({ env, platform, fs, home, stderr, spawn }) {
+async function ensureUvx({ env, platform, fs, home, stderr, spawn, uvHome }) {
   let resolved;
   try {
-    resolved = resolveUvx({ env, platform, fs, home });
+    resolved = resolveUvx({ env, platform, fs, home, uvHome });
   } catch (error) {
     write(stderr, error.message);
     return { code: 1 };
@@ -99,7 +104,7 @@ async function ensureUvx({ env, platform, fs, home, stderr, spawn }) {
 
   let installCode;
   try {
-    installCode = await installUv({ spawn, installer, env });
+    installCode = await installUv({ spawn, installer, env: uvHome ? withInstallerEnv(env, uvHome) : env });
   } catch (error) {
     write(stderr, `Could not start the uv installer: ${error && error.message ? error.message : String(error)}`);
     write(stderr, `Install uv manually: ${MANUAL_INSTALL_URL}`);
@@ -112,7 +117,7 @@ async function ensureUvx({ env, platform, fs, home, stderr, spawn }) {
   }
 
   try {
-    resolved = resolveUvx({ env, platform, fs, home });
+    resolved = resolveUvx({ env, platform, fs, home, uvHome });
   } catch (error) {
     write(stderr, error.message);
     return { code: 1 };
@@ -120,6 +125,7 @@ async function ensureUvx({ env, platform, fs, home, stderr, spawn }) {
   if (!resolved) {
     write(stderr, 'uv was installed, but uvx was not found in the usual locations.');
     write(stderr, 'Open a new terminal, or set CITEPROOF_UVX to the full path of uvx.');
+    if (uvHome) write(stderr, `Looked in ${uvHome} as well.`);
     write(stderr, `Manual install: ${MANUAL_INSTALL_URL}`);
     return { code: 1 };
   }
@@ -180,7 +186,7 @@ function runServer({ uvx, args, env, spawn, stderr, processRef }) {
  */
 async function runCli(options = {}) {
   const argv = options.argv || [];
-  const env = options.env || process.env;
+  let env = options.env || process.env;
   const platform = options.platform || process.platform;
   const stdout = options.stdout || process.stdout;
   const stderr = options.stderr || process.stderr;
@@ -199,8 +205,26 @@ async function runCli(options = {}) {
     stdout.write(helpText(version));
     return 0;
   }
+  if (parsed.mode === 'error') {
+    write(stderr, parsed.error);
+    return 1;
+  }
 
-  const ensured = await ensureUvx({ env, platform, fs, home, stderr, spawn });
+  const uvHome = uvHomeDir({ flag: parsed.uvHome, env, cwd: options.cwd });
+  if (uvHome) {
+    try {
+      createUvHomeDirs({ dir: uvHome, fs });
+    } catch (error) {
+      write(
+        stderr,
+        `Could not create the uv home folder ${uvHome}: ${error && error.message ? error.message : String(error)}`
+      );
+      return 1;
+    }
+    env = withUvHomeEnv(env, uvHome);
+  }
+
+  const ensured = await ensureUvx({ env, platform, fs, home, stderr, spawn, uvHome });
   if (ensured.code !== undefined) return ensured.code;
 
   const args = buildUvxArgs({ version, env, extraArgs: parsed.args });

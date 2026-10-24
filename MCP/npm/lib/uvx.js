@@ -93,12 +93,19 @@ function defaultUvxPaths({ env, platform, home }) {
   return [path.posix.join(base, '.local', 'bin', 'uvx'), path.posix.join(base, '.cargo', 'bin', 'uvx')];
 }
 
+/** `<CITEPROOF_UV_HOME>/bin/uvx`, where the auto-installer puts uvx. */
+function uvHomeBinPaths({ platform, uvHome }) {
+  if (!uvHome) return [];
+  const names = platform === 'win32' ? ['uvx.exe', 'uvx'] : ['uvx'];
+  return names.map((name) => path.join(uvHome, 'bin', name));
+}
+
 /**
  * Return `{ command, source }` for uvx, or null when it cannot be found.
- * `source` is 'env' | 'path' | 'default'.
+ * `source` is 'env' | 'path' | 'uv-home' | 'default'.
  * Throws when CITEPROOF_UVX is set but does not point at an executable.
  */
-function resolveUvx({ env, platform, fs, home }) {
+function resolveUvx({ env, platform, fs, home, uvHome }) {
   const override = env.CITEPROOF_UVX;
   if (override && override.trim()) {
     const value = override.trim();
@@ -115,6 +122,10 @@ function resolveUvx({ env, platform, fs, home }) {
   const onPath = findOnPath({ name: 'uvx', env, platform, fs });
   if (onPath) return { command: onPath, source: 'path' };
 
+  for (const candidate of uvHomeBinPaths({ platform, uvHome })) {
+    if (isFile(fs, candidate)) return { command: candidate, source: 'uv-home' };
+  }
+
   for (const candidate of defaultUvxPaths({ env, platform, home })) {
     if (isFile(fs, candidate)) return { command: candidate, source: 'default' };
   }
@@ -129,4 +140,5 @@ module.exports = {
   findOnPath,
   isFile,
   resolveUvx,
+  uvHomeBinPaths,
 };

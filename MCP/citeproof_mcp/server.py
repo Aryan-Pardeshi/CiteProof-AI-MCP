@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 """Server assembly. Every tool module exposes ``register(server)``."""
 
+import inspect
+from importlib.metadata import PackageNotFoundError, version as package_version
+
+from citeproof_mcp import __version__
 from citeproof_mcp.compat import MCPServer
 from citeproof_mcp.tools import (
     core,
@@ -31,8 +35,27 @@ INSTRUCTIONS = (
 TOOL_MODULES = (core, protocol, prisma, extraction, evidence_checks, review)
 
 
+def _server_version() -> str:
+    """Version reported in ``serverInfo``; the package version once installed."""
+    try:
+        return package_version("citeproof-mcp")
+    except PackageNotFoundError:
+        return __version__
+    except Exception:  # a broken metadata backend must not stop the server
+        return __version__
+
+
+def _version_kwargs() -> dict[str, str]:
+    """mcp 2.x takes ``version``; mcp 1.x (Claude Science) has no such parameter."""
+    try:
+        parameters = inspect.signature(MCPServer.__init__).parameters
+    except (TypeError, ValueError):
+        return {}
+    return {"version": _server_version()} if "version" in parameters else {}
+
+
 def build_server() -> MCPServer:
-    server = MCPServer("citeproof", instructions=INSTRUCTIONS)
+    server = MCPServer("citeproof", instructions=INSTRUCTIONS, **_version_kwargs())
     for module in TOOL_MODULES:
         module.register(server)
     return server

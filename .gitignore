@@ -260,3 +260,11 @@ docs/superpowers/
 # Generated documents
 *.pdf
 *.docx
+
+# MCP npm launcher sources (the root lib/ rule above would hide them)
+!MCP/npm/lib/
+!MCP/npm/lib/**
+
+# MCP bundle build outputs (manifest, icon and build script stay tracked)
+MCP/mcpb/dist/
+*.mcpb

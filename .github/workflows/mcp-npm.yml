@@ -12,6 +12,8 @@ on:
       - 'MCP/**'
       - '.github/workflows/mcp-npm.yml'
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -77,3 +79,24 @@ jobs:
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  bundle:
+    name: build Claude Desktop extension
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build and validate the bundle
+        run: node MCP/mcpb/build.mjs
+
+      - name: Upload the bundle to the release
+        run: gh release upload "${GITHUB_REF_NAME}" MCP/mcpb/citeproof.mcpb --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

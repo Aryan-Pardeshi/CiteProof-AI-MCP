@@ -11,12 +11,18 @@ function normalizePath(value) {
 
 function memoryFs(files = []) {
   const set = new Set(files.map(normalizePath));
+  const dirs = [];
   return {
+    dirs,
     add(file) {
       set.add(normalizePath(file));
     },
     has(file) {
       return set.has(normalizePath(file));
+    },
+    mkdirSync(dir) {
+      dirs.push(normalizePath(dir));
+      set.add(normalizePath(dir));
     },
     statSync(file) {
       if (!set.has(normalizePath(file))) {
