@@ -188,6 +188,8 @@ test('auto-install with a uv home sets UV_INSTALL_DIR and then finds uvx there',
   const uvx = path.join(uvHome, 'bin', UVX_NAME);
   const fs = memoryFs(['/usr/bin/curl']);
   const spawn = scriptedSpawn([
+    (call) => call.child.emit('exit', 3, null),
+    (call) => call.child.emit('exit', 3, null),
     (call) => {
       fs.add(uvx);
       call.child.emit('exit', 0, null);
@@ -210,8 +212,8 @@ test('auto-install with a uv home sets UV_INSTALL_DIR and then finds uvx there',
   const code = await runCli(options);
 
   assert.equal(code, 0);
-  assert.equal(spawn.calls.length, 2);
-  assert.equal(spawn.calls[0].options.env.UV_INSTALL_DIR, path.join(uvHome, 'bin'));
-  assert.equal(spawn.calls[0].options.env.UV_CACHE_DIR, path.join(uvHome, 'cache'));
-  assert.equal(spawn.calls[1].command, uvx);
+  assert.equal(spawn.calls.length, 4);
+  assert.equal(spawn.calls[2].options.env.UV_INSTALL_DIR, path.join(uvHome, 'bin'));
+  assert.equal(spawn.calls[2].options.env.UV_CACHE_DIR, path.join(uvHome, 'cache'));
+  assert.equal(spawn.calls[3].command, uvx);
 });

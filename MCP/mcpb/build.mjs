@@ -34,6 +34,9 @@ mkdirSync(path.join(dist, 'server'), { recursive: true });
 // The manifest points at server/bin/citeproof-mcp.js, so keep the npm layout.
 cpSync(path.join(npmDir, 'bin'), path.join(dist, 'server', 'bin'), { recursive: true });
 cpSync(path.join(npmDir, 'lib'), path.join(dist, 'server', 'lib'), { recursive: true });
+// The bundled Python source lets the launcher run without uv (see scripts/bundle-python.js).
+run(`node ${quote(path.join(npmDir, 'scripts', 'bundle-python.js'))}`);
+cpSync(path.join(npmDir, 'python'), path.join(dist, 'server', 'python'), { recursive: true });
 copyFileSync(path.join(npmDir, 'package.json'), path.join(dist, 'server', 'package.json'));
 copyFileSync(path.join(npmDir, 'LICENSE'), path.join(dist, 'LICENSE'));
 copyFileSync(path.join(here, 'manifest.json'), path.join(dist, 'manifest.json'));
