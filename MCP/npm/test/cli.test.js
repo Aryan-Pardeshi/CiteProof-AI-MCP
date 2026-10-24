@@ -217,7 +217,7 @@ test('CITEPROOF_MCP_PYTHON runs the bundled server without uvx or probing', asyn
 
   const [call] = spawn.calls;
   assert.equal(call.command, '/opt/python3.12');
-  assert.deepEqual(call.args, ['-m', 'citeproof_mcp', '--verbose']);
+  assert.deepEqual(call.args, ['-P', '-m', 'citeproof_mcp', '--verbose']);
   assert.equal(call.options.stdio, 'inherit');
   assert.equal(call.options.env.PYTHONUNBUFFERED, '1');
   assert.equal(call.options.env.PYTHONPATH, `${BUNDLED}:/old/py`);
@@ -236,7 +236,7 @@ test('--python wins over CITEPROOF_MCP_PYTHON and is removed from the server arg
 
   assert.equal(spawn.calls.length, 1);
   assert.equal(spawn.calls[0].command, '/from/flag');
-  assert.deepEqual(spawn.calls[0].args, ['-m', 'citeproof_mcp', '--http']);
+  assert.deepEqual(spawn.calls[0].args, ['-P', '-m', 'citeproof_mcp', '--http']);
 });
 
 test('--python=<path> is accepted too', async () => {
@@ -245,7 +245,7 @@ test('--python=<path> is accepted too', async () => {
   await runCli(options);
 
   assert.equal(spawn.calls[0].command, '/from/equals');
-  assert.deepEqual(spawn.calls[0].args, ['-m', 'citeproof_mcp']);
+  assert.deepEqual(spawn.calls[0].args, ['-P', '-m', 'citeproof_mcp']);
 });
 
 test('a missing --python value is a usage error and starts nothing', async () => {
@@ -292,7 +292,7 @@ test('without uvx, the first working Python on PATH runs the bundled server', as
   assert.deepEqual(pythonProbe.args, ['-c', PYTHON_PROBE_CODE]);
 
   assert.equal(server.command, 'python');
-  assert.deepEqual(server.args, ['-m', 'citeproof_mcp', '--port', '8080']);
+  assert.deepEqual(server.args, ['-P', '-m', 'citeproof_mcp', '--port', '8080']);
   assert.equal(server.options.stdio, 'inherit');
   assert.equal(server.options.env.PYTHONPATH, BUNDLED);
   assert.equal(server.options.env.PYTHONUNBUFFERED, '1');
@@ -320,7 +320,7 @@ test('Windows probes python3, python, then py -3, and uses ";" in PYTHONPATH', a
 
   const server = spawn.calls[3];
   assert.equal(server.command, 'py');
-  assert.deepEqual(server.args, ['-3', '-m', 'citeproof_mcp']);
+  assert.deepEqual(server.args, ['-3', '-P', '-m', 'citeproof_mcp']);
   assert.equal(server.options.env.PYTHONPATH, `${BUNDLED};C:\\old\\py`);
   assert.match(options.stderr.text, /python mode: using py -3/);
 });

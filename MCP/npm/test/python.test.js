@@ -148,9 +148,9 @@ test('withPythonEnv writes PYTHONPATH alone when none existed', () => {
 });
 
 test('buildPythonArgs runs the module and forwards server arguments', () => {
-  assert.deepEqual(buildPythonArgs({ pythonArgs: [], extraArgs: ['--http'] }), ['-m', 'citeproof_mcp', '--http']);
-  assert.deepEqual(buildPythonArgs({ pythonArgs: ['-3'], extraArgs: [] }), ['-3', '-m', 'citeproof_mcp']);
-  assert.deepEqual(buildPythonArgs({}), ['-m', 'citeproof_mcp']);
+  assert.deepEqual(buildPythonArgs({ pythonArgs: [], extraArgs: ['--http'] }), ['-P', '-m', 'citeproof_mcp', '--http']);
+  assert.deepEqual(buildPythonArgs({ pythonArgs: ['-3'], extraArgs: [] }), ['-3', '-P', '-m', 'citeproof_mcp']);
+  assert.deepEqual(buildPythonArgs({}), ['-P', '-m', 'citeproof_mcp']);
 });
 
 test('bundledPythonDir points at the package python/ folder', () => {

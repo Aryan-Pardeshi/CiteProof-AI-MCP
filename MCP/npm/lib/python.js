@@ -83,7 +83,8 @@ function withPythonEnv(env, pythonDir, platform) {
 function buildPythonArgs({ pythonArgs, extraArgs }) {
   const interpreterArgs = Array.isArray(pythonArgs) ? pythonArgs : [];
   const passthrough = Array.isArray(extraArgs) ? extraArgs : [];
-  return [...interpreterArgs, '-m', 'citeproof_mcp', ...passthrough];
+  // -P: do not put the current directory on sys.path, so a local citeproof_mcp folder cannot shadow the bundled one.
+  return [...interpreterArgs, '-P', '-m', 'citeproof_mcp', ...passthrough];
 }
 
 /**
