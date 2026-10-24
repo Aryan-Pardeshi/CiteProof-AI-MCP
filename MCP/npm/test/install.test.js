@@ -4,7 +4,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { INSTALL_PS1_URL, INSTALL_SH_URL, installUv, installerCommand } = require('../lib/install');
+const { INSTALL_PS1_URL, INSTALL_SH_URL, downloadThenRun, installUv, installerCommand } = require('../lib/install');
 const { memoryFs, scriptedSpawn } = require('../test-support/helpers');
 
 const CURL = '/usr/bin/curl';
@@ -18,7 +18,7 @@ test('macOS/Linux installer uses curl when curl is on PATH', () => {
   });
   assert.deepEqual(installer, {
     command: 'sh',
-    args: ['-c', `curl -LsSf ${INSTALL_SH_URL} | sh`],
+    args: ['-c', downloadThenRun(`curl -LsSf ${INSTALL_SH_URL} -o "$t"`)],
     url: INSTALL_SH_URL,
   });
 });
@@ -31,7 +31,7 @@ test('macOS/Linux installer falls back to wget when curl is missing', () => {
   });
   assert.deepEqual(installer, {
     command: 'sh',
-    args: ['-c', `wget -qO- ${INSTALL_SH_URL} | sh`],
+    args: ['-c', downloadThenRun(`wget -qO "$t" ${INSTALL_SH_URL}`)],
     url: INSTALL_SH_URL,
   });
 });

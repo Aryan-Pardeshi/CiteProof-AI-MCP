@@ -12,7 +12,7 @@ test('default source pins the git tag that matches the launcher version', () => 
   const source = defaultSource(VERSION);
   assert.equal(
     source,
-    'git+https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP@v0.2.0#subdirectory=MCP'
+    'https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/download/v0.2.0/citeproof_mcp-0.2.0-py3-none-any.whl'
   );
   assert.deepEqual(buildUvxArgs({ version: VERSION, env: {} }), [
     '--from',

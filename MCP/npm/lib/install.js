@@ -11,6 +11,12 @@ const MANUAL_INSTALL_URL = 'https://docs.astral.sh/uv/getting-started/installati
 const INSTALL_SH_URL = 'https://astral.sh/uv/install.sh';
 const INSTALL_PS1_URL = 'https://astral.sh/uv/install.ps1';
 
+// `curl ... | sh` exits 0 when the download fails, because sh reads empty input.
+// Download to a file first so a network error fails the install.
+function downloadThenRun(download) {
+  return `t=$(mktemp) || exit 1; ${download} && sh "$t"; s=$?; rm -f "$t"; exit $s`;
+}
+
 function installerCommand({ platform, env, fs }) {
   if (platform === 'win32') {
     return {
@@ -21,10 +27,10 @@ function installerCommand({ platform, env, fs }) {
   }
 
   if (findOnPath({ name: 'curl', env, platform, fs })) {
-    return { command: 'sh', args: ['-c', `curl -LsSf ${INSTALL_SH_URL} | sh`], url: INSTALL_SH_URL };
+    return { command: 'sh', args: ['-c', downloadThenRun(`curl -LsSf ${INSTALL_SH_URL} -o "$t"`)], url: INSTALL_SH_URL };
   }
   if (findOnPath({ name: 'wget', env, platform, fs })) {
-    return { command: 'sh', args: ['-c', `wget -qO- ${INSTALL_SH_URL} | sh`], url: INSTALL_SH_URL };
+    return { command: 'sh', args: ['-c', downloadThenRun(`wget -qO "$t" ${INSTALL_SH_URL}`)], url: INSTALL_SH_URL };
   }
   return null;
 }
@@ -66,6 +72,7 @@ module.exports = {
   INSTALL_PS1_URL,
   INSTALL_SH_URL,
   MANUAL_INSTALL_URL,
+  downloadThenRun,
   installUv,
   installerCommand,
 };

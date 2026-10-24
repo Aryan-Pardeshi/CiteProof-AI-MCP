@@ -75,6 +75,11 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Check the release tag exists
+        run: |
+          version=$(node -p "require('./package.json').version")
+          git ls-remote --exit-code --tags origin "refs/tags/v${version}" > /dev/null             || { echo "Tag v${version} does not exist. Create the release first."; exit 1; }
+
       - name: Publish
         run: npm publish --provenance --access public
         env:
@@ -88,6 +93,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -96,7 +103,12 @@ jobs:
       - name: Build and validate the bundle
         run: node MCP/mcpb/build.mjs
 
-      - name: Upload the bundle to the release
-        run: gh release upload "${GITHUB_REF_NAME}" MCP/mcpb/citeproof.mcpb --clobber
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build the Python wheel
+        run: uv build --wheel --out-dir dist MCP
+
+      - name: Upload the bundle and wheel to the release
+        run: gh release upload "${GITHUB_REF_NAME}" MCP/mcpb/citeproof.mcpb dist/*.whl --clobber --repo "${GITHUB_REPOSITORY}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

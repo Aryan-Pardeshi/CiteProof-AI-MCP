@@ -4,13 +4,16 @@
 // Build the uvx command line. The launcher never reads papers or talks to the
 // network itself; it only starts the Python MCP server from this source.
 
-const DEFAULT_REPOSITORY = 'git+https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP';
+const DEFAULT_REPOSITORY = 'https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP';
 const PACKAGE_NAME = 'citeproof-mcp';
 const PYTHON_VERSION = '3.12';
 
-/** Default uvx `--from` value: the repo tag matching the launcher version. */
+/**
+ * Default uvx `--from` value: the wheel attached to the GitHub release that
+ * matches the launcher version. A wheel URL needs no git on the user's machine.
+ */
 function defaultSource(version) {
-  return `${DEFAULT_REPOSITORY}@v${version}#subdirectory=MCP`;
+  return `${DEFAULT_REPOSITORY}/releases/download/v${version}/citeproof_mcp-${version}-py3-none-any.whl`;
 }
 
 /** CITEPROOF_MCP_SOURCE wins when it is a non-empty string. */

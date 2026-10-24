@@ -8,6 +8,7 @@
 //   <dir>/python  uv-managed Python builds  (UV_PYTHON_INSTALL_DIR)
 //   <dir>/bin     uv/uvx binaries           (UV_INSTALL_DIR, auto-install only)
 
+const os = require('node:os');
 const path = require('node:path');
 
 const SUBDIRS = ['cache', 'tools', 'python', 'bin'];
@@ -40,12 +41,14 @@ function parseUvHomeArgs(argv) {
 }
 
 /** The flag wins over CITEPROOF_UV_HOME; relative paths resolve against cwd. */
-function uvHomeDir({ flag, env, cwd }) {
+function uvHomeDir({ flag, env, cwd, home }) {
   const fromFlag = typeof flag === 'string' ? flag.trim() : '';
   const fromEnv = env && typeof env.CITEPROOF_UV_HOME === 'string' ? env.CITEPROOF_UV_HOME.trim() : '';
   const raw = fromFlag || fromEnv;
   if (!raw) return null;
-  return path.resolve(cwd || process.cwd(), raw);
+  // MCP clients pass args and env without a shell, so `~` is not expanded for us.
+  const expanded = /^~(?=$|[\/])/.test(raw) ? path.join(home || os.homedir(), raw.slice(1)) : raw;
+  return path.resolve(cwd || process.cwd(), expanded);
 }
 
 function createUvHomeDirs({ dir, fs }) {

@@ -26,6 +26,7 @@ Before accepting or finalizing any review report, run the following verification
 
 2. Full-Text Screening Completeness:
    - Verify that every study included in the final synthesis has an explicit `full_text` stage `include` decision recorded in `screening_list`.
+   - `screening_list` returns at most 200 records per call. Keep calling it with `offset` set to `next_offset` until `truncated` is false, and check every page.
    - Verify that all full-text exclusions have documented exclusion reasons.
    - For multi-reviewer workflows, verify that reviewer agreement was calculated via `screening_agreement` and consensus decisions were recorded under reviewer "primary".
 

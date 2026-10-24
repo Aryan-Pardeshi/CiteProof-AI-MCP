@@ -42,6 +42,10 @@ test('the flag wins over CITEPROOF_UV_HOME and relative paths resolve against cw
   assert.equal(uvHomeDir({ flag: 'flag-home', env: { CITEPROOF_UV_HOME: 'env-home' }, cwd }), path.resolve(cwd, 'flag-home'));
   assert.equal(uvHomeDir({ flag: null, env: { CITEPROOF_UV_HOME: 'env-home' }, cwd }), path.resolve(cwd, 'env-home'));
   assert.equal(uvHomeDir({ flag: null, env: {}, cwd }), null);
+  const home = path.resolve('/home/user');
+  assert.equal(uvHomeDir({ flag: '~/.citeproof-uv', env: {}, cwd, home }), path.join(home, '.citeproof-uv'));
+  assert.equal(uvHomeDir({ flag: '~', env: {}, cwd, home }), home);
+  assert.equal(uvHomeDir({ flag: '~user/x', env: {}, cwd, home }), path.resolve(cwd, '~user/x'));
   assert.equal(uvHomeDir({ flag: '  ', env: { CITEPROOF_UV_HOME: '   ' }, cwd }), null);
 });
 

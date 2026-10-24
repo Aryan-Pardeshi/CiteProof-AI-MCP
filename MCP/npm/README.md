@@ -20,7 +20,7 @@ CiteProof runs **entirely on your computer**. There is no hosted server, no acco
 ## Requirements
 
 - Node.js 18 or newer.
-- Network access on the first run: the launcher downloads the Python server (and uv, and Python 3.12, if needed).
+- Network access on the first run: the launcher downloads the Python server as a wheel from the GitHub release (and uv, and Python 3.12, if needed). Git is not required.
 - macOS, Linux or Windows.
 
 ## Install

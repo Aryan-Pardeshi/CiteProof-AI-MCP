@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const { runCli } = require('../lib/cli');
 const pkg = require('../package.json');
 const { defaultSource } = require('../lib/source');
+const { INSTALL_SH_URL, downloadThenRun } = require('../lib/install');
 const { captureStream, fakeProcess, memoryFs, scriptedSpawn } = require('../test-support/helpers');
 
 const UVX = '/home/a/.local/bin/uvx';
@@ -115,7 +116,7 @@ test('missing uv is installed automatically, then uvx starts the server', async 
 
   const installer = spawn.calls[0];
   assert.equal(installer.command, 'sh');
-  assert.deepEqual(installer.args, ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh']);
+  assert.deepEqual(installer.args, ['-c', downloadThenRun(`curl -LsSf ${INSTALL_SH_URL} -o "$t"`)]);
   assert.deepEqual(installer.options.stdio, ['ignore', 2, 2]);
   assert.equal(installer.options.env.UV_NO_MODIFY_PATH, '1');
 
