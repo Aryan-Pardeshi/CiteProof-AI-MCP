@@ -1,0 +1,39 @@
+{
+  "name": "citeproof-mcp",
+  "version": "0.2.0",
+  "description": "Audit layer for AI literature reviews: run the CiteProof MCP server over stdio with npx. Records PRISMA counts, screening decisions, evidence checks and citation checks supplied by your research agent.",
+  "license": "MIT",
+  "author": "Aryan Pardeshi",
+  "bin": {
+    "citeproof-mcp": "bin/citeproof-mcp.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP.git",
+    "directory": "MCP/npm"
+  },
+  "bugs": {
+    "url": "https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues"
+  },
+  "homepage": "https://citeproof.top/mcp",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "systematic-review",
+    "prisma",
+    "citations"
+  ]
+}

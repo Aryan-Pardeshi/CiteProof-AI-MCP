@@ -1,0 +1,114 @@
+name: MCP npm launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'MCP/**'
+      - '.github/workflows/mcp-npm.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'MCP/**'
+      - '.github/workflows/mcp-npm.yml'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: MCP
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Launcher tests
+        working-directory: MCP/npm
+        run: node --test
+
+      - name: Package contents
+        working-directory: MCP/npm
+        run: npm pack --dry-run
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: MCP/pyproject.toml
+
+      - name: Install MCP server
+        run: pip install ".[test]"
+
+      - name: MCP Python tests
+        run: python -m pytest -q
+
+  publish:
+    name: publish to npm
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: MCP/npm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check the release tag exists
+        run: |
+          version=$(node -p "require('./package.json').version")
+          git ls-remote --exit-code --tags origin "refs/tags/v${version}" > /dev/null             || { echo "Tag v${version} does not exist. Create the release first."; exit 1; }
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  bundle:
+    name: build Claude Desktop extension
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build and validate the bundle
+        run: node MCP/mcpb/build.mjs
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build the Python wheel
+        run: uv build --wheel --out-dir dist MCP
+
+      - name: Upload the bundle and wheel to the release
+        run: gh release upload "${GITHUB_REF_NAME}" MCP/mcpb/citeproof.mcpb dist/*.whl --clobber --repo "${GITHUB_REPOSITORY}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

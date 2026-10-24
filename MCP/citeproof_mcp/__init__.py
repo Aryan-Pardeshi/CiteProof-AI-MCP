@@ -3,3 +3,5 @@
 
 See docs/MCP_SPEC.md.
 """
+
+__version__ = "0.2.0"
