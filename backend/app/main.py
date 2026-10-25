@@ -79,7 +79,8 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="AI Research Assistant Bot", lifespan=lifespan)
+# The interactive API docs live at /api-docs so that /docs can serve the documentation portal.
+app = FastAPI(title="AI Research Assistant Bot", lifespan=lifespan, docs_url="/api-docs")
 
 
 @app.middleware("http")
@@ -239,6 +240,32 @@ def serve_workspace_app():
     if app_file.exists():
         return FileResponse(app_file, media_type="text/html", headers={"Cache-Control": "no-cache, must-revalidate"})
     raise HTTPException(status_code=404, detail="Research workspace app.html not found")
+
+# Documentation portal and MCP setup pages. The static deployment serves these through clean
+# URLs. Here each route maps to one known file, so nothing is built from the request path.
+_DOC_PAGES = {
+    "/mcp": "mcp.html",
+    "/docs": "docs.html",
+    "/docs/mcp": "docs/mcp.html",
+    "/docs/research-workflow": "docs/research-workflow.html",
+    "/docs/self-hosting": "docs/self-hosting.html",
+    "/docs/troubleshooting": "docs/troubleshooting.html",
+}
+
+
+def _page_route(relative_path: str):
+    def serve_page():
+        page = frontend_path / relative_path
+        if page.exists():
+            return FileResponse(page, media_type="text/html", headers={"Cache-Control": "no-cache, must-revalidate"})
+        raise HTTPException(status_code=404, detail=f"{relative_path} not found")
+
+    return serve_page
+
+
+for _route, _file in _DOC_PAGES.items():
+    app.add_api_route(_route, _page_route(_file), methods=["GET"], include_in_schema=False)
+
 
 class UIStaticFiles(StaticFiles):
     """StaticFiles that forces revalidation of HTML.
