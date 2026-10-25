@@ -20,7 +20,7 @@ CiteProof runs **entirely on your computer**. There is no hosted server, no acco
 ## Requirements
 
 - Node.js 18 or newer.
-- Either Python 3.12+ with the `mcp`, `pydantic` and `httpx` packages (the launcher probes `python3`, `python` and, on Windows, `py -3` on your `PATH` and runs the bundled server offline), or network access on the first run so the launcher can download uv, Python 3.12 and the server wheel.
+- Either Python 3.12+ with the `mcp`, `pydantic` and `httpx` packages (the launcher probes `python3`, `python` and, on Windows, `py -3` on your `PATH` and runs the bundled server without further downloads), or network access on the first run so the launcher can download uv, Python 3.12 and the server wheel. Either way, `npx` needs the npm registry the first time unless the package is already cached.
 - macOS, Linux or Windows.
 
 ## Install
@@ -37,7 +37,7 @@ CiteProof runs **entirely on your computer**. There is no hosted server, no acco
 
 4. Save and start a new conversation.
 
-The npm package contains the server source, so inside Claude Science's sandbox the launcher runs it with the sandbox's own `python3` (which already has `mcp`, `pydantic` and `httpx`). No uv, no download and no network access are needed. If the sandbox has no usable Python, see [Troubleshooting](#troubleshooting).
+The npm package contains the server source, so inside Claude Science's sandbox the launcher runs it with the sandbox's own `python3` (which already has `mcp`, `pydantic` and `httpx`). Claude Science stages the npm package for you, and when `uvx` is not available the launcher needs no uv, no download and no access to astral.sh, GitHub or PyPI. If the sandbox has `uvx`, the launcher prefers it; set `CITEPROOF_MCP_PYTHON=python3` to select the sandbox's Python. If the sandbox has no usable Python, see [Troubleshooting](#troubleshooting).
 
 ### Claude Desktop
 
@@ -140,7 +140,7 @@ Example with a pinned source and a custom data directory:
 }
 ```
 
-`--python /usr/bin/python3` does the same. The launcher then runs the server from the package's own `python/` folder; it needs no uv and no network. Nothing is printed to stdout.
+`--python /usr/bin/python3` does the same. The launcher then runs the server from the package's own `python/` folder; it needs no uv and downloads nothing. Nothing is printed to stdout.
 
 **Claude Science says a file is not readable inside the sandbox.** This only applies when the launcher falls back to uv: uv normally writes to `~/.local/share/uv`, `~/.cache/uv` and similar folders, which may sit outside the connector's workspace. Set `CITEPROOF_UV_HOME` to a folder inside the connector's workspace, for example:
 

@@ -13,7 +13,7 @@ This page shows how to add the CiteProof MCP server to Claude Science as a **Loc
 
 ## Recommended: npx
 
-Claude Science stages the npm package into the connector's own workspace. The package ships the Python server source, and the launcher runs it with the sandbox's own `python3`, which already has `mcp`, `pydantic` and `httpx`. So this method needs no uv, no download and no network access, including no access to astral.sh, GitHub or PyPI.
+Claude Science stages the npm package into the connector's own workspace; that step uses the npm registry and Claude Science does it for you. The package ships the Python server source. When `uvx` is not available in the sandbox, the launcher runs that source with the sandbox's own `python3`, which already has `mcp`, `pydantic` and `httpx`. The launcher itself then needs no uv and no download, and no access to astral.sh, GitHub or PyPI. If the sandbox does have `uvx`, the launcher prefers it; to select the sandbox's Python instead, add the connector environment variable `CITEPROOF_MCP_PYTHON=python3`.
 
 The launcher checks, in order: `CITEPROOF_MCP_PYTHON` (or `--python`), `uvx` if it is present, then `python3`, `python` and (on Windows) `py -3` on `PATH`, requiring Python 3.12+ with the three packages. Inside the sandbox the third step succeeds with `python3`.
 
@@ -112,7 +112,7 @@ The sandbox only lets the connector write inside its own workspace folder, which
 
 ## Other MCP clients
 
-Any client that can start a stdio MCP server works. The npm launcher needs only Node.js 18 or newer:
+Any client that can start a stdio MCP server works. The npm launcher needs Node.js 18 or newer, plus either a Python 3.12+ that already has `mcp`, `pydantic` and `httpx`, or network access on the first run so it can download uv, Python 3.12 and the server wheel:
 
 ```bash
 npx -y citeproof-mcp
