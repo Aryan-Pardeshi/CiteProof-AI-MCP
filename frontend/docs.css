@@ -1562,12 +1562,16 @@ a.mcp-install-chip-label:hover {
     background: var(--cp-canvas-soft);
     box-shadow: var(--cp-shadow-modal);
     transform: translateX(-102%);
-    transition: transform 200ms var(--cp-ease);
+    /* Closed: out of the tab order too. The delay lets the slide-out play first. */
+    visibility: hidden;
+    transition: transform 200ms var(--cp-ease), visibility 0s linear 200ms;
     overflow-y: auto;
   }
 
   .docs-sidebar.is-open {
     transform: translateX(0);
+    visibility: visible;
+    transition-delay: 0s;
   }
 
   .docs-overlay {
@@ -1700,4 +1704,23 @@ a.mcp-install-chip-label:hover {
 .docs-page input:focus-visible {
   outline: 2px solid var(--cp-ink);
   outline-offset: 2px;
+}
+
+/* Three-step overview on the MCP reference page */
+.mcp-flow {
+  display: grid;
+  gap: var(--cp-space-3);
+  margin: var(--cp-space-4) 0 var(--cp-space-6);
+}
+
+.mcp-flow > div {
+  padding: 14px 16px;
+  border-radius: var(--cp-radius-md);
+  background: var(--cp-canvas-soft);
+  box-shadow: inset 0 0 0 1px var(--cp-hairline);
+}
+
+.mcp-flow strong,
+.mcp-flow span {
+  display: block;
 }

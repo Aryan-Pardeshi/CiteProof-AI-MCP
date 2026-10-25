@@ -77,6 +77,7 @@
         ['connect', 'Connect CiteProof MCP to Claude Science'],
         ['prerequisites', 'Prerequisites'],
         ['claude-science-steps', 'Install the Claude Science connector'],
+        ['bundle-fallback', 'Fallback: build a bundle'],
         ['confirm-tools', 'Confirm the tools are available'],
         ['install-vs-use', 'Installing is not using'],
         ['desktop-extension', 'Claude Desktop extension and npx'],
@@ -170,8 +171,8 @@
 
   if (sidebar) {
     sidebar.addEventListener('click', function (event) {
-      var target = event.target;
-      if (target && target.tagName === 'A' && window.matchMedia('(max-width: 960px)').matches) {
+      var link = event.target && event.target.closest ? event.target.closest('a') : null;
+      if (link && window.matchMedia('(max-width: 960px)').matches) {
         setDrawer(false);
       }
     });

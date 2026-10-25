@@ -63,6 +63,9 @@
   <link rel="stylesheet" href="/docs.css?v=1.0.0">
 </head>
 <body class="docs-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="logo-github" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+  </svg>
   <a href="#docs-content" class="docs-skip">Skip to main content</a>
 
   <header class="docs-header" role="banner">
@@ -192,24 +195,35 @@
         </ul>
 
         <h2 id="connect">Connect CiteProof MCP to Claude Science</h2>
-        <p>Claude Science on Windows 11 is the tested path for this release (Claude Science 0.1.67, native sandbox). The connector runs inside a Windows sandbox that can read only its own workspace folder and Claude Science's bundled runtime. That is why the Claude Science install copies the server into the connector workspace instead of pointing at a project virtual environment.</p>
+        <p>The recommended install is a Local command connector that runs <code>npx -y citeproof-mcp</code>. It was checked on Claude Science 0.1.70 on Windows 11 (native sandbox): the connector starts and lists all 24 tools. The connector runs inside a sandbox that can read only its own workspace folder and Claude Science's bundled runtime, and that cannot reach <code>astral.sh</code>. For that reason the launcher does not need to download <code>uv</code> there: it runs the server code it carries with the sandbox's own <code>python3</code>, which already provides <code>mcp</code>, <code>pydantic</code> and <code>httpx</code>.</p>
 
         <h3 id="prerequisites">Prerequisites</h3>
         <ul>
           <li><strong>Claude Science</strong> with Connectors available under Customize.</li>
-          <li><strong>This repository</strong> checked out, for the bundle build script. The script uses only the Python standard library.</li>
-          <li><strong>No separate Python install for the connector.</strong> The bundled <code>python3</code> already provides <code>mcp</code>, <code>pydantic</code> and <code>httpx</code>.</li>
+          <li><strong>npx.</strong> The command is <code>npx -y citeproof-mcp</code>, which needs Node.js 18 or newer.</li>
           <li><strong>No model API key.</strong> The server makes no model calls.</li>
+          <li><strong>This repository</strong>, only if you use the bundle fallback below. The build script uses only the Python standard library.</li>
         </ul>
 
         <h3 id="claude-science-steps">Install the Claude Science connector</h3>
         <ol class="docs-step-list">
-          <li><strong>Create the connector workspace.</strong> Open Customize, then Connectors, then Add connector, then Local command. Name it <code>citeproof</code> and use <code>python3 placeholder.py</code>. It will fail; the first start creates the workspace folder. If the folder does not appear, create it by hand in the next step.</li>
+          <li><strong>Add a connector.</strong> Open Customize, then Connectors, then Add connector, then Local command.</li>
+          <li><strong>Name it and enter the command.</strong> The name allows lowercase letters, digits and hyphens only, so use <code>citeproof</code>. The command line is <code>npx -y citeproof-mcp</code>.</li>
+          <li><strong>Optional: set the data folder.</strong> Under Advanced settings, add the environment variable <code>CITEPROOF_MCP_HOME</code> to keep review files in a folder you choose. Without it, review files go to <code>~/.citeproof-mcp</code> inside the sandbox.</li>
+          <li><strong>Wait for the first start.</strong> The first start downloads the package and can take about half a minute.</li>
+          <li><strong>Confirm 24 tools.</strong> The connector page should list every tool from <code>review_create</code> to <code>export_bundle</code>. Claude Science asks for approval before each tool run by default; set a tool to always allow only after you trust it.</li>
+        </ol>
+        <div class="docs-code"><pre><code>npx -y citeproof-mcp</code></pre></div>
+        <p>After a new release, Claude Science keeps the previous npx copy in the connector workspace (<code>.../workspaces/_mcp-citeproof/.npm/_npx</code>). If the old version keeps loading, delete that folder and turn the connector off and on. Review data survives this.</p>
+
+        <h3 id="bundle-fallback">Fallback: build a bundle</h3>
+        <p>If the npx command cannot start in your Claude Science, copy the server into the connector workspace and start it with Claude Science's own <code>python3</code>. This path was checked on Claude Science 0.1.67 on Windows 11.</p>
+        <ol class="docs-step-list">
+          <li><strong>Create the connector workspace.</strong> Add a Local command connector named <code>citeproof</code> with the command <code>python3 placeholder.py</code>. It will fail; the first start creates the workspace folder. If the folder does not appear, create it by hand in the next step.</li>
           <li><strong>Find the workspace folder.</strong> On Windows it is <code>C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof</code>. The command <code>claude-science logs</code> also prints it as <code>cwd</code> in the sandbox policy lines.</li>
           <li><strong>Build the bundle into that folder.</strong> Run the command below from the repository root. The script refuses a folder that holds other files, so passing the workspace folder by mistake cannot delete your <code>data</code> folder.</li>
-          <li><strong>Point the connector at the bundle.</strong> Remove the placeholder and add it again. Use forward slashes in the command; backslashes are stripped by the form.</li>
+          <li><strong>Point the connector at the bundle.</strong> Remove the placeholder and add the connector again. Use forward slashes in the command; backslashes are stripped by the form.</li>
           <li><strong>Set the data folder.</strong> Add the environment variable <code>CITEPROOF_MCP_HOME</code> so review files stay inside the sandbox workspace.</li>
-          <li><strong>Confirm 24 tools.</strong> The connector page should list every tool from <code>review_create</code> to <code>export_bundle</code>. Claude Science asks for approval before each tool run by default; set a tool to always allow only after you trust it.</li>
         </ol>
         <div class="docs-code"><pre><code>python MCP/scripts/build_claude_science_bundle.py "C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/bundle"</code></pre></div>
         <div class="docs-code"><pre><code>python3 C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/bundle/run.py</code></pre></div>
@@ -895,6 +909,7 @@
           <table class="docs-table">
             <thead><tr><th scope="col">Client</th><th scope="col">Install path</th><th scope="col">Status</th></tr></thead>
             <tbody>
+              <tr><td>Claude Science</td><td>Local command connector with <code>npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.70, 24 tools listed</td></tr>
               <tr><td>Claude Science</td><td>Local command connector with the built bundle</td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.67</td></tr>
               <tr><td>Claude Desktop</td><td><code>citeproof.mcpb</code> extension</td><td><span class="docs-status docs-status-new">New</span> Extension path, not yet broadly tested</td></tr>
               <tr><td>Claude Desktop</td><td>npx with a JSON <code>mcpServers</code> entry</td><td><span class="docs-status docs-status-new">New</span> Not yet tested for this release</td></tr>
@@ -911,8 +926,9 @@
           <table class="docs-table">
             <thead><tr><th scope="col">Symptom</th><th scope="col">What to check</th></tr></thead>
             <tbody>
+              <tr><td><code>Connection closed</code> with <code>uv (uvx) was not found</code> in the error text</td><td>You are running launcher 0.2.0, which tried to download <code>uv</code> from <code>astral.sh</code>, and the sandbox cannot reach it. Use 0.2.1 or newer (<code>npx -y citeproof-mcp@latest</code>), and delete the cached copy under <code>.../_mcp-citeproof/.npm/_npx</code> if the old version keeps loading.</td></tr>
               <tr><td>Only 18 tools appear instead of 24</td><td>An old server process is still running. Remove the connector and add it again with the same settings.</td></tr>
-              <tr><td><code>this kernel's Python interpreter ... is not readable inside the sandbox</code></td><td>The command points outside the connector workspace. Use the bundle path from the install steps.</td></tr>
+              <tr><td><code>this kernel's Python interpreter ... is not readable inside the sandbox</code></td><td>The command points outside the connector workspace. Use <code>npx -y citeproof-mcp</code>, or the bundle path from the fallback steps.</td></tr>
               <tr><td><code>Set "command" to node, npx or python3 ...</code></td><td>You gave an absolute path to a Python that Claude Science does not provide. Use <code>python3</code>.</td></tr>
               <tr><td><code>can't open file ... Permission denied</code></td><td>The bundle is outside the connector workspace. Build it into <code>.../workspaces/_mcp-citeproof/bundle</code>.</td></tr>
               <tr><td>Connector name rejected</td><td>Use lowercase letters, digits and hyphens only. Use <code>citeproof</code>.</td></tr>

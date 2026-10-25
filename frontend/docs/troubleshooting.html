@@ -71,6 +71,9 @@
   <link rel="stylesheet" href="/footer.css?v=1.0.0">
 </head>
 <body class="docs-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="logo-github" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+  </svg>
   <a href="#docs-content" class="docs-skip">Skip to main content</a>
 
   <header class="docs-header" role="banner">
@@ -211,7 +214,7 @@
               </tr>
               <tr>
                 <td><code>npx</code> cannot find the package or Node is too old</td>
-                <td>Install Node 18 or newer. The launcher installs <code>uv</code> automatically when it is missing; set <code>CITEPROOF_NO_AUTO_INSTALL=1</code> only if you manage <code>uv</code> yourself.</td>
+                <td>Install Node 18 or newer. Outside Claude Science, the launcher installs <code>uv</code> automatically when it is missing; set <code>CITEPROOF_NO_AUTO_INSTALL=1</code> only if you manage <code>uv</code> yourself. Inside Claude Science's sandbox it uses the sandbox's own <code>python3</code> and downloads nothing. If the error says <code>uv (uvx) was not found</code> and the installer could not reach <code>astral.sh</code>, you are on launcher 0.2.0: run <code>npx -y citeproof-mcp@latest</code>, delete the cached copy under <code>.../_mcp-citeproof/.npm/_npx</code>, or use the bundle fallback.</td>
               </tr>
             </tbody>
           </table>
@@ -230,7 +233,7 @@
               </tr>
               <tr>
                 <td>No CiteProof tools at all</td>
-                <td>Confirm the client can start a stdio server. For Claude Science, check that the connector command points at the built <code>run.py</code> and uses forward slashes. For npx, run the server by hand and check that it starts without an import error.</td>
+                <td>Confirm the client can start a stdio server. For the recommended Claude Science install, check that the connector command is exactly <code>npx -y citeproof-mcp</code> and read the connector's error text. If you chose the bundle fallback instead, check that the command points at the built <code>run.py</code> and uses forward slashes. Run the server by hand and check that it starts without an import error.</td>
               </tr>
               <tr>
                 <td><code>ok: false</code> with an <code>error</code></td>
@@ -250,7 +253,7 @@
               </tr>
               <tr>
                 <td>An export is cut off</td>
-                <td>Very large reviews are truncated at 5000 screening decisions or claims. The result sets <code>truncated: true</code>. Each reviewer pair lists at most 50 disagreements without setting that flag; <code>disagreement_count</code> is the true total. Export the JSON format or split the review record; do not assume the missing rows were checked.</td>
+                <td>Very large reviews are truncated at 5000 screening decisions or claims, in the Markdown and the JSON format alike. The result sets <code>truncated: true</code>. Each reviewer pair lists at most 50 disagreements without setting that flag; <code>disagreement_count</code> is the true total. Page through <code>screening_list</code> with <code>offset</code> for every screening decision, and copy the review file <code>reviews/&lt;review_id&gt;.db</code> from <code>CITEPROOF_MCP_HOME</code> for the complete record. Do not assume the missing rows were checked.</td>
               </tr>
             </tbody>
           </table>

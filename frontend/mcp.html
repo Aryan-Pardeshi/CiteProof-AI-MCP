@@ -79,6 +79,9 @@
   <link rel="stylesheet" href="/mcp.css?v=2.0.0">
 </head>
 <body class="docs-page mcp-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="logo-github" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+  </svg>
   <svg width="0" height="0" class="mcp-sprite" aria-hidden="true" focusable="false">
     <symbol id="logo-mcp" viewBox="0 0 24 24"><path d="M13.85 0a4.16 4.16 0 0 0-2.95 1.217L1.456 10.66a.835.835 0 0 0 0 1.18.835.835 0 0 0 1.18 0l9.442-9.442a2.49 2.49 0 0 1 3.541 0 2.49 2.49 0 0 1 0 3.541L8.59 12.97l-.1.1a.835.835 0 0 0 0 1.18.835.835 0 0 0 1.18 0l.1-.098 7.03-7.034a2.49 2.49 0 0 1 3.542 0l.049.05a2.49 2.49 0 0 1 0 3.54l-8.54 8.54a1.96 1.96 0 0 0 0 2.755l1.753 1.753a.835.835 0 0 0 1.18 0 .835.835 0 0 0 0-1.18l-1.753-1.753a.266.266 0 0 1 0-.394l8.54-8.54a4.185 4.185 0 0 0 0-5.9l-.05-.05a4.16 4.16 0 0 0-2.95-1.218c-.2 0-.401.02-.6.048a4.17 4.17 0 0 0-1.17-3.552A4.16 4.16 0 0 0 13.85 0m0 3.333a.84.84 0 0 0-.59.245L6.275 10.56a4.186 4.186 0 0 0 0 5.902 4.186 4.186 0 0 0 5.902 0L19.16 9.48a.835.835 0 0 0 0-1.18.835.835 0 0 0-1.18 0l-6.985 6.984a2.49 2.49 0 0 1-3.54 0 2.49 2.49 0 0 1 0-3.54l6.983-6.985a.835.835 0 0 0 0-1.18.84.84 0 0 0-.59-.245"/></symbol>
   </svg>
@@ -146,7 +149,7 @@
         </div>
 
         <h2 class="mcp-install-title">Get the CiteProof MCP</h2>
-        <p class="mcp-install-lede">One command. Runs on your computer. Works with Claude Science, Claude Desktop and Claude Code.</p>
+        <p class="mcp-install-lede">One command. Runs on your computer. Built for Claude Science; runs in any client that starts local stdio servers.</p>
 
         <div class="mcp-install-tabs" role="tablist" aria-label="Choose an install path">
           <button type="button" class="mcp-install-tab is-active" role="tab" id="mcp-tab-npx" aria-selected="true" aria-controls="mcp-install-panel" data-mcp-command="npx -y citeproof-mcp" data-mcp-label="Copy the npx install command">npx</button>
@@ -390,15 +393,15 @@
       <section class="mcp-section scroll-reveal" aria-labelledby="setup">
         <p class="mcp-section-eyebrow">Install the local server</p>
         <h2 id="setup">Set up CiteProof in Claude Science</h2>
-        <p>Claude Science is the tested path: Windows 11, Claude Science 0.1.67 and a local command connector. The short version is below; the <a href="/docs/mcp">MCP reference</a> lists the exact fields, the bundle script and the data-folder rules.</p>
+        <p>Claude Science is the tested path: a Local command connector that runs <code>npx -y citeproof-mcp</code>, checked on Windows 11 with Claude Science 0.1.70. The short version is below; the <a href="/docs/mcp">MCP reference</a> lists the exact fields, the bundle fallback and the data-folder rules.</p>
         <ol class="mcp-steps">
-          <li><strong>Create the local connector workspace.</strong> In Claude Science, open Customize, then Connectors, then Add connector, then Local command. Name it <code>citeproof</code> and save a placeholder command. The first start creates the workspace folder.</li>
-          <li><strong>Build the bundle into that folder.</strong> Run <code>MCP/scripts/build_claude_science_bundle.py</code> from a checkout of the MCP repository. The script refuses a folder that already holds unrelated files.</li>
-          <li><strong>Point the connector at the bundle.</strong> Edit the connector and replace the placeholder with the bundle's <code>run.py</code>. Use forward slashes in the command field.</li>
-          <li><strong>Set <code>CITEPROOF_MCP_HOME</code>.</strong> Keep review data inside the sandbox workspace. The default is <code>~/.citeproof-mcp</code> when the variable is unset.</li>
-          <li><strong>Reconnect and confirm 24 tools.</strong> The connector page should list every tool from <code>review_create</code> to <code>export_bundle</code>. Ask for one small tool call before a real review.</li>
+          <li><strong>Add a Local command connector.</strong> In Claude Science, open Customize, then Connectors, then Add connector, then Local command.</li>
+          <li><strong>Name it and enter the command.</strong> Use the name <code>citeproof</code> (lowercase letters, digits and hyphens only) and the command <code>npx -y citeproof-mcp</code>.</li>
+          <li><strong>Optional: set <code>CITEPROOF_MCP_HOME</code>.</strong> Keep review data in a folder you choose. The default is <code>~/.citeproof-mcp</code> when the variable is unset.</li>
+          <li><strong>Wait for the first start and confirm 24 tools.</strong> The first start downloads the package and can take about half a minute. The connector page should then list every tool from <code>review_create</code> to <code>export_bundle</code>. Ask for one small tool call before a real review.</li>
         </ol>
-        <div class="docs-code"><pre><code>python MCP/scripts/build_claude_science_bundle.py "C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/bundle"</code></pre></div>
+        <div class="docs-code"><pre><code>npx -y citeproof-mcp</code></pre></div>
+        <p>Claude Science's sandbox cannot reach <code>astral.sh</code>, so inside it the launcher runs the server it carries with the sandbox's own <code>python3</code> instead of downloading <code>uv</code>. If your Claude Science cannot start the npx command, build the bundle instead: <code>MCP/scripts/build_claude_science_bundle.py</code> copies the server into the connector workspace.</p>
         <p>Two other local paths are available. Both start the same server over stdio and use the same review format.</p>
         <div class="mcp-setup-grid">
           <div class="mcp-setup-card">
@@ -433,7 +436,7 @@
               <h3>Claude Science local command</h3>
               <span class="mcp-tag mcp-tag-primary">Tested</span>
             </div>
-            <p>The tested route. Build the bundle, add a local command connector, then point it at the bundle with forward slashes. The npx command above starts the same server if your client accepts a stdio command.</p>
+            <p>The recommended route, checked on Claude Science 0.1.70 on Windows 11: add a Local command connector named <code>citeproof</code> with the npx command. If your Claude Science cannot start it, build the bundle and point the connector at its <code>run.py</code> with forward slashes.</p>
             <div class="docs-code"><pre><code>python3 C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/bundle/run.py</code></pre></div>
             <p>Set the data folder so review files stay inside the sandbox:</p>
             <div class="docs-code"><pre><code>CITEPROOF_MCP_HOME=C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/data</code></pre></div>
@@ -452,6 +455,7 @@
               <tr><th scope="col">Client</th><th scope="col">Install path</th><th scope="col">Status</th></tr>
             </thead>
             <tbody>
+              <tr><td>Claude Science</td><td>Local command connector with <code>npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.70, 24 tools listed</td></tr>
               <tr><td>Claude Science</td><td>Local command connector with the built bundle</td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.67</td></tr>
               <tr><td>Claude Desktop</td><td><code>citeproof.mcpb</code> extension</td><td><span class="docs-status docs-status-new">New</span> Extension path, not yet broadly tested</td></tr>
               <tr><td>Claude Desktop</td><td>npx with a JSON <code>mcpServers</code> entry</td><td><span class="docs-status docs-status-new">New</span> Not yet tested for this release</td></tr>
@@ -467,7 +471,7 @@
       <section class="mcp-section scroll-reveal" aria-labelledby="next-steps">
         <p class="mcp-section-eyebrow">Go deeper</p>
         <h2 id="next-steps">Next steps and troubleshooting</h2>
-        <p>If Claude Science does not list all 24 tools, check the command path first. Backslashes are stripped by the connector form, and a bundle built into the wrong folder will start but expose nothing. Then check that <code>CITEPROOF_MCP_HOME</code> points at a writable folder inside the workspace.</p>
+        <p>If Claude Science does not list all 24 tools, read the connector's error text first. For the npx install, check that the command is exactly <code>npx -y citeproof-mcp</code> and that you run launcher 0.2.1 or newer. If you use the bundle fallback, backslashes are stripped by the connector form and a bundle built into the wrong folder will start but expose nothing. Then check that <code>CITEPROOF_MCP_HOME</code> points at a writable folder inside the workspace.</p>
         <ul>
           <li><a href="/docs/mcp">MCP tool reference</a>: all 24 tools, arguments, limits, result shapes and error handling.</li>
           <li><a href="/docs/troubleshooting">Troubleshooting</a>: connector, bundle, storage and tool-call problems.</li>

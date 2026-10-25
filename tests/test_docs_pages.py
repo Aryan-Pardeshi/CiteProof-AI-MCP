@@ -220,10 +220,12 @@ def test_internal_links_and_anchors_resolve(name: str) -> None:
             or (path / "index.html").is_file()
         ), f"{name} links to missing {href}"
         if fragment:
-            if path.is_dir():
-                destination = path / "index.html"
+            if path.is_file():
+                destination = path
+            elif path.with_suffix(".html").is_file():
+                destination = path.with_suffix(".html")
             else:
-                destination = path if path.is_file() else path.with_suffix(".html")
+                destination = path / "index.html"
             destination_ids = set(
                 re.findall(r'\sid="([^"]+)"', destination.read_text(encoding="utf-8"))
             )
@@ -376,8 +378,8 @@ def test_mcp_hub_hero_has_install_block_and_copy_controls() -> None:
     markup = text(HUB)
     assert "Get the CiteProof MCP" in parser.heading("h2")
     assert (
-        "One command. Runs on your computer. Works with Claude Science, "
-        "Claude Desktop and Claude Code."
+        "One command. Runs on your computer. Built for Claude Science; "
+        "runs in any client that starts local stdio servers."
     ) in markup
     assert 'id="mcp-install-command">npx -y citeproof-mcp</code>' in markup
     assert 'data-copy-target="mcp-install-command"' in markup
@@ -576,3 +578,17 @@ def test_docs_css_contains_drawer_and_outline_styles() -> None:
         assert selector in css, selector
     assert "@media (max-width: 960px)" in css
     assert "prefers-reduced-motion" in css
+
+
+def test_claude_science_npx_route_is_documented_as_tested() -> None:
+    for name in (HUB, "docs/mcp.html"):
+        markup = text(name)
+        assert "Claude Science 0.1.70" in markup, name
+        assert "npx -y citeproof-mcp" in markup, name
+
+
+def test_every_docs_page_defines_the_github_logo_symbol_it_uses() -> None:
+    for name in [*DOCS_PAGES, HUB]:
+        markup = text(name)
+        if 'href="#logo-github"' in markup:
+            assert 'id="logo-github"' in markup, name
