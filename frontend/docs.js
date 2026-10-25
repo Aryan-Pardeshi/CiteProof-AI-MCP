@@ -179,8 +179,9 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') {
+      var wasOpen = Boolean(sidebar && sidebar.classList.contains('is-open'));
       setDrawer(false);
-      if (menuToggle && sidebar && sidebar.classList.contains('is-open')) {
+      if (wasOpen && menuToggle) {
         menuToggle.focus();
       }
     }
@@ -247,6 +248,8 @@
         return;
       }
       event.preventDefault();
+      /* landing.js also handles arrow keys on every tablist; handle each key once. */
+      event.stopPropagation();
       activateInstallTab(installTabs[next], true);
     });
   });
