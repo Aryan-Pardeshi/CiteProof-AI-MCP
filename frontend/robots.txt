@@ -10,4 +10,4 @@ Disallow: /research/start
 Disallow: /research/approve
 
 # Sitemap location
-Sitemap: https://deepresearch.dev/sitemap.xml
+Sitemap: https://citeproof.top/sitemap.xml

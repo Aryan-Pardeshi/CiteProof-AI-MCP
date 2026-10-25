@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Self-host CiteProof with Docker or Python | CiteProof</title>
+  <meta name="description" content="Run the CiteProof research app on your own machine: clone the repository, configure your model and search keys, start it with Docker or Python, and see where data is stored.">
+  <meta name="application-name" content="CiteProof">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://citeproof.top/docs/self-hosting">
+
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="CiteProof">
+  <meta property="og:title" content="Self-host CiteProof with Docker or Python | CiteProof">
+  <meta property="og:description" content="Run the CiteProof research app on your own machine: clone the repository, configure your model and search keys, start it with Docker or Python, and see where data is stored.">
+  <meta property="og:url" content="https://citeproof.top/docs/self-hosting">
+  <meta property="og:image" content="https://citeproof.top/assets/og-image.png">
+  <meta property="og:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Self-host CiteProof with Docker or Python | CiteProof">
+  <meta name="twitter:description" content="Run the CiteProof research app on your own machine: clone the repository, configure your model and search keys, start it with Docker or Python, and see where data is stored.">
+  <meta name="twitter:image" content="https://citeproof.top/assets/og-image.png">
+  <meta name="twitter:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://citeproof.top/docs/self-hosting#article",
+        "headline": "Self-host CiteProof with Docker or Python",
+        "url": "https://citeproof.top/docs/self-hosting",
+        "description": "Run the CiteProof research app on your own machine: clone the repository, configure your model and search keys, start it with Docker or Python, and see where data is stored.",
+        "inLanguage": "en",
+        "isPartOf": {"@type": "WebSite", "name": "CiteProof", "url": "https://citeproof.top/"},
+        "breadcrumb": {"@id": "https://citeproof.top/docs/self-hosting#breadcrumb"}
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://citeproof.top/docs/self-hosting#breadcrumb",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://citeproof.top/"},
+          {"@type": "ListItem", "position": 2, "name": "Docs", "item": "https://citeproof.top/docs"},
+          {"@type": "ListItem", "position": 3, "name": "Self-hosting", "item": "https://citeproof.top/docs/self-hosting"}
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/tokens.css?v=5.0.0">
+  <link rel="stylesheet" href="/docs.css?v=1.0.0">
+  <link rel="stylesheet" href="/footer.css?v=1.0.0">
+</head>
+<body class="docs-page">
+  <a href="#docs-content" class="docs-skip">Skip to main content</a>
+
+  <header class="docs-header" role="banner">
+    <div class="docs-header-inner">
+      <a href="/" class="docs-brand" aria-label="CiteProof homepage">
+        <img src="/assets/logo.png" alt="CiteProof" width="26" height="26">
+        <span>CiteProof</span>
+        <span class="docs-brand-slash" aria-hidden="true">/</span>
+        <span class="docs-brand-label">Docs</span>
+      </a>
+      <nav class="docs-header-nav" aria-label="Site">
+        <a href="/docs" aria-current="page">Docs</a>
+        <a href="/mcp">Claude Science</a>
+        <a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </nav>
+      <div class="docs-header-actions">
+        <a href="/app" class="docs-btn docs-btn-primary">Open app</a>
+        <button type="button" class="docs-menu-toggle" id="docs-menu-toggle" aria-controls="docs-sidebar" aria-expanded="false">
+          <span class="docs-menu-toggle-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-overlay" id="docs-overlay"></div>
+
+  <div class="docs-shell">
+    <aside class="docs-sidebar" id="docs-sidebar" aria-label="Documentation navigation">
+      <div class="docs-search">
+        <label class="docs-search-label" for="docs-search-input">Search docs</label>
+        <input id="docs-search-input" type="search" placeholder="Search pages and headings" autocomplete="off" spellcheck="false" aria-describedby="docs-search-hint">
+        <span id="docs-search-hint" hidden>Press slash to focus search. Results link to pages and headings.</span>
+        <div class="docs-search-results" id="docs-search-results" aria-live="polite" hidden></div>
+      </div>
+
+      <nav class="docs-nav" aria-label="Documentation">
+        <div class="docs-nav-group">
+          <p class="docs-nav-heading">Getting started</p>
+          <ul>
+            <li><a href="/docs">Overview</a></li>
+            <li><a href="/docs/research-workflow">Research workflow</a></li>
+            <li><a href="/docs/self-hosting" aria-current="page">Self-hosting</a></li>
+          </ul>
+        </div>
+        <div class="docs-nav-group">
+          <p class="docs-nav-heading">Claude Science + MCP</p>
+          <ul>
+            <li><a href="/mcp">Setup hub</a></li>
+            <li><a href="/docs/mcp">MCP reference</a></li>
+          </ul>
+        </div>
+        <div class="docs-nav-group">
+          <p class="docs-nav-heading">Help</p>
+          <ul>
+            <li><a href="/docs/troubleshooting">Troubleshooting</a></li>
+            <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="docs-sidebar-footer">
+        <p>Missing something? <a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues" target="_blank" rel="noopener noreferrer">Open an issue</a>. The technical source of truth is the <a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/SPEC.md" target="_blank" rel="noopener noreferrer">MCP specification</a>.</p>
+      </div>
+    </aside>
+
+    <main class="docs-main" id="docs-content">
+      <nav class="docs-breadcrumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs">Docs</a></li>
+          <li><span aria-current="page">Self-hosting</span></li>
+        </ol>
+      </nav>
+
+      <article class="docs-article">
+        <h1>Self-hosting CiteProof</h1>
+        <p class="docs-lede">Run the CiteProof research app on your own machine with Docker or a local Python environment. You bring your own language-model endpoint and search keys. The MCP server needs none of this.</p>
+
+        <h2 id="requirements">Requirements</h2>
+        <ul>
+          <li>Docker with Compose, or Python 3.12.</li>
+          <li>An OpenAI-compatible language-model endpoint and its API key. The example configuration uses DeepSeek.</li>
+          <li>A <a href="https://tavily.com" target="_blank" rel="noopener noreferrer">Tavily</a> API key for DeepSearch web search.</li>
+          <li>A real email address for OpenAlex and NCBI. Both services ask for one so they can reach you if a client misbehaves.</li>
+        </ul>
+
+        <h2 id="configure">Clone and configure</h2>
+        <pre><code>git clone https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP.git
+cd CiteProof-AI-MCP
+cp .env.example .env</code></pre>
+        <p>Open <code>.env</code> and set at least these values:</p>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead>
+              <tr><th>Variable</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>LLM_API_KEY</code></td><td>Key for the language-model endpoint.</td></tr>
+              <tr><td><code>LLM_BASE_URL</code></td><td>Base URL of the OpenAI-compatible endpoint, for example <code>https://api.deepseek.com</code>.</td></tr>
+              <tr><td><code>TAVILY_API_KEY</code></td><td>Web search for DeepSearch.</td></tr>
+              <tr><td><code>OPENALEX_EMAIL</code></td><td>Contact address for OpenAlex, Crossref and Unpaywall requests.</td></tr>
+              <tr><td><code>NCBI_EMAIL</code> and <code>NCBI_TOOL_NAME</code></td><td>Both are required for PubMed. If either is missing, PubMed is skipped.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Optional keys raise rate limits or recover more full texts: <code>SEMANTIC_SCHOLAR_API_KEY</code>, <code>NCBI_API_KEY</code> (3 to 10 requests per second) and <code>CORE_API_KEY</code>. Set <code>ORCID_AUTHOR_ENRICHMENT=1</code> to canonicalise leading author names through ORCID.</p>
+        <div class="docs-callout docs-callout-warn">
+          <span class="docs-callout-title">Key handling</span>
+          <p><code>.env</code> is ignored by git. Never commit real keys. The configuration API rewrites <code>.env</code>, so it is off unless you opt in: set <code>ALLOW_OPEN_CONFIG_API=1</code> for local work only, or set <code>CONFIG_API_TOKEN</code> on any deployed copy.</p>
+        </div>
+
+        <h2 id="docker">Run with Docker</h2>
+        <pre><code>docker compose up -d --build</code></pre>
+        <p>Open <code>http://localhost:8000</code>. The container reads <code>.env</code> and keeps its data in a Docker volume.</p>
+
+        <h2 id="local">Run for development</h2>
+        <pre><code>python -m venv .venv
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn backend.app.main:app --reload --port 8000</code></pre>
+
+        <h2 id="data">Where your data lives</h2>
+        <p>Run state, the model cache and generated figures are written to local paths set in <code>.env</code>: <code>RESEARCH_DB_PATH</code> (default <code>./data/research_state.db</code>), <code>LLM_CACHE_PATH</code> and <code>FIGURES_DIR</code>. Nothing is sent anywhere except to the language-model and academic services you configured.</p>
+
+        <h2 id="limits">Time, cost and limits</h2>
+        <ul>
+          <li>DeepSearch takes about 5 to 10 minutes. Research Mode takes about 15 to 25 minutes and pauses at three review gates.</li>
+          <li>Cost depends on the model endpoint you choose. CiteProof sets no usage cap of its own in a self-hosted copy.</li>
+          <li>Academic APIs and model providers have their own rate limits and outages. A run that fails at one stage can usually be retried.</li>
+        </ul>
+
+        <h2 id="mcp-separate">The MCP server is separate</h2>
+        <p>CiteProof MCP runs on your computer with <code>npx -y citeproof-mcp</code> and needs no model key, search key or app server. See <a href="/mcp">the Claude Science setup page</a>.</p>
+      </article>
+
+      <nav class="docs-pager" aria-label="Documentation pages">
+        <a href="/docs/research-workflow">
+          <span>Previous</span>
+          Research workflow
+        </a>
+        <a href="/docs/troubleshooting" class="docs-pager-next">
+          <span>Next</span>
+          Troubleshooting
+        </a>
+      </nav>
+    </main>
+
+    <aside class="docs-toc" aria-label="On this page">
+      <p class="docs-toc-title">On this page</p>
+      <ul id="docs-toc-list"></ul>
+    </aside>
+  </div>
+
+  <footer role="contentinfo" class="cp-footer">
+    <div class="cp-container">
+      <div class="cp-footer-top scroll-reveal">
+        <!-- Left Block -->
+        <div class="cp-footer-left">
+          <h3 class="cp-footer-brand-heading">
+            <a href="/" class="cp-footer-brand" aria-label="CiteProof home">
+              <img src="/assets/logo.png" alt="" width="32" height="32" class="cp-footer-logo">
+              <span class="cp-footer-brand-name">CiteProof</span>
+            </a>
+          </h3>
+          <p class="cp-footer-tagline">Evidence-grounded literature reviews, with a human in the loop.</p>
+          <a href="/app" class="cp-footer-btn">Start a research run</a>
+          <p class="cp-footer-copyright">Copyright 2026 CiteProof. Logos belong to their owners.</p>
+        </div>
+
+
+        <!-- Right Block: Navigation Link Lists -->
+        <div class="cp-footer-right">
+          <div class="cp-footer-grid">
+            <nav class="cp-footer-nav" aria-label="Product">
+              <h3 class="cp-footer-heading">Product</h3>
+              <ul class="cp-footer-links">
+                <li><a href="/#example">Example output</a></li>
+                <li><a href="/#how-it-works">How it works</a></li>
+                <li><a href="/#evidence">Evidence checks</a></li>
+                <li><a href="/#modes">Modes</a></li>
+                <li><a href="/app">Open the app</a></li>
+                <li><a href="/docs">Documentation</a></li>
+                <li><a href="/docs/mcp">MCP reference</a></li>
+              </ul>
+            </nav>
+
+            <nav class="cp-footer-nav" aria-label="Research">
+              <h3 class="cp-footer-heading">Research</h3>
+              <ul class="cp-footer-links">
+                <li><a href="/app?mode=deepsearch">DeepSearch Mode</a></li>
+                <li><a href="/app?mode=researchmode">Research Mode</a></li>
+                <li><a href="/mcp">Claude Science MCP</a></li>
+                <li><a href="/#human-review">Human review gates</a></li>
+              </ul>
+            </nav>
+
+            <nav class="cp-footer-nav" aria-label="Sources">
+              <h3 class="cp-footer-heading">Sources</h3>
+              <ul class="cp-footer-links">
+                <li><a href="https://openalex.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/openalex.png" alt="" width="16" height="16" loading="lazy">OpenAlex</a></li>
+                <li><a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/semantic-scholar.png" alt="" width="16" height="16" loading="lazy">Semantic Scholar</a></li>
+                <li><a href="https://arxiv.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/arxiv.png" alt="" width="16" height="16" loading="lazy">arXiv</a></li>
+                <li><a href="https://unpaywall.org" target="_blank" rel="noopener noreferrer">Unpaywall</a></li>
+                <li><a href="https://europepmc.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/europe-pmc.png" alt="" width="16" height="16" loading="lazy">Europe PMC</a></li>
+              </ul>
+            </nav>
+
+            <nav class="cp-footer-nav" aria-label="Project">
+              <h3 class="cp-footer-heading">Project</h3>
+              <ul class="cp-footer-links">
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><svg width="16" height="16" aria-hidden="true"><use href="/#logo-github"></use></svg>GitHub</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer">Author</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues" target="_blank" rel="noopener noreferrer">Issues</a></li>
+              </ul>
+            </nav>
+  
+
+      </div>
+
+        </div>
+      </div>
+
+      <!-- Large Wordmark -->
+      <div class="cp-footer-wordmark-wrap">
+        <div class="cp-footer-wordmark scroll-reveal" aria-hidden="true">CiteProof</div>
+      </div>
+    </div>
+    <noscript>
+      <style>
+        .cp-footer .scroll-reveal {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style>
+    </noscript>
+  </footer>
+
+  <script src="/docs.js?v=1.1.0"></script>
+</body>
+</html>

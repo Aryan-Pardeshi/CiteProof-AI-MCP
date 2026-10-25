@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CiteProof MCP Tool Reference for Claude Science | CiteProof</title>
+  <meta name="description" content="Reference for all 24 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://citeproof.top/docs/mcp">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="CiteProof">
+  <meta property="og:title" content="CiteProof MCP Tool Reference for Claude Science | CiteProof">
+  <meta property="og:description" content="Reference for all 24 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
+  <meta property="og:url" content="https://citeproof.top/docs/mcp">
+  <meta property="og:image" content="https://citeproof.top/assets/og-image.png">
+  <meta property="og:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="CiteProof MCP Tool Reference for Claude Science | CiteProof">
+  <meta name="twitter:description" content="Reference for all 24 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
+  <meta name="twitter:image" content="https://citeproof.top/assets/og-image.png">
+  <meta name="twitter:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://citeproof.top/docs/mcp#article",
+        "headline": "CiteProof MCP tool reference for Claude Science",
+        "name": "CiteProof MCP tool reference",
+        "url": "https://citeproof.top/docs/mcp",
+        "description": "All 24 CiteProof MCP tools with arguments, limits, result shapes and realistic examples for Claude Science review workflows.",
+        "isPartOf": {"@id": "https://citeproof.top/docs#webpage"},
+        "inLanguage": "en"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://citeproof.top/docs/mcp#breadcrumb",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://citeproof.top/"},
+          {"@type": "ListItem", "position": 2, "name": "Docs", "item": "https://citeproof.top/docs"},
+          {"@type": "ListItem", "position": 3, "name": "Claude Science + MCP", "item": "https://citeproof.top/mcp"},
+          {"@type": "ListItem", "position": 4, "name": "Tool reference", "item": "https://citeproof.top/docs/mcp"}
+        ]
+      }
+    ]
+  }
+  </script>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/tokens.css?v=5.0.0">
+  <link rel="stylesheet" href="/footer.css?v=1.0.0">
+  <link rel="stylesheet" href="/docs.css?v=1.0.0">
+</head>
+<body class="docs-page">
+  <a href="#docs-content" class="docs-skip">Skip to main content</a>
+
+  <header class="docs-header" role="banner">
+    <div class="docs-header-inner">
+      <a href="/" class="docs-brand" aria-label="CiteProof homepage">
+        <img src="/assets/logo.png" alt="CiteProof" width="26" height="26">
+        <span>CiteProof</span>
+        <span class="docs-brand-slash" aria-hidden="true">/</span>
+        <span class="docs-brand-label">Docs</span>
+      </a>
+      <nav class="docs-header-nav" aria-label="Site">
+        <a href="/docs" aria-current="page">Docs</a>
+        <a href="/mcp">Claude Science</a>
+        <a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </nav>
+      <div class="docs-header-actions">
+        <a href="/app" class="docs-btn docs-btn-primary">Open app</a>
+        <button type="button" class="docs-menu-toggle" id="docs-menu-toggle" aria-controls="docs-sidebar" aria-expanded="false">
+          <span class="docs-menu-toggle-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-overlay" id="docs-overlay"></div>
+
+  <div class="docs-shell">
+    <aside class="docs-sidebar" id="docs-sidebar" aria-label="Documentation navigation">
+      <div class="docs-search">
+        <label class="docs-search-label" for="docs-search-input">Search docs</label>
+        <input id="docs-search-input" type="search" placeholder="Search pages and headings" autocomplete="off" spellcheck="false" aria-describedby="docs-search-hint">
+        <span id="docs-search-hint" hidden>Press slash to focus search. Results link to pages and headings.</span>
+        <div class="docs-search-results" id="docs-search-results" aria-live="polite" hidden></div>
+      </div>
+
+      <nav class="docs-nav" aria-label="Documentation">
+        <div class="docs-nav-group">
+          <p class="docs-nav-heading">Getting started</p>
+          <ul>
+            <li><a href="/docs">Overview</a></li>
+            <li><a href="/docs/research-workflow">Research workflow</a></li>
+            <li><a href="/docs/self-hosting">Self-hosting</a></li>
+          </ul>
+        </div>
+        <div class="docs-nav-group">
+          <p class="docs-nav-heading">Claude Science + MCP</p>
+          <ul>
+            <li><a href="/mcp">Setup hub</a></li>
+            <li><a href="/docs/mcp" aria-current="page">MCP reference</a></li>
+          </ul>
+        </div>
+        <div class="docs-nav-group">
+          <p class="docs-nav-heading">Help</p>
+          <ul>
+            <li><a href="/docs/troubleshooting">Troubleshooting</a></li>
+            <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="docs-sidebar-footer">
+        <p>Missing something? <a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues" target="_blank" rel="noopener noreferrer">Open an issue</a>. The technical source of truth is the <a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/SPEC.md" target="_blank" rel="noopener noreferrer">MCP specification</a>.</p>
+      </div>
+    </aside>
+
+    <main class="docs-main" id="docs-content">
+      <nav class="docs-breadcrumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs">Docs</a></li>
+          <li><a href="/mcp">Claude Science + MCP</a></li>
+          <li><span aria-current="page">Tool reference</span></li>
+        </ol>
+      </nav>
+
+      <article class="docs-article">
+        <p class="docs-eyebrow">Claude Science + MCP</p>
+        <h1>CiteProof MCP tool reference</h1>
+        <p class="docs-lede">This page documents all 24 tools in CiteProof MCP 0.1.0. Each entry lists the arguments, the limits the server enforces, and a realistic request and result. The tool names, fields and caps mirror the shipped schemas.</p>
+
+        <div class="docs-callout">
+          <p class="docs-callout-title">The division of labour</p>
+          <p>Claude Science searches, reads and writes. CiteProof MCP stores the protocol, PRISMA counts, screening decisions, extracted evidence, claims and risk-of-bias judgements, validates their shape, checks supplied quotes and computes the counts. The server contains no language model and does not search for papers.</p>
+        </div>
+
+        <h2 id="understand">How Claude Science and CiteProof MCP fit together</h2>
+        <p>A research agent can draft a systematic review, but the decisions behind the draft need a record: why a paper was excluded, which studies were included, what each study reported, and whether the cited sentence appears in the source. CiteProof MCP is that record.</p>
+        <div class="docs-role-grid">
+          <div class="docs-role">
+            <h3>Claude Science: research agent</h3>
+            <p>Runs searches, retrieves papers, reads full text, makes inclusion and exclusion judgements, extracts results, grades risk of bias and drafts the report. Every scientific judgement comes from the agent or its human reviewer.</p>
+          </div>
+          <div class="docs-role docs-role-audit">
+            <h3>CiteProof MCP: audit layer</h3>
+            <p>Stores those judgements in a local review file, rejects malformed input, checks that quotes appear in the supplied text, computes deduplication and PRISMA counts, and exports the audit trail.</p>
+          </div>
+        </div>
+        <p>The MCP server is a separate component of the CiteProof repository. It does not use the research app, its model endpoint or its search keys, and it needs no model API key.</p>
+
+        <h2 id="architecture">Architecture and data flow</h2>
+        <div class="mcp-flow">
+          <div>
+            <strong>1. Research agent</strong>
+            <span>Claude Science searches, reads and decides. It supplies each decision and, where required, the source text and quote.</span>
+          </div>
+          <div>
+            <strong>2. CiteProof MCP</strong>
+            <span>A local stdio server validates arguments, checks quotes, computes counts and writes one SQLite review file.</span>
+          </div>
+          <div>
+            <strong>3. Audit output</strong>
+            <span><code>review_status</code> reports gaps and next steps. <code>export_bundle</code> returns one Markdown or JSON document.</span>
+          </div>
+        </div>
+        <p>Each review is one SQLite file at <code>&lt;CITEPROOF_MCP_HOME&gt;/reviews/&lt;review_id&gt;.db</code>. Writes use one immediate transaction with a 30 second busy timeout, so concurrent calls wait instead of failing with a locked database. Read tools never change the record.</p>
+        <p>Every tool returns JSON with an <code>ok</code> boolean. A successful result adds tool-specific fields. A handled failure returns <code>{"ok": false, "error": "..."}</code>.</p>
+
+        <h2 id="does-not">What the server does not do</h2>
+        <ul>
+          <li>It does not search literature, query a database or open a paper. The agent supplies every record.</li>
+          <li>It does not contain an LLM and does not make inclusion, extraction, claim or risk-of-bias judgements.</li>
+          <li>It does not prove that a study is valid, that a claim is scientifically true or that a review is complete.</li>
+          <li>It does not turn a resolved DOI into evidence. A registered DOI only proves that the identifier exists; citation matching is called <em>resolved</em>, never <em>verified</em>.</li>
+          <li>It does not write exports to disk and does not upload review data. Exports are returned as text for the client to save.</li>
+          <li>claude.ai web custom connectors cannot start a local stdio process, so they are not supported.</li>
+        </ul>
+
+        <h2 id="connect">Connect CiteProof MCP to Claude Science</h2>
+        <p>Claude Science on Windows 11 is the tested path for this release (Claude Science 0.1.67, native sandbox). The connector runs inside a Windows sandbox that can read only its own workspace folder and Claude Science's bundled runtime. That is why the Claude Science install copies the server into the connector workspace instead of pointing at a project virtual environment.</p>
+
+        <h3 id="prerequisites">Prerequisites</h3>
+        <ul>
+          <li><strong>Claude Science</strong> with Connectors available under Customize.</li>
+          <li><strong>This repository</strong> checked out, for the bundle build script. The script uses only the Python standard library.</li>
+          <li><strong>No separate Python install for the connector.</strong> The bundled <code>python3</code> already provides <code>mcp</code>, <code>pydantic</code> and <code>httpx</code>.</li>
+          <li><strong>No model API key.</strong> The server makes no model calls.</li>
+        </ul>
+
+        <h3 id="claude-science-steps">Install the Claude Science connector</h3>
+        <ol class="docs-step-list">
+          <li><strong>Create the connector workspace.</strong> Open Customize, then Connectors, then Add connector, then Local command. Name it <code>citeproof</code> and use <code>python3 placeholder.py</code>. It will fail; the first start creates the workspace folder. If the folder does not appear, create it by hand in the next step.</li>
+          <li><strong>Find the workspace folder.</strong> On Windows it is <code>C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof</code>. The command <code>claude-science logs</code> also prints it as <code>cwd</code> in the sandbox policy lines.</li>
+          <li><strong>Build the bundle into that folder.</strong> Run the command below from the repository root. The script refuses a folder that holds other files, so passing the workspace folder by mistake cannot delete your <code>data</code> folder.</li>
+          <li><strong>Point the connector at the bundle.</strong> Remove the placeholder and add it again. Use forward slashes in the command; backslashes are stripped by the form.</li>
+          <li><strong>Set the data folder.</strong> Add the environment variable <code>CITEPROOF_MCP_HOME</code> so review files stay inside the sandbox workspace.</li>
+          <li><strong>Confirm 24 tools.</strong> The connector page should list every tool from <code>review_create</code> to <code>export_bundle</code>. Claude Science asks for approval before each tool run by default; set a tool to always allow only after you trust it.</li>
+        </ol>
+        <div class="docs-code"><pre><code>python MCP/scripts/build_claude_science_bundle.py "C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/bundle"</code></pre></div>
+        <div class="docs-code"><pre><code>python3 C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/bundle/run.py</code></pre></div>
+        <div class="docs-code"><pre><code>CITEPROOF_MCP_HOME=C:/Users/&lt;you&gt;/.claude-science/orgs/&lt;org-id&gt;/workspaces/_mcp-citeproof/data</code></pre></div>
+        <p>After a new release, run the build script again into the same bundle folder, then remove and re-add the connector with the same settings. The running process keeps old code in memory, and the Connectors page has no restart button when the connector is healthy. Review data in the <code>data</code> folder survives this.</p>
+
+        <h3 id="confirm-tools">Confirm the tools are available</h3>
+        <p>Ask the client to list its tools, or open the connector details. A healthy install shows 24 tools with the names on this page. If fewer appear, an older server process is still running: remove the connector and add it again.</p>
+        <p>The first useful call is <code>review_create</code>. If it succeeds, the server is running and can write to <code>CITEPROOF_MCP_HOME</code>.</p>
+
+        <h3 id="install-vs-use">Installing is not using</h3>
+        <p>A successful install only makes the tools callable. It does not create a review, run a search or add records. Ask Claude Science to follow the workflow on this page, or give it the instruction “use CiteProof MCP for the review record and call <code>review_status</code> before moving to the next stage”.</p>
+
+        <h3 id="desktop-extension">Claude Desktop extension and npx</h3>
+        <p>Two other local install paths are available. Both start the same server over stdio and use the same review format.</p>
+        <div class="docs-split">
+          <div class="docs-card">
+            <span class="docs-eyebrow">New</span>
+            <h3>Claude Desktop extension</h3>
+            <p>Download <code>citeproof.mcpb</code> from the latest release, then open it with Claude Desktop. The extension uses Claude Desktop's built-in Node and installs <code>uv</code> automatically if it is missing.</p>
+            <p><a class="docs-card-link" href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest" target="_blank" rel="noopener noreferrer">Open the latest release</a></p>
+          </div>
+          <div class="docs-card">
+            <span class="docs-eyebrow">New</span>
+            <h3>npx configuration</h3>
+            <p>For Claude Desktop, Claude Code and other JSON-config clients, add the entry below. Node 18 or newer is required.</p>
+            <div class="docs-code"><pre><code>{
+  "mcpServers": {
+    "citeproof": {
+      "command": "npx",
+      "args": ["-y", "citeproof-mcp"]
+    }
+  }
+}</code></pre></div>
+          </div>
+        </div>
+        <p>For Claude Code, the equivalent command is:</p>
+        <div class="docs-code"><pre><code>claude mcp add citeproof -- npx -y citeproof-mcp</code></pre></div>
+        <p>The launcher installs <code>uv</code> automatically when it is missing, and <code>uv</code> fetches Python 3.12 on first run. Set <code>CITEPROOF_NO_AUTO_INSTALL=1</code> to opt out and manage <code>uv</code> yourself. Review data goes to <code>~/.citeproof-mcp</code> unless <code>CITEPROOF_MCP_HOME</code> is set.</p>
+        <div class="docs-callout">
+          <p class="docs-callout-title">Use one data folder per client</p>
+          <p>If two clients should share reviews, give them the same <code>CITEPROOF_MCP_HOME</code>. Do not point two servers at the same review file and expect independent writers; writes serialise on the SQLite file.</p>
+        </div>
+
+        <h2 id="workflow">Follow the end-to-end review workflow</h2>
+        <p>The order matters because later tools read earlier records. Run <code>review_status</code> at any point to learn the current phase and what is missing.</p>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th scope="col">Stage</th>
+                <th scope="col">What to do</th>
+                <th scope="col">Tools</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1. Create or recover</td>
+                <td>Create the review file, or list existing reviews and reuse a <code>review_id</code>.</td>
+                <td><code>review_create</code>, <code>review_list</code></td>
+              </tr>
+              <tr>
+                <td>2. Protocol</td>
+                <td>Record the question, populations, outcomes, eligibility and search plan before screening.</td>
+                <td><code>protocol_record</code></td>
+              </tr>
+              <tr>
+                <td>3. Searches</td>
+                <td>Record one row per database, query and run date, with the hit count.</td>
+                <td><code>prisma_record_search</code></td>
+              </tr>
+              <tr>
+                <td>4. Deduplication</td>
+                <td>Deduplicate the complete exported set and record the count. A partial batch is analysed but not recorded.</td>
+                <td><code>dedup_papers</code>, <code>prisma_record_dedup</code></td>
+              </tr>
+              <tr>
+                <td>5. Screening</td>
+                <td>Screen titles and abstracts, then full text. Record each reviewer under their own name, compute agreement, then record consensus under <code>primary</code>.</td>
+                <td><code>screening_record</code>, <code>screening_record_many</code>, <code>screening_list</code>, <code>screening_agreement</code>, <code>prisma_status</code></td>
+              </tr>
+              <tr>
+                <td>6. Evidence</td>
+                <td>Record one row per paper and outcome with the quote and the source text used to check it.</td>
+                <td><code>evidence_record</code>, <code>evidence_table</code></td>
+              </tr>
+              <tr>
+                <td>7. Risk of bias</td>
+                <td>Record each domain for the chosen tool, then compute the overall judgement by the published rule.</td>
+                <td><code>rob_record</code>, <code>rob_summary</code></td>
+              </tr>
+              <tr>
+                <td>8. Claims</td>
+                <td>Record each key claim with a label, reason and quote, then find weak claims in the draft.</td>
+                <td><code>claim_record</code>, <code>claim_report</code></td>
+              </tr>
+              <tr>
+                <td>9. Citations</td>
+                <td>Check DOIs against Crossref and doi.org, and resolve author-year citations against the paper list.</td>
+                <td><code>verify_dois</code>, <code>resolve_citations</code>, <code>lint_prose</code></td>
+              </tr>
+              <tr>
+                <td>10. Report and export</td>
+                <td>Render the flow diagram, check the draft against the PRISMA checklist, then export the audit bundle.</td>
+                <td><code>prisma_flow_diagram</code>, <code>prisma_checklist</code>, <code>export_bundle</code>, <code>review_status</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>When you resume a review in a new session, call <code>review_status</code> first. It reports the phase, missing protocol fields, PRISMA completeness, reviewer names, included studies, extraction and risk-of-bias coverage, claim counts, DOI checks and source-text changes.</p>
+
+        <h2 id="tool-reference">Tool reference</h2>
+        <p>Arguments marked optional may be omitted. Every result also has <code>ok</code>. List results are capped at 200 items unless the entry says otherwise, and a cut list sets <code>truncated: true</code>. Paper references use the forms described in <a href="#paper-refs">Paper identity</a>; use the same form for a paper in every tool.</p>
+
+        <h2 id="tools-core">Review setup and core checks</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-review-create">review_create</h3>
+          <p>Creates a review file and returns its identifier. Every other tool needs that <code>review_id</code>.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>title</code></td><td>string</td><td>Yes</td><td>Maximum 500 characters.</td></tr>
+                <tr><td><code>question</code></td><td>string</td><td>Yes</td><td>Maximum 2,000 characters.</td></tr>
+                <tr><td><code>year_min</code></td><td>integer</td><td>No</td><td>1800 to 3000. Must not exceed <code>year_max</code>.</td></tr>
+                <tr><td><code>year_max</code></td><td>integer</td><td>No</td><td>1800 to 3000. Must not be below <code>year_min</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Limits.</strong> The id is generated by the server and matches <code>^[a-z0-9_-]{6,40}$</code>. Creating a review never reuses an existing file.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"title": "Teleradiology turnaround times: a systematic review", "question": "In adults, what is the effect of teleradiology on radiology report turnaround time?", "year_min": 2010, "year_max": 2026}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "review_id": "rev-9f3c2a1b", "next_step": "Record the protocol with protocol_record (PICO, eligibility criteria, databases, search strategy)."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-review-list">review_list</h3>
+          <p>Lists review files in the current <code>CITEPROOF_MCP_HOME</code>, newest first. Use it to recover an id when you resume work.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>limit</code></td><td>integer</td><td>No</td><td>Default 50. Capped at 200.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"limit": 10}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "reviews": [{"review_id": "rev-9f3c2a1b", "title": "Teleradiology turnaround times: a systematic review", "question": "In adults, what is the effect of teleradiology on radiology report turnaround time?", "created_at": "2026-10-25T09:14:00Z", "year_min": 2010, "year_max": 2026}], "count": 1}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-verify-dois">verify_dois</h3>
+          <p>Checks DOIs against Crossref and doi.org. This is the only tool that uses the network. With a <code>review_id</code>, the results are saved for <code>review_status</code> and <code>export_bundle</code>.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>dois</code></td><td>array of strings, or one string</td><td>Yes</td><td>Up to 100 DOIs. One string may separate DOIs with spaces, commas or new lines. <code>doi:</code> and doi.org prefixes are normalised; duplicates are removed case-insensitively.</td></tr>
+                <tr><td><code>review_id</code></td><td>string</td><td>No</td><td>Saves the result. The review must exist.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Status.</strong> <code>resolved</code> means the registry returned a record. <code>not_found</code> means doi.org returned 404. <code>unverified</code> means the registry could not be reached, so there is no verdict. <code>invalid</code> means the value was not DOI-shaped and was never sent. <code>retracted</code> is true or false only for Crossref records.</p>
+          <p><strong>Limits.</strong> Fixed HTTPS hosts, no redirect following, 15 second timeout. A redirect from doi.org is read as registered. No other host is contacted.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"dois": ["10.1136/bmj.n71", "https://doi.org/10.1371/journal.pmed.1003583"], "review_id": "rev-9f3c2a1b"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "results": [{"doi": "10.1136/bmj.n71", "input": "10.1136/bmj.n71", "status": "resolved", "title": "The PRISMA 2020 statement: an updated guideline for reporting systematic reviews", "year": 2021, "journal": "BMJ", "authors": "Page MJ, McKenzie JE, Bossuyt PM", "retracted": false, "registry": "crossref"}, {"doi": "10.1371/journal.pmed.1003583", "input": "https://doi.org/10.1371/journal.pmed.1003583", "status": "resolved", "title": "PRISMA 2020 explanation and elaboration", "year": 2021, "journal": "PLOS Medicine", "authors": "Page MJ, Moher D, Bossuyt PM", "retracted": false, "registry": "crossref"}], "summary": {"checked": 2, "resolved": 2, "not_found": 0, "unverified": 0, "invalid": 0, "retracted": 0}, "offline": false, "saved": true, "note": "Registry lookups only: a resolved DOI is real, which says nothing about whether it supports a claim."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-resolve-citations">resolve_citations</h3>
+          <p>Matches inline citations in a draft against a supplied paper list. It rewrites common author-year forms such as <code>Smith et al. (2020)</code>, <code>(Smith 2020)</code> and <code>(Smith, 2020a)</code> before matching. Groups that contain a DOI or URL are left alone.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>text</code></td><td>string</td><td>Yes</td><td>The draft or section to check.</td></tr>
+                <tr><td><code>papers</code></td><td>array of objects</td><td>Yes</td><td>Up to 2,000 papers. Each object has <code>title</code>, <code>authors</code> (list or <code>A; B</code>) and <code>year</code>; <code>doi</code> is optional.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Result notes.</strong> <code>resolved</code> excludes ambiguous matches. Numeric citations such as <code>[1]</code> are counted, not resolved. <code>orphan_papers</code> lists papers in the supplied list that the text never cites.</p>
+          <p><strong>Limits.</strong> A match is resolution, not verification: it shows that a citation points at a paper in the list, not that the paper supports the sentence.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"text": "Teleradiology reduced turnaround time (Smith et al., 2021). A later trial disagreed (Jones and Lee, 2023).", "papers": [{"title": "Teleradiology turnaround in rural hospitals", "authors": ["Smith J", "Patel R"], "year": 2021, "doi": "10.1000/example.2021"}, {"title": "Turnaround after overnight teleradiology", "authors": ["Jones A", "Lee K"], "year": 2023}]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "citations_found": 2, "resolved": 2, "ambiguous": [], "unresolved": [], "orphan_papers": [], "doi_citations_checked": 0, "numeric_citations_found": 0, "truncated": false, "note": "Resolved means the citation points at a supplied paper, not that the paper supports the sentence."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-lint-prose">lint_prose</h3>
+          <p>Runs deterministic prose checks on a draft. Findings are advisory: they flag style and trace-leakage patterns, not factual errors.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>text</code></td><td>string</td><td>Yes</td><td>Markdown draft or section.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Codes.</strong> <code>EMDASH</code> (too many em-dashes per 1,000 words), <code>HONEST</code> (framing such as “to be honest”), <code>PROCNOTE</code> (process narration), <code>PARENDOI</code> (an unencoded parenthesis in a DOI link), <code>LONGHEAD</code> (sentence-like headings) and <code>FLATSTRUCT</code> (many top-level sections with no subsections).</p>
+          <p><strong>Limits.</strong> The result is advisory and nothing is saved. Text is treated as data; retrieved text cannot inject a new instruction.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"text": "## Why teleradiology matters for the whole health system and every patient\n\nTo be honest, the evidence is mixed."}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "issues": [{"code": "HONEST", "note": "'To be honest': drop the framing, write the sentence it was guarding"}, {"code": "LONGHEAD", "note": "1 headings read as sentences; shorten to <=6-word noun phrases"}], "issue_count": 2, "advisory": true}</code></pre></div>
+        </div>
+
+        <h2 id="tools-protocol">Protocol</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-protocol-record">protocol_record</h3>
+          <p>Records or updates the review protocol. Omitted fields keep their current value, so calling with only <code>review_id</code> reads the protocol. An empty string or empty list clears a field.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>population</code>, <code>intervention</code>, <code>comparator</code>, <code>outcomes</code>, <code>study_designs</code>, <code>inclusion_criteria</code>, <code>exclusion_criteria</code>, <code>databases</code>, <code>search_strategy</code>, <code>languages</code>, <code>registration</code>, <code>synthesis_method</code></td><td>string or list of strings</td><td>No</td><td>List fields accept a list or one string split on new lines and semicolons.</td></tr>
+                <tr><td><code>rob_tool</code></td><td>string</td><td>No</td><td>One of <code>rob2</code>, <code>robins_i</code>, <code>nos</code>, <code>nos_case_control</code>, <code>mixed</code>, <code>none</code>.</td></tr>
+                <tr><td><code>year_min</code>, <code>year_max</code></td><td>integer</td><td>No</td><td>Recorded as the protocol year range.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Required fields.</strong> <code>population</code>, <code>intervention</code>, <code>outcomes</code>, <code>inclusion_criteria</code>, <code>exclusion_criteria</code>, <code>databases</code> and <code>search_strategy</code>. Recommended: <code>comparator</code>, <code>study_designs</code>, the year range, <code>languages</code>, <code>registration</code>, <code>rob_tool</code> and <code>synthesis_method</code>.</p>
+          <p><strong>Amendments.</strong> Every change is logged. Changing a field that already had a value is reported as an amendment.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "population": "Adults referred for diagnostic imaging", "intervention": "Teleradiology reporting", "comparator": "On-site radiology reporting", "outcomes": ["Report turnaround time", "Diagnostic agreement"], "inclusion_criteria": ["Primary comparative study", "Report turnaround time measured"], "exclusion_criteria": ["Conference abstract only", "No quantitative result"], "databases": ["PubMed", "Embase"], "search_strategy": "(\"teleradiology\" OR \"telemedicine\") AND \"turnaround time\"", "rob_tool": "robins_i"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "protocol": {"population": "Adults referred for diagnostic imaging", "intervention": "Teleradiology reporting", "rob_tool": "robins_i"}, "updated_fields": ["population", "intervention", "comparator", "outcomes", "inclusion_criteria", "exclusion_criteria", "databases", "search_strategy", "rob_tool"], "complete": true, "missing_required": [], "missing_recommended": ["study_designs", "year_range", "languages", "registration", "synthesis_method"], "amendments": 0, "next_step": "Protocol complete. Run the searches and log each one with prisma_record_search."}</code></pre></div>
+        </div>
+
+        <h2 id="tools-prisma">PRISMA and screening</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-prisma-record-search">prisma_record_search</h3>
+          <p>Records one database search. The same source, query and run date replaces the hit count instead of adding a row, so a retried call cannot double-count.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>source</code></td><td>string</td><td>Yes</td><td>Database name, matched case-insensitively.</td></tr>
+                <tr><td><code>query</code></td><td>string</td><td>Yes</td><td>The query as run.</td></tr>
+                <tr><td><code>date_run</code></td><td>string</td><td>Yes</td><td>A real <code>YYYY-MM-DD</code> date. A future date is a warning.</td></tr>
+                <tr><td><code>hits</code></td><td>integer</td><td>Yes</td><td>Records returned by this search.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Important.</strong> Adding a search or changing a hit count clears the review's deduplication record, because the old count belonged to a different set of records. The result says so in <code>warnings</code>. Re-sending the same search with the same hits changes nothing.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "source": "PubMed", "query": "teleradiology AND turnaround time", "date_run": "2026-10-20", "hits": 412}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "search_id": 1, "updated": false, "records_identified": 412, "records_by_source": {"PubMed": 412}, "searches_recorded": 1, "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-dedup-papers">dedup_papers</h3>
+          <p>Detects duplicate records in an exported set. Same paper means the same normalised DOI, the same PMID, or the same normalised title of at least 20 characters with the same year and first-author surname. Matching is transitive.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>papers</code></td><td>array of objects</td><td>Yes</td><td>Up to 10,000 exported records. Fields: <code>id</code>, <code>doi</code>, <code>pmid</code>, <code>title</code>, <code>year</code>, <code>authors</code> or <code>first_author</code>, <code>abstract</code>.</td></tr>
+                <tr><td><code>review_id</code></td><td>string</td><td>No</td><td>Records the count only when the call covers every exported record.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Recording rule.</strong> The count is saved only when <code>review_id</code> is given. A partial or batched call is saved too, with a warning that <code>records_checked</code> does not match the total hits from <code>prisma_record_search</code>. A count larger than the recorded hits is refused, and an earlier record is replaced.</p>
+          <p><strong>What is kept.</strong> The record with the most complete metadata is kept. Records are not merged, so copy any field you need from a removed record before discarding it. A same-title record with a different year or author is listed in <code>possible_duplicates</code> instead of merged.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "papers": [{"id": "p1", "doi": "10.1000/example.2021", "title": "Teleradiology turnaround in rural hospitals", "year": 2021, "first_author": "Smith"}, {"id": "p2", "pmid": "12345678", "title": "Teleradiology turnaround in rural hospitals", "year": 2021, "first_author": "Smith"}, {"id": "p3", "doi": "10.1000/example.2023", "title": "Turnaround after overnight teleradiology", "year": 2023, "first_author": "Jones"}]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "records_checked": 3, "unique_records": 2, "duplicates_removed": 1, "removed_indices": [1], "clusters": [{"kept_index": 0, "kept_id": "p1", "member_indices": [0, 1], "matched_on": ["title_year_author"], "conflicting_dois": false}], "possible_duplicates": [], "truncated": false, "recorded": true, "method": "dedup_papers: exact DOI, then PMID, then normalised title + year + first-author surname", "warnings": ["3 records were checked but the recorded searches total 412 hits; send every exported record so the PRISMA counts add up."]}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-prisma-record-dedup">prisma_record_dedup</h3>
+          <p>Records a whole-review duplicate count when deduplication was done elsewhere, for example in a reference manager. It replaces any existing dedup record.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>duplicates_removed</code></td><td>integer</td><td>Yes</td><td>Cannot exceed the recorded hits.</td></tr>
+                <tr><td><code>method</code></td><td>string</td><td>Yes</td><td>Short description of how duplicates were found.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "duplicates_removed": 87, "method": "Zotero duplicate merge, then manual title check"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "duplicates_removed": 87, "records_identified": 412, "records_after_dedup": 325, "method": "Zotero duplicate merge, then manual title check"}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-screening-record">screening_record</h3>
+          <p>Records one screening decision for one reviewer at one stage. Recording the same paper, stage and reviewer again updates the decision.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>Yes</td><td>DOI, <code>pmid:&lt;digits&gt;</code> or <code>title:&lt;title&gt;|&lt;year&gt;</code>.</td></tr>
+                <tr><td><code>stage</code></td><td>string</td><td>Yes</td><td><code>title_abstract</code> or <code>full_text</code>.</td></tr>
+                <tr><td><code>decision</code></td><td>string</td><td>Yes</td><td><code>include</code> or <code>exclude</code>; at full text also <code>not_retrieved</code>.</td></tr>
+                <tr><td><code>reason</code></td><td>string</td><td>For exclude</td><td>Maximum 300 characters.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>1 to 40 characters, stored lower-case. Default <code>primary</code>.</td></tr>
+                <tr><td><code>title</code></td><td>string</td><td>No</td><td>Optional paper title for display.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Warnings.</strong> A full-text decision without a title/abstract include is flagged, and so is a title/abstract exclusion of a paper that already has a full-text decision.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_ref": "10.1000/example.2021", "stage": "title_abstract", "decision": "include", "reviewer": "primary", "title": "Teleradiology turnaround in rural hospitals"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "updated": false, "paper_ref": "10.1000/example.2021", "stage": "title_abstract", "reviewer": "primary", "decision": "include", "stage_counts": {"include": 48, "exclude": 277, "not_retrieved": 0}, "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-screening-record-many">screening_record_many</h3>
+          <p>Records up to 500 screening decisions in one all-or-nothing call. An invalid item or a repeated paper, stage and reviewer returns an error with the item index, and nothing is written.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>decisions</code></td><td>array of objects</td><td>Yes</td><td>Up to 500 items with the same fields as <code>screening_record</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Limits.</strong> Repeated <code>(paper_ref, stage, reviewer)</code> triples are rejected instead of silently overwriting. Use <code>screening_record</code> to update one decision.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "decisions": [{"paper_ref": "10.1000/example.2023", "stage": "title_abstract", "decision": "exclude", "reason": "No turnaround time outcome", "reviewer": "secondary"}, {"paper_ref": "pmid:12345678", "stage": "title_abstract", "decision": "include", "reviewer": "secondary"}]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "count": 2, "inserted_count": 2, "updated_count": 0, "warning_count": 0, "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-screening-list">screening_list</h3>
+          <p>Lists screening decisions, newest first, with filters and offset paging.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>stage</code></td><td>string</td><td>No</td><td><code>title_abstract</code> or <code>full_text</code>.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Filter by reviewer name.</td></tr>
+                <tr><td><code>decision</code></td><td>string</td><td>No</td><td><code>include</code>, <code>exclude</code> or <code>not_retrieved</code>.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>No</td><td>Filter by one paper.</td></tr>
+                <tr><td><code>limit</code></td><td>integer</td><td>No</td><td>Default 200, capped at 200.</td></tr>
+                <tr><td><code>offset</code></td><td>integer</td><td>No</td><td>Default 0.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "full_text", "reviewer": "primary", "limit": 50}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "records": [{"paper_ref": "10.1000/example.2021", "stage": "full_text", "reviewer": "primary", "decision": "include", "reason": null, "title": "Teleradiology turnaround in rural hospitals", "updated_at": "2026-10-24T16:02:00Z"}], "count": 1, "total": 48, "truncated": false, "next_offset": 1}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-screening-agreement">screening_agreement</h3>
+          <p>Computes Cohen's kappa between two reviewers at one stage. Only papers both reviewers decided with <code>include</code> or <code>exclude</code> enter the calculation; <code>not_retrieved</code> pairs are counted in <code>not_judged</code>.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>stage</code></td><td>string</td><td>Yes</td><td><code>title_abstract</code> or <code>full_text</code>.</td></tr>
+                <tr><td><code>reviewer_a</code></td><td>string</td><td>Yes</td><td>First reviewer name.</td></tr>
+                <tr><td><code>reviewer_b</code></td><td>string</td><td>Yes</td><td>Second reviewer name.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Result notes.</strong> <code>kappa</code> is null and the interpretation is <code>undefined</code> when the reviewers share no decisions or expected agreement is 1. Interpretation uses the Landis and Koch bands.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "reviewer_a": "primary", "reviewer_b": "secondary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "reviewer_a": "primary", "reviewer_b": "secondary", "shared": 20, "agree": 17, "table": {"both_include": 6, "a_include_b_exclude": 1, "a_exclude_b_include": 2, "both_exclude": 11}, "po": 0.85, "pe": 0.53, "kappa": 0.681, "interpretation": "substantial", "disagreement_count": 3, "disagreements": [{"paper_ref": "10.1000/example.2023", "title": "Turnaround after overnight teleradiology", "a": "include", "b": "exclude", "reason_a": null, "reason_b": "No turnaround time outcome"}, {"paper_ref": "10.1000/example.2024", "title": "Diagnostic accuracy of remote reporting", "a": "exclude", "b": "include", "reason_a": "Wrong population", "reason_b": null}, {"paper_ref": "10.1000/example.2025", "title": "Cost of teleradiology in rural hospitals", "a": "exclude", "b": "include", "reason_a": "No turnaround time outcome", "reason_b": null}], "truncated": false, "only_a": 2, "only_b": 1, "not_judged": 4, "next_step": "Resolve the 3 disagreement(s) and record each consensus decision with reviewer='primary'."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-prisma-status">prisma_status</h3>
+          <p>Computes PRISMA 2020 counts from the search log, the dedup record and one reviewer's decisions. Run it before writing the flow section and before export.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Defaults to <code>primary</code>, else the only reviewer. Several reviewers with no <code>primary</code> is an error.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Counts.</strong> Reports sought are title/abstract includes. Reports not retrieved are full-text <code>not_retrieved</code>. Assessed is full-text include plus exclude. A report sought with no full-text decision is <code>full_text_pending</code>.</p>
+          <p><strong>Invariants.</strong> The server checks that full-text decisions exist only for title/abstract includes, so sought equals assessed plus not retrieved plus pending. <code>complete</code> is true when searches and dedup are recorded, every record after dedup has a title/abstract decision, no full-text decision is pending and the invariants hold.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "primary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "reviewer_used": "primary", "records_identified": 412, "records_by_source": {"PubMed": 412}, "duplicates_removed": 87, "records_after_dedup": 325, "records_screened": 325, "excluded_title_abstract": 277, "full_text_requested": 48, "full_text_unavailable": 3, "full_text_assessed": 45, "excluded_full_text": 33, "studies_included": 12, "exclusion_reasons": {"Wrong population": 14, "No turnaround outcome": 11, "No comparator": 8}, "exclusion_reasons_title_abstract": {"Wrong population": 160, "No turnaround outcome": 117}, "full_text_pending": 0, "records_awaiting_screening": 0, "full_text_without_title_abstract_include": [], "searches_recorded": 1, "dedup_recorded": true, "dedup_method": "Zotero duplicate merge, then manual title check", "invariants_valid": true, "invariant_errors": [], "warnings": [], "complete": true, "next_steps": ["PRISMA counts are complete; render them with prisma_flow_diagram."]}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-prisma-flow-diagram">prisma_flow_diagram</h3>
+          <p>Renders the recorded PRISMA counts as a flow diagram. Output is text only and agent-supplied text is escaped for the chosen format.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>format</code></td><td>string</td><td>No</td><td><code>mermaid</code> (default), <code>svg</code> or <code>markdown</code>.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Reviewer whose counts are used.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Notes.</strong> The diagram shows the top full-text exclusion reasons and adds a pending box when decisions are incomplete. It is a rendering of recorded counts, not a new calculation.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "mermaid", "reviewer": "primary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "mermaid", "diagram": "flowchart TD\n    subgraph Identification\n        id1[\"Records identified from databases (n = 412)&lt;br/&gt;PubMed: 412\"]\n        id2[\"Duplicates removed (n = 87)\"]\n        id3[\"Records after deduplication (n = 325)\"]\n        id1 --&gt; id2\n        id2 --&gt; id3\n    end\n    subgraph Screening\n        sc1[\"Records screened (title/abstract) (n = 325)\"]\n        sc_exc[\"Records excluded (title/abstract) (n = 277)\"]\n        sc2[\"Reports sought for retrieval (n = 48)\"]\n        sc_unav[\"Reports not retrieved (n = 3)\"]\n        sc3[\"Reports assessed for eligibility (full-text) (n = 45)\"]\n        sc_ft_exc[\"Reports excluded (full-text) (n = 33)&lt;br/&gt;Wrong population: 14&lt;br/&gt;No turnaround outcome: 11&lt;br/&gt;No comparator: 8\"]\n        id3 --&gt; sc1\n        sc1 --&gt; sc_exc\n        sc1 --&gt; sc2\n        sc2 --&gt; sc_unav\n        sc2 --&gt; sc3\n        sc3 --&gt; sc_ft_exc\n    end\n    subgraph Included\n        inc[\"Studies included in review (n = 12)\"]\n        sc3 --&gt; inc\n    end", "complete": true, "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-prisma-checklist">prisma_checklist</h3>
+          <p>Checks a draft against the 27 PRISMA 2020 items with a keyword match, and compares sentences that state PRISMA counts with the recorded counts. Nothing is saved.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>report_text</code></td><td>string</td><td>Yes</td><td>The draft to check.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Reviewer whose counts are compared.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>What it proves.</strong> The keyword check shows whether an item is mentioned, not whether it is reported well. Item 1 checks whether the first line contains “systematic review” or “meta-analysis”. Count statements are compared within tolerance and returned with a snippet.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "report_text": "This systematic review examined teleradiology. Of 412 records identified, 12 studies were included.", "reviewer": "primary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "found_count": 2, "total": 27, "items": [{"item": 1, "section": "Title", "topic": "Title identifies the report as a systematic review", "found": true, "matched": "systematic review"}, {"item": 2, "section": "Abstract", "topic": "Abstract", "found": false, "matched": null}, {"item": 3, "section": "Introduction", "topic": "Rationale", "found": false, "matched": null}, {"item": 4, "section": "Introduction", "topic": "Objectives", "found": false, "matched": null}, {"item": 5, "section": "Methods", "topic": "Eligibility criteria", "found": false, "matched": null}, {"item": 6, "section": "Methods", "topic": "Information sources", "found": false, "matched": null}, {"item": 7, "section": "Methods", "topic": "Search strategy", "found": false, "matched": null}, {"item": 8, "section": "Methods", "topic": "Selection process", "found": false, "matched": null}, {"item": 9, "section": "Methods", "topic": "Data collection process", "found": false, "matched": null}, {"item": 10, "section": "Methods", "topic": "Data items", "found": false, "matched": null}, {"item": 11, "section": "Methods", "topic": "Study risk of bias assessment", "found": false, "matched": null}, {"item": 12, "section": "Methods", "topic": "Effect measures", "found": false, "matched": null}, {"item": 13, "section": "Methods", "topic": "Synthesis methods", "found": false, "matched": null}, {"item": 14, "section": "Methods", "topic": "Reporting bias assessment", "found": false, "matched": null}, {"item": 15, "section": "Methods", "topic": "Certainty assessment", "found": false, "matched": null}, {"item": 16, "section": "Results", "topic": "Study selection", "found": true, "matched": "records identified"}, {"item": 17, "section": "Results", "topic": "Study characteristics", "found": false, "matched": null}, {"item": 18, "section": "Results", "topic": "Risk of bias in studies", "found": false, "matched": null}, {"item": 19, "section": "Results", "topic": "Results of individual studies", "found": false, "matched": null}, {"item": 20, "section": "Results", "topic": "Results of syntheses", "found": false, "matched": null}, {"item": 21, "section": "Results", "topic": "Reporting biases", "found": false, "matched": null}, {"item": 22, "section": "Results", "topic": "Certainty of evidence", "found": false, "matched": null}, {"item": 23, "section": "Discussion", "topic": "Discussion (interpretation, limitations, implications)", "found": false, "matched": null}, {"item": 24, "section": "Other information", "topic": "Registration and protocol", "found": false, "matched": null}, {"item": 25, "section": "Other information", "topic": "Support", "found": false, "matched": null}, {"item": 26, "section": "Other information", "topic": "Competing interests", "found": false, "matched": null}, {"item": 27, "section": "Other information", "topic": "Availability of data, code and other materials", "found": false, "matched": null}], "missing": ["Abstract", "Rationale", "Objectives", "Eligibility criteria", "Information sources", "Search strategy", "Selection process", "Data collection process", "Data items", "Study risk of bias assessment", "Effect measures", "Synthesis methods", "Reporting bias assessment", "Certainty assessment", "Study characteristics", "Risk of bias in studies", "Results of individual studies", "Results of syntheses", "Reporting biases", "Certainty of evidence", "Discussion (interpretation, limitations, implications)", "Registration and protocol", "Support", "Competing interests", "Availability of data, code and other materials"], "numbers": [{"field": "records_identified", "reported": 412, "recorded": 412, "matches": true, "snippet": "ew examined teleradiology. Of 412 records identified, 12 studies were included."}, {"field": "studies_included", "reported": 12, "recorded": 12, "matches": true, "snippet": "y. Of 412 records identified, 12 studies were included."}], "number_mismatches": 0, "numbers_note": null, "note": "Keyword check of the report text. It shows which items are mentioned, not whether they are reported well."}</code></pre></div>
+        </div>
+
+        <h2 id="tools-evidence">Evidence extraction</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-evidence-record">evidence_record</h3>
+          <p>Records one evidence row per paper and outcome. The server checks that the quote appears in <code>source_text</code> and that every number entered is written in the quote. Only the length and SHA-256 of <code>source_text</code> are stored.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>Yes</td><td>Canonical paper reference.</td></tr>
+                <tr><td><code>outcome</code></td><td>string</td><td>Yes</td><td>Outcome name. One row per paper and outcome.</td></tr>
+                <tr><td><code>study_design</code></td><td>string</td><td>Yes</td><td>Design as reported.</td></tr>
+                <tr><td><code>quote</code></td><td>string</td><td>Yes</td><td>Passage that contains the extracted numbers.</td></tr>
+                <tr><td><code>source_text</code></td><td>string</td><td>Yes</td><td>Text used to check the quote. Must not be empty.</td></tr>
+                <tr><td><code>sample_size</code>, <code>population</code>, <code>intervention</code>, <code>comparator</code>, <code>timepoint</code>, <code>effect_measure</code>, <code>effect_estimate</code>, <code>ci_lower</code>, <code>ci_upper</code>, <code>ci_level</code>, <code>notes</code></td><td>varies</td><td>No</td><td><code>effect_measure</code> is <code>rr</code>, <code>or</code>, <code>hr</code>, <code>irr</code>, <code>rom</code>, <code>rd</code>, <code>md</code>, <code>smd</code> or <code>other</code>; names such as “risk ratio” are accepted.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Refused input.</strong> An estimate without a measure, only one CI limit, lower above upper, an estimate outside its CI, a ratio measure at or below zero, a non-finite number, or an empty <code>source_text</code>. A quote that does not verify is stored and flagged, not rejected.</p>
+          <p><strong>Warnings.</strong> A paper that is not among the full-text included studies is flagged. A changed source-text hash is reported as <code>source_changed</code>.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_ref": "10.1000/example.2021", "outcome": "Report turnaround time", "study_design": "Retrospective cohort", "quote": "Median turnaround time fell by 24 minutes (95% CI 31 to 17 minutes less; n=1,204).", "source_text": "Results: Median turnaround time fell by 24 minutes (95% CI 31 to 17 minutes less; n=1,204).", "sample_size": 1204, "effect_measure": "md", "effect_estimate": -24, "ci_lower": -31, "ci_upper": -17, "ci_level": 95}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "updated": false, "paper_ref": "10.1000/example.2021", "outcome": "Report turnaround time", "quote_verified": true, "quote_note": "Quote found in the supplied source text.", "numbers_not_in_quote": [], "effect": "MD -24 (95% CI -31 to -17)", "rows_for_paper": 1, "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-evidence-table">evidence_table</h3>
+          <p>Returns the whole evidence table as Markdown, CSV or JSON. Coverage counters show included studies with no row and rows whose quote or numbers did not verify.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>format</code></td><td>string</td><td>No</td><td><code>markdown</code> (default), <code>csv</code> or <code>json</code>.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>No</td><td>Limit the table to one paper.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>CSV safety.</strong> A text cell that starts with <code>=</code>, <code>+</code>, <code>-</code> or <code>@</code> is prefixed with an apostrophe so a spreadsheet does not execute it.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "row_count": 1, "table": "| Study | Design | N | Population | Intervention | Comparator | Outcome | Effect | Source quote | Checks |\n|---|---|---|---|---|---|---|---|---|---|\n| 10.1000/example.2021 | Retrospective cohort | 1204 | Adults referred for imaging | Teleradiology | On-site reporting | Report turnaround time | MD -24 (95% CI -31 to -17) | Median turnaround time fell by 24 minutes | quote verified |", "truncated": false, "included_without_rows": ["10.1000/example.2024"], "included_without_rows_count": 1, "rows_quote_not_verified": 0, "rows_numbers_not_in_quote": 0}</code></pre></div>
+        </div>
+
+        <h2 id="tools-claims">Claims and risk of bias</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-claim-record">claim_record</h3>
+          <p>Records whether a key claim is supported by one paper. The agent supplies the label and reason; the server stores the judgement and checks the quote against the supplied source text. A claim is upserted on normalised claim text plus paper reference.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>claim_text</code></td><td>string</td><td>Yes</td><td>The sentence or claim being judged.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>Yes</td><td>The paper that should support it.</td></tr>
+                <tr><td><code>label</code></td><td>string</td><td>Yes</td><td><code>supported</code>, <code>partial</code> or <code>unsupported</code>.</td></tr>
+                <tr><td><code>reason</code></td><td>string</td><td>Yes</td><td>Why the label applies.</td></tr>
+                <tr><td><code>source_text</code></td><td>string</td><td>For supported and partial</td><td>Checked, then stored only as length and SHA-256.</td></tr>
+                <tr><td><code>quote</code></td><td>string</td><td>For supported and partial</td><td>Must appear in <code>source_text</code> to verify.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Note.</strong> <code>quote_verified</code> means the quote appears in the supplied text. It does not mean the passage supports the claim; that is the agent's recorded judgement.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "claim_text": "Teleradiology reduced median report turnaround time by 24 minutes.", "paper_ref": "10.1000/example.2021", "label": "supported", "reason": "The reported median difference matches the claim.", "quote": "Median turnaround time fell from 42 minutes to 18 minutes", "source_text": "Results: Median turnaround time fell from 42 minutes to 18 minutes (n=1,204)."}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "claim_id": 7, "updated": false, "quote_verified": true, "quote_note": "Quote found in the supplied source text.", "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-claim-report">claim_report</h3>
+          <p>Summarises the claim log. With <code>report_text</code>, it also finds weak claims whose text appears verbatim in the draft.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>report_text</code></td><td>string</td><td>No</td><td>The draft in which to find weak claims.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Fields.</strong> <code>suspicious</code> lists supported or partial claims whose quote did not verify. <code>unsupported</code> lists unsupported claims. <code>weak_claims_in_report</code> is null when no report text is supplied.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "report_text": "Teleradiology reduced median report turnaround time by 24 minutes."}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "total": 9, "counts_by_label": {"supported": 7, "partial": 1, "unsupported": 1}, "quotes_not_verified": 1, "suspicious_count": 1, "suspicious": [{"claim_id": 8, "claim_text": "Teleradiology improved diagnostic accuracy.", "paper_ref": "10.1000/example.2024", "label": "partial", "reason": "Only sensitivity was reported; specificity was not."}], "unsupported_count": 1, "unsupported": [{"claim_id": 9, "claim_text": "Teleradiology is cost saving in every setting.", "paper_ref": "10.1000/example.2025", "label": "unsupported", "reason": "No cost outcome was reported."}], "weak_claims_in_report": [{"claim_id": 9, "claim_text": "Teleradiology is cost saving in every setting.", "paper_ref": "10.1000/example.2025", "label": "unsupported", "reason": "No cost outcome was reported."}], "truncated": false, "method": "Labels were assigned by the calling agent. The server checked only that each quote appears in the supplied source text. This is not independent verification.", "next_step": "Remove or rewrite the claims in weak_claims_in_report, or record a verified quote for them."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-rob-record">rob_record</h3>
+          <p>Records one risk-of-bias domain judgement for one paper. The tool and domain sets are fixed, a paper cannot mix tools, and a quote is required except for a few cases.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>Yes</td><td>Included study.</td></tr>
+                <tr><td><code>tool</code></td><td>string</td><td>Yes</td><td><code>rob2</code>, <code>robins_i</code>, <code>nos</code> (cohort) or <code>nos_case_control</code>.</td></tr>
+                <tr><td><code>domain</code></td><td>string</td><td>Yes</td><td>RoB 2 D1–D5, ROBINS-I D1–D7 (aliases accepted), NOS selection / comparability / outcome or exposure, or <code>overall</code> for RoB 2 and ROBINS-I.</td></tr>
+                <tr><td><code>judgement</code></td><td>string or integer</td><td>Yes</td><td>RoB 2: <code>low</code>, <code>some_concerns</code>, <code>high</code>. ROBINS-I: <code>low</code>, <code>moderate</code>, <code>serious</code>, <code>critical</code>, <code>no_information</code>. NOS: star counts, selection 0–4, comparability 0–2, outcome or exposure 0–3.</td></tr>
+                <tr><td><code>quote</code></td><td>string</td><td>Usually</td><td>Required except for <code>overall</code>, ROBINS-I <code>no_information</code> and 0 stars.</td></tr>
+                <tr><td><code>source_text</code></td><td>string</td><td>Usually</td><td>Text used to check the quote.</td></tr>
+                <tr><td><code>rationale</code></td><td>string</td><td>For overall</td><td>Required for an <code>overall</code> judgement.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rule.</strong> Recording the same domain again updates it. <code>domains_missing</code> shows what remains before <code>rob_summary</code> can compute an overall judgement.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_ref": "10.1000/example.2021", "tool": "robins_i", "domain": "D2", "judgement": "moderate", "quote": "Consecutive cases were identified from the radiology information system.", "source_text": "Methods: Consecutive cases were identified from the radiology information system."}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "updated": false, "paper_ref": "10.1000/example.2021", "tool": "robins_i", "domain": "D2", "judgement": "moderate", "quote_verified": true, "quote_note": "Quote found in the supplied source text.", "domains_recorded": 2, "domains_missing": ["D3", "D4", "D5", "D6", "D7"], "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-rob-summary">rob_summary</h3>
+          <p>Computes the overall risk-of-bias judgement for each paper from its recorded domains and the published rule, then returns a traffic-light table and counts by overall judgement.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> RoB 2: any high gives high, else any some concerns gives some concerns, else low. ROBINS-I: any critical gives critical, else any serious gives serious, else any no information gives no information unless a recorded overall is used, else the worst of moderate and low. NOS uses the AHRQ thresholds: good, fair or poor. A paper is <code>incomplete</code> while a domain is missing.</p>
+          <p><strong>Recorded overall.</strong> A reviewer's own <code>overall</code> is used only where the rule allows it. A recorded overall outside the rule is ignored with a note.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "papers": [{"paper_ref": "10.1000/example.2021", "tool": "robins_i", "domains": {"D1": "low", "D2": "moderate", "D3": "low", "D4": "low", "D5": "low", "D6": "low", "D7": "low"}, "missing_domains": [], "overall": "moderate", "overall_by_rule": "moderate", "overall_recorded": null, "notes": []}], "table": [{"paper_ref": "10.1000/example.2021", "D1": "low", "D2": "moderate", "overall": "moderate"}], "counts_by_overall": {"moderate": 1}, "papers_with_unverified_quotes": [], "overall_rule": "ROBINS-I: critical > serious > no_information > moderate > low", "truncated": false}</code></pre></div>
+        </div>
+
+        <h2 id="tools-review">Whole-review views and export</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-review-status">review_status</h3>
+          <p>Reports the current phase, what is complete and what is missing. It is read only and is the right first call when you resume a review.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Reviewer used for screening and PRISMA coverage.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Coverage checks.</strong> Included studies without evidence rows or risk-of-bias records, evidence rows for papers not included, included DOIs not yet checked, retracted or non-resolving DOIs, single-reviewer screening and source-text changes. Paper lists show the first 20 references.</p>
+          <p><strong>Phase.</strong> The first unfinished step of protocol, searching, deduplication, title/abstract screening, full-text screening, data extraction, risk of bias, claim checking or reporting.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "primary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "review": {"review_id": "rev-9f3c2a1b", "title": "Teleradiology turnaround times: a systematic review", "question": "In adults, what is the effect of teleradiology on radiology report turnaround time?", "year_min": 2010, "year_max": 2026, "created_at": "2026-10-25T09:14:00Z"}, "phase": "reporting", "protocol": {"complete": true, "missing_required": [], "missing_recommended": []}, "prisma": {"reviewer_used": "primary", "records_identified": 412, "duplicates_removed": 87, "records_after_dedup": 325, "records_screened": 325, "records_awaiting_screening": 0, "full_text_requested": 48, "full_text_unavailable": 3, "full_text_pending": 0, "full_text_assessed": 45, "studies_included": 12, "invariants_valid": true, "complete": true}, "screening_reviewers": ["primary", "secondary"], "included_studies": 12, "extraction": {"rows": 12, "studies_with_rows": 12, "included_without_rows_count": 0, "included_without_rows": [], "rows_quote_not_verified": 0, "rows_numbers_not_in_quote": 0}, "risk_of_bias": {"papers_assessed": 12, "counts_by_overall": {"low": 3, "moderate": 7, "serious": 2}, "included_without_rob_count": 0, "included_without_rob": [], "incomplete": [], "papers_with_unverified_quotes": []}, "claims": {"total": 9, "counts_by_label": {"supported": 7, "partial": 1, "unsupported": 1}, "quotes_not_verified": 1, "suspicious_count": 1, "unsupported_count": 1}, "dois": {"checked": 12, "retracted": [], "not_found": [], "unverified": 0, "included_dois_unchecked": 0}, "source_texts": {"distinct_by_paper": 12, "changes_count": 0}, "warnings": ["Claim 9 is unsupported but appears in the draft."], "next_steps": ["Revise the draft claim flagged by claim_report.", "Export the audit bundle."]}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-export-bundle">export_bundle</h3>
+          <p>Returns one document with the review record: metadata, protocol and amendments, search log, dedup, PRISMA counts and invariants with a diagram, screening decisions, agreement, evidence, risk of bias, claims, DOI checks and source-text changes.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>format</code></td><td>string</td><td>No</td><td><code>markdown</code> (default) or <code>json</code>.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Reviewer used for agreement and PRISMA coverage.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Limits.</strong> At most 5,000 screening decisions and 5,000 claims. Source texts are never included. Nothing is written to disk; the client receives the text and may save it.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown", "reviewer": "primary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "content": "# Teleradiology turnaround times: a systematic review\n\n## Protocol\n...\n\n## PRISMA 2020 flow\n...", "chars": 28410, "suggested_filename": "rev-9f3c2a1b-audit-bundle.md", "truncated": false, "phase": "reporting"}</code></pre></div>
+        </div>
+
+        <h2 id="limits">Limits and validation rules</h2>
+
+        <h3 id="paper-refs">Paper identity</h3>
+        <p>Every <code>paper_ref</code> is stored in a canonical form. Accepted inputs are a DOI (lower-cased, with any <code>doi:</code> or doi.org prefix removed), <code>pmid:&lt;digits&gt;</code>, or <code>title:&lt;normalised title&gt;|&lt;year or nd&gt;</code>. Title matching folds accents and removes punctuation while keeping letters of every script. Anything else is refused. Use the same form for a paper in every tool, or later tools will treat it as a different paper.</p>
+
+        <h3 id="caps">Input and list caps</h3>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th scope="col">Item</th><th scope="col">Cap or rule</th></tr></thead>
+            <tbody>
+              <tr><td>List results</td><td>200 items, with <code>truncated: true</code> when cut.</td></tr>
+              <tr><td><code>review_id</code></td><td><code>^[a-z0-9_-]{6,40}$</code>, validated before it becomes a file name.</td></tr>
+              <tr><td><code>review_create</code> title / question</td><td>500 / 2,000 characters.</td></tr>
+              <tr><td><code>verify_dois</code></td><td>100 DOIs per call.</td></tr>
+              <tr><td><code>resolve_citations</code> papers</td><td>2,000 papers.</td></tr>
+              <tr><td><code>dedup_papers</code></td><td>10,000 records; more is refused so cross-call duplicates are not missed.</td></tr>
+              <tr><td><code>screening_record_many</code></td><td>500 decisions per call, all or nothing.</td></tr>
+              <tr><td>Screening exclusion reason</td><td>300 characters; required for <code>exclude</code>.</td></tr>
+              <tr><td>Reviewer name</td><td>1 to 40 characters, stored lower-case.</td></tr>
+              <tr><td><code>export_bundle</code></td><td>5,000 screening decisions and 5,000 claims.</td></tr>
+              <tr><td>Tool text input</td><td>400,000 characters for a single text field.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="quote-checks">How quote checks work</h3>
+        <p>Quote matching ignores case, whitespace, curly quotes, dash variants, zero-width characters, line-break hyphenation and hyphens inside words. It needs at least 12 normalised characters and matches on word boundaries for scripts written with spaces.</p>
+        <p>An ellipsis quote (<code>a ... b</code> or <code>a [...] b</code>) verifies only when every part is found in order and the parts are at most 1,500 characters apart. In an evidence row, every number entered must also be written in the quote; missing numbers are reported in <code>numbers_not_in_quote</code>.</p>
+        <p>A failed check is stored and reported. It is never silently accepted, and it is never described as verified.</p>
+
+        <h2 id="data">Data handling and privacy</h2>
+
+        <h3 id="storage">Local storage</h3>
+        <p>State lives in SQLite files under <code>CITEPROOF_MCP_HOME</code>, which defaults to <code>~/.citeproof-mcp</code>. Each review is <code>&lt;home&gt;/reviews/&lt;review_id&gt;.db</code>. The server opens one file per review, applies its schema on first open, and uses WAL plus a 30 second busy timeout. Concurrent calls wait rather than fail as locked.</p>
+        <p>Source text is never stored in full. The server stores its length and SHA-256, plus observations and hash changes. Exports are returned as text; nothing is written outside the home folder. Removing or moving the folder moves the review data with it.</p>
+
+        <h3 id="network">Network calls</h3>
+        <p>The only network calls are DOI checks in <code>verify_dois</code>, to <code>api.crossref.org</code> and <code>doi.org</code>. Hosts are fixed, redirects are not followed, the timeout is 15 seconds, and a value that is not DOI-shaped is never sent. No review data is uploaded. Metrics, accounts and telemetry are not part of the server.</p>
+
+        <h3 id="privacy">What stays on your machine</h3>
+        <p>Review files, screening decisions, extracted evidence, claims, risk-of-bias records and source-text hashes stay in the local SQLite database. CiteProof does not receive them. The client can read tool results and may send them to its own model provider under that provider's terms; that is outside the MCP server's control.</p>
+
+        <h2 id="errors">Handling <code>ok:false</code></h2>
+        <p>Every handled failure looks like this:</p>
+        <div class="docs-code"><pre><code>{"ok": false, "error": "stage must be one of: title_abstract, full_text; got 'full_pdf'"}</code></pre></div>
+        <p>Read <code>error</code> and change the argument. Common cases:</p>
+        <ul>
+          <li><strong>Invalid paper reference.</strong> Use a DOI, <code>pmid:&lt;digits&gt;</code> or <code>title:&lt;title&gt;|&lt;year&gt;</code>. Do not switch forms for the same paper.</li>
+          <li><strong>Missing required field.</strong> An exclusion needs a reason; a supported or partial claim needs a quote and source text; an overall risk-of-bias judgement needs a rationale.</li>
+          <li><strong>Wrong JSON type.</strong> The MCP SDK rejects the argument before the tool runs. That is a transport-level tool error, not an <code>ok:false</code> result.</li>
+          <li><strong>Busy database.</strong> Retry the call. The failed attempt saved nothing.</li>
+          <li><strong>Internal error.</strong> The message names the tool and exception type, with no stack trace or file path. Check the arguments, retry once, then report the tool name and a redacted request.</li>
+        </ul>
+        <p>Read-only calls are safe to repeat. Do not blindly retry a write after an error that may have partially applied; read <code>review_status</code> first.</p>
+
+        <h2 id="compatibility">Client compatibility</h2>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th scope="col">Client</th><th scope="col">Install path</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+              <tr><td>Claude Science</td><td>Local command connector with the built bundle</td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.67</td></tr>
+              <tr><td>Claude Desktop</td><td><code>citeproof.mcpb</code> extension</td><td><span class="docs-status docs-status-new">New</span> Extension path, not yet broadly tested</td></tr>
+              <tr><td>Claude Desktop</td><td>npx with a JSON <code>mcpServers</code> entry</td><td><span class="docs-status docs-status-new">New</span> Not yet tested for this release</td></tr>
+              <tr><td>Claude Code</td><td><code>claude mcp add citeproof -- npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-new">New</span> Not yet tested for this release</td></tr>
+              <tr><td>Cursor, VS Code, Windsurf</td><td>Any stdio launcher, or npx</td><td><span class="docs-status docs-status-untested">Not yet tested</span></td></tr>
+              <tr><td>claude.ai web custom connectors</td><td>Cannot start a local stdio command</td><td><span class="docs-status docs-status-untested">Unsupported</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The server follows the standard MCP stdio protocol and was tested against mcp 1.27 and mcp 2.x. A client that can start a stdio server should work, but “should” is not “tested”.</p>
+
+        <h2 id="troubleshooting">Troubleshooting</h2>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th scope="col">Symptom</th><th scope="col">What to check</th></tr></thead>
+            <tbody>
+              <tr><td>Only 18 tools appear instead of 24</td><td>An old server process is still running. Remove the connector and add it again with the same settings.</td></tr>
+              <tr><td><code>this kernel's Python interpreter ... is not readable inside the sandbox</code></td><td>The command points outside the connector workspace. Use the bundle path from the install steps.</td></tr>
+              <tr><td><code>Set "command" to node, npx or python3 ...</code></td><td>You gave an absolute path to a Python that Claude Science does not provide. Use <code>python3</code>.</td></tr>
+              <tr><td><code>can't open file ... Permission denied</code></td><td>The bundle is outside the connector workspace. Build it into <code>.../workspaces/_mcp-citeproof/bundle</code>.</td></tr>
+              <tr><td>Connector name rejected</td><td>Use lowercase letters, digits and hyphens only. Use <code>citeproof</code>.</td></tr>
+              <tr><td>The local process exits immediately</td><td>Check the command path, <code>CITEPROOF_MCP_HOME</code> and the connector log. The command must be readable inside the sandbox.</td></tr>
+              <tr><td>npx does not start</td><td>Check <code>node --version</code>. Node 18 or newer is required. If auto-install is disabled, install <code>uv</code> yourself; <code>uv</code> fetches Python 3.12 on first run.</td></tr>
+              <tr><td>A DOI returns <code>unverified</code></td><td>The registry was unreachable, so there is no verdict. It is not “not found”. Retry when the network is available.</td></tr>
+              <tr><td>Deduplication will not record</td><td>The call did not cover every exported record. <code>records_checked</code> must equal the total hits recorded by <code>prisma_record_search</code>, or record the whole count with <code>prisma_record_dedup</code>.</td></tr>
+              <tr><td>An export is empty or cut short</td><td>Check <code>review_status</code> for missing records and <code>truncated</code> in the export result. The 5,000-decision and 5,000-claim caps are the only truncation points.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>For connector-specific errors and the research-assistant failures, see <a href="/docs/troubleshooting">Troubleshooting</a>.</p>
+
+        <h2 id="maintaining">Keeping these docs accurate</h2>
+        <p>This page describes CiteProof MCP 0.1.0. When the code and this page disagree, the code wins. The authoritative sources are:</p>
+        <ul>
+          <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/SPEC.md" target="_blank" rel="noopener noreferrer">MCP/docs/SPEC.md</a>: tool arguments, limits, result shapes, storage and security rules.</li>
+          <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/CLAUDE_SCIENCE.md" target="_blank" rel="noopener noreferrer">MCP/docs/CLAUDE_SCIENCE.md</a>: the tested Claude Science install and connector troubleshooting.</li>
+          <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP" target="_blank" rel="noopener noreferrer">The MCP repository</a>: tool modules and server instructions.</li>
+        </ul>
+        <p>To update this page, change the tool schema and the SPEC together, then revise the matching entry here. The sidebar, search index and in-page outline are generated from the heading ids, so keep each tool heading id in the form <code>tool-&lt;name-with-hyphens&gt;</code>.</p>
+      </article>
+
+      <nav class="docs-pager" aria-label="Documentation pages">
+        <a href="/mcp">
+          <span>Previous</span>
+          <strong>MCP setup hub</strong>
+        </a>
+        <a class="docs-pager-next" href="/docs/troubleshooting">
+          <span>Next</span>
+          <strong>Troubleshooting</strong>
+        </a>
+      </nav>
+    </main>
+
+    <aside class="docs-toc" aria-label="On this page">
+      <p class="docs-toc-title">On this page</p>
+      <ul id="docs-toc-list"></ul>
+    </aside>
+  </div>
+
+  <footer role="contentinfo" class="cp-footer">
+    <div class="cp-container">
+      <div class="cp-footer-top scroll-reveal">
+        <!-- Left Block -->
+        <div class="cp-footer-left">
+          <h3 class="cp-footer-brand-heading">
+            <a href="/" class="cp-footer-brand" aria-label="CiteProof home">
+              <img src="/assets/logo.png" alt="" width="32" height="32" class="cp-footer-logo">
+              <span class="cp-footer-brand-name">CiteProof</span>
+            </a>
+          </h3>
+          <p class="cp-footer-tagline">Evidence-grounded literature reviews, with a human in the loop.</p>
+          <a href="/app" class="cp-footer-btn">Start a research run</a>
+          <p class="cp-footer-copyright">Copyright 2026 CiteProof. Logos belong to their owners.</p>
+        </div>
+
+
+        <!-- Right Block: Navigation Link Lists -->
+        <div class="cp-footer-right">
+          <div class="cp-footer-grid">
+            <nav class="cp-footer-nav" aria-label="Product">
+              <h3 class="cp-footer-heading">Product</h3>
+              <ul class="cp-footer-links">
+                <li><a href="/#example">Example output</a></li>
+                <li><a href="/#how-it-works">How it works</a></li>
+                <li><a href="/#evidence">Evidence checks</a></li>
+                <li><a href="/#modes">Modes</a></li>
+                <li><a href="/app">Open the app</a></li>
+                <li><a href="/docs">Documentation</a></li>
+                <li><a href="/docs/mcp">MCP reference</a></li>
+              </ul>
+            </nav>
+
+            <nav class="cp-footer-nav" aria-label="Research">
+              <h3 class="cp-footer-heading">Research</h3>
+              <ul class="cp-footer-links">
+                <li><a href="/app?mode=deepsearch">DeepSearch Mode</a></li>
+                <li><a href="/app?mode=researchmode">Research Mode</a></li>
+                <li><a href="/mcp">Claude Science MCP</a></li>
+                <li><a href="/#human-review">Human review gates</a></li>
+              </ul>
+            </nav>
+
+            <nav class="cp-footer-nav" aria-label="Sources">
+              <h3 class="cp-footer-heading">Sources</h3>
+              <ul class="cp-footer-links">
+                <li><a href="https://openalex.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/openalex.png" alt="" width="16" height="16" loading="lazy">OpenAlex</a></li>
+                <li><a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/semantic-scholar.png" alt="" width="16" height="16" loading="lazy">Semantic Scholar</a></li>
+                <li><a href="https://arxiv.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/arxiv.png" alt="" width="16" height="16" loading="lazy">arXiv</a></li>
+                <li><a href="https://unpaywall.org" target="_blank" rel="noopener noreferrer">Unpaywall</a></li>
+                <li><a href="https://europepmc.org" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><img src="/assets/europe-pmc.png" alt="" width="16" height="16" loading="lazy">Europe PMC</a></li>
+              </ul>
+            </nav>
+
+            <nav class="cp-footer-nav" aria-label="Project">
+              <h3 class="cp-footer-heading">Project</h3>
+              <ul class="cp-footer-links">
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP" target="_blank" rel="noopener noreferrer" class="cp-footer-link-logo"><svg width="16" height="16" aria-hidden="true"><use href="/#logo-github"></use></svg>GitHub</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer">Author</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li>
+                <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/issues" target="_blank" rel="noopener noreferrer">Issues</a></li>
+              </ul>
+            </nav>
+  
+
+      </div>
+
+        </div>
+      </div>
+
+      <!-- Large Wordmark -->
+      <div class="cp-footer-wordmark-wrap">
+        <div class="cp-footer-wordmark scroll-reveal" aria-hidden="true">CiteProof</div>
+      </div>
+    </div>
+    <noscript>
+      <style>
+        .cp-footer .scroll-reveal {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style>
+    </noscript>
+  </footer>
+
+  <script src="/docs.js?v=1.1.0"></script>
+</body>
+</html>
