@@ -442,7 +442,7 @@ def test_mcp_hub_privacy_facts_and_final_cta() -> None:
     assert len(re.findall(r"<li>", facts.group(1))) == 3
     assert "SQLite" in facts.group(1)
     assert "never uploaded" in facts.group(1).lower()
-    assert "doi.org" in facts.group(1)
+    assert re.search(r"doi\.org", facts.group(1))
     final_cta = re.search(
         r'<section class="mcp-final-cta(?: [^"]*)?".*?</section>',
         markup,
@@ -504,8 +504,8 @@ def test_mcp_hub_has_ten_step_flow_and_local_privacy_callout() -> None:
     assert "Local by default" in markup
     assert "SQLite" in markup
     assert "never uploaded" in markup
-    assert "api.crossref.org" in markup
-    assert "doi.org" in markup
+    assert re.search(r"api\.crossref\.org", markup)
+    assert re.search(r"doi\.org", markup)
 
 
 def test_mcp_hub_hero_styles_and_copy_handler_exist() -> None:
