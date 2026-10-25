@@ -170,6 +170,10 @@
   fill: currentColor;
 }
 
+.mcp-lockup-claude {
+  color: #d97757;
+}
+
 .mcp-lockup-mark img {
   display: block;
   width: 22px;
@@ -761,21 +765,31 @@
 .mcp-flow-strip {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
+  row-gap: 40px;
   margin: 38px 0 0;
   padding: 0;
   list-style: none;
 }
 
 .mcp-flow-strip::before {
+  display: none;
+}
+
+.mcp-flow-strip li::before {
   position: absolute;
   top: 19px;
-  right: 4.5%;
-  left: 4.5%;
+  left: 50%;
+  width: calc(100% + 12px);
   height: 1px;
-  background: linear-gradient(90deg, rgba(82, 168, 255, 0.42), rgba(255, 255, 255, 0.12) 55%, rgba(255, 97, 102, 0.32));
+  background: rgba(255, 255, 255, 0.14);
   content: "";
+}
+
+.mcp-flow-strip li:nth-child(5n)::before,
+.mcp-flow-strip li:last-child::before {
+  display: none;
 }
 
 .mcp-flow-strip li {
@@ -787,6 +801,10 @@
   align-items: flex-start;
   margin: 0;
   padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 14px;
 }
 
 .mcp-flow-num {
@@ -812,7 +830,7 @@
   min-height: 38px;
   margin-bottom: 8px;
   color: var(--cp-ink);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -827,7 +845,7 @@
   background: rgba(255, 255, 255, 0.035);
   color: var(--cp-muted);
   font-family: var(--cp-font-mono);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.35;
   overflow-wrap: anywhere;
   white-space: normal;
