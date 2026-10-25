@@ -31,7 +31,7 @@ CiteProof enforces a strict division of responsibility between the agent and the
 
 All review data is stored locally on your machine:
 - Review records live in SQLite databases in `<CITEPROOF_MCP_HOME>/reviews/<review_id>.db` (default: `~/.citeproof-mcp/reviews/<review_id>.db`).
-- Full source texts supplied for evidence and claim checks are **never** stored permanently on disk; CiteProof stores only text length and SHA-256 digests alongside verification flags.
+- Full source texts supplied for evidence and claim checks are **never** stored on disk; CiteProof stores only the text length and a SHA-256 digest alongside the verification flags. The **quotes** you record with evidence rows and claims are stored in the review file.
 - No telemetry, analytics, or review content is uploaded to any remote server.
 - The **only** network calls made by CiteProof MCP are outbound HTTPS queries to Crossref (`api.crossref.org`) and doi.org in `verify_dois`.
 

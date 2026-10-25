@@ -88,10 +88,10 @@ The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package i
 
 | Client | How to add CiteProof MCP | Status |
 |---|---|---|
-| **Claude Science** | Customize → Connectors → Add connector → **Local command**. Name `citeproof`, command `npx -y citeproof-mcp`. | Bundle install tested on 0.1.67 (Windows); npx install new in 0.2.0 |
+| **Claude Science** | Customize → Connectors → Add connector → **Local command**. Name `citeproof`, command `npx -y citeproof-mcp`. | npx install tested on Claude Science 0.1.70 (Windows 11, 24 tools listed); bundle install tested on 0.1.67 |
 | **Claude Desktop** | Download [`citeproof.mcpb`](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest/download/citeproof.mcpb) and open it (Settings → Extensions), or add the JSON below to `claude_desktop_config.json`. | New in 0.2.0 |
 | **Claude Code** | `claude mcp add citeproof -- npx -y citeproof-mcp` | New in 0.2.0 |
-| **Cursor, VS Code, Windsurf, other clients** | Add the JSON below to the client's MCP settings. | Not yet tested |
+| **Cursor, VS Code, Windsurf, other clients** | Add the JSON below to the client's MCP settings (VS Code: the `servers` form further down). | Not yet tested |
 
 ```json
 {
@@ -104,7 +104,21 @@ The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package i
 }
 ```
 
-Everything runs on your computer. Review files go to `CITEPROOF_MCP_HOME`, or to `~/.citeproof-mcp` when it is not set. The only network calls are DOI and retraction lookups to Crossref and doi.org. claude.ai custom connectors need a remote server, so they are not supported.
+VS Code's built-in MCP support (`.vscode/mcp.json` or your user MCP settings) uses `servers` instead of `mcpServers`:
+
+```json
+{
+  "servers": {
+    "citeproof": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "citeproof-mcp"]
+    }
+  }
+}
+```
+
+Everything runs on your computer. Review files go to `CITEPROOF_MCP_HOME`, or to `~/.citeproof-mcp` when it is not set. The server's only network calls are DOI and retraction lookups to Crossref and doi.org. On first run the launcher also downloads its own files: the npm package, and, when no compatible Python is found, uv, Python 3.12 and the server wheel. claude.ai custom connectors need a remote server, so they are not supported.
 
 If Claude Science reports that a file is not readable inside its sandbox, set `CITEPROOF_UV_HOME` (Advanced settings → environment variables) to a folder inside the connector's workspace, so uv keeps its cache and Python there. The older bundle install in [MCP/docs/CLAUDE_SCIENCE.md](MCP/docs/CLAUDE_SCIENCE.md) still works.
 
