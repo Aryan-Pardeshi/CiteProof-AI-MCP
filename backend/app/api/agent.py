@@ -35,7 +35,9 @@ MAX_THREAD_ID_CHARS = 100
 
 class ResearchStartRequest(BaseModel):
     query: str = Field(max_length=MAX_QUERY_CHARS)
-    search_topic: list[Literal["all", "news", "academic", "finance", "patent"]] = ["all"]
+    search_topic: list[Literal["all", "news", "academic", "finance", "patent"]] = Field(
+        default_factory=lambda: ["all"], max_length=5
+    )
 
 
 class ResearchApproveRequest(BaseModel):

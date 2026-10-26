@@ -4,12 +4,7 @@
 useDefault = true
 
 [[allowlists]]
-description = "Test fixtures use fake keys, tokens and idempotency keys"
-paths = ['''^tests/''']
-
-[[allowlists]]
 description = "Placeholder values and storage key names, not secrets"
 regexes = [
-  '''^sk_test_placeholder$''',
   '''^citeproof_gh_stars_v1$''',
 ]
