@@ -30,4 +30,4 @@ jobs:
         with:
           fetch-depth: 0
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: gitleaks git "$GITHUB_WORKSPACE" --no-banner --redact --exit-code 1
+      - run: gitleaks git "$GITHUB_WORKSPACE" --no-banner --redact --verbose --exit-code 1

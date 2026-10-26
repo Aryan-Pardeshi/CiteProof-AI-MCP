@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import re
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -50,16 +50,43 @@ def test_csp_allows_scripts_from_this_site_only() -> None:
     assert script_src.strip() == "script-src 'self'"
 
 
+class _ScriptScan(HTMLParser):
+    """Collect script tags and inline event-handler attributes from a page."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.scripts: list[tuple[dict[str, str], str]] = []
+        self.handlers: list[str] = []
+        self._current: dict[str, str] | None = None
+        self._body: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = {name: value or "" for name, value in attrs}
+        self.handlers.extend(name for name in values if name.startswith("on"))
+        if tag == "script":
+            self._current, self._body = values, []
+
+    def handle_data(self, data: str) -> None:
+        if self._current is not None:
+            self._body.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "script" and self._current is not None:
+            self.scripts.append((self._current, "".join(self._body)))
+            self._current = None
+
+
 def test_pages_have_no_cdn_scripts_inline_scripts_or_handlers() -> None:
     for page in FRONTEND.rglob("*.html"):
-        text = page.read_text(encoding="utf-8")
-        for attrs, body in re.findall(r"<script([^>]*)>(.*?)</script>", text, re.DOTALL):
-            src = re.search(r'src="([^"]+)"', attrs)
+        scan = _ScriptScan()
+        scan.feed(page.read_text(encoding="utf-8"))
+        for attrs, body in scan.scripts:
+            src = attrs.get("src")
             if src:
-                assert not src.group(1).startswith(("http://", "https://", "//")), page.name
-            elif "application/ld+json" not in attrs:
+                assert not src.startswith(("http://", "https://", "//")), page.name
+            elif attrs.get("type") != "application/ld+json":
                 assert not body.strip(), f"{page.name}: inline script"
-        assert not re.search(r"\son[a-z]+=\"", text), f"{page.name}: inline event handler"
+        assert not scan.handlers, f"{page.name}: inline event handlers {scan.handlers}"
 
 
 def test_app_links_and_model_values_are_made_safe() -> None:
