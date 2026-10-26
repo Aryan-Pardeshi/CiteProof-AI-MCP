@@ -8,7 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from langgraph.types import Command
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Resolved per call, not bound at import: lifespan recompiles the graph with the
 # SQLite checkpointer, and an import-time binding would pin the in-memory one.
@@ -26,18 +26,25 @@ def _validate_thread_id(thread_id: str) -> str:
     return thread_id
 
 
+# Bounds on request fields: these texts go into LLM prompts paid for by the
+# server's key, and FastAPI parses the body before any handler runs.
+MAX_QUERY_CHARS = 4000
+MAX_MESSAGE_CHARS = 4000
+MAX_THREAD_ID_CHARS = 100
+
+
 class ResearchStartRequest(BaseModel):
-    query: str
+    query: str = Field(max_length=MAX_QUERY_CHARS)
     search_topic: list[Literal["all", "news", "academic", "finance", "patent"]] = ["all"]
 
 
 class ResearchApproveRequest(BaseModel):
-    thread_id: str
-    message: str
+    thread_id: str = Field(max_length=MAX_THREAD_ID_CHARS)
+    message: str = Field(max_length=MAX_MESSAGE_CHARS)
 
 
 class CancelRequest(BaseModel):
-    thread_id: str
+    thread_id: str = Field(max_length=MAX_THREAD_ID_CHARS)
 
 
 # Track active tasks per thread_id

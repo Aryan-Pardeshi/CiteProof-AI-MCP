@@ -1,0 +1,33 @@
+name: Security
+# CodeQL (codeql.yml) scans the code. This workflow adds known-vulnerability
+# checks for Python dependencies and a secret scan of the git history.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+permissions:
+  contents: read
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pip-audit==2.10.1
+      - run: pip-audit -r requirements.txt --progress-spinner off
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    container:
+      image: zricethezav/gitleaks:v8.30.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: gitleaks git "$GITHUB_WORKSPACE" --no-banner --redact --exit-code 1
