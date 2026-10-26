@@ -8,15 +8,11 @@
 [![CI](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml/badge.svg)](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-```bash
-npx -y citeproof-mcp
-```
+**🔗 Research Web → [CiteProof.top](https://citeproof.top/)**
 
 <p align="center">
   <a href="https://citeproof.top/"><img src="docs/media/citeproof-ad.gif" alt="CiteProof: PRISMA screening, DOI and retraction checks, claim checks against source text, and the CiteProof MCP inside Claude Science" width="800"></a>
 </p>
-
-**🔗 Research Web → [CiteProof.top](https://citeproof.top/)**
 
 ## Contents
 
