@@ -12,6 +12,10 @@
 npx -y citeproof-mcp
 ```
 
+<p align="center">
+  <a href="https://citeproof.top/"><img src="docs/media/citeproof-ad.gif" alt="CiteProof: PRISMA screening, DOI and retraction checks, claim checks against source text, and the CiteProof MCP inside Claude Science" width="800"></a>
+</p>
+
 **🔗 Research Web → [CiteProof.top](https://citeproof.top/)**
 
 ## Contents
