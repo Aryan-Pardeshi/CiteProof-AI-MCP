@@ -38,7 +38,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
     <!-- Open Graph / Facebook / LinkedIn / Discord -->
     <meta property="og:type" content="website">
@@ -118,11 +117,11 @@
     <link rel="stylesheet" href="app.css?v=1.0.0">
 
     <!-- Marked.js for markdown parsing (pinned) -->
-    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="vendor/marked-12.0.2.min.js"></script>
     <!-- DOMPurify for XSS sanitization (pinned with SRI) -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a" crossorigin="anonymous"></script>
+    <script src="vendor/dompurify-3.4.17.min.js"></script>
     <!-- Lucide icons (pinned) -->
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="vendor/lucide-0.468.0.min.js"></script>
 </head>
 <body class="cp-page cp-app">
     <!-- Skip Link for Accessibility & Keyboard Navigation -->
@@ -690,14 +689,14 @@
                                 <span>Copy Text</span>
                             </button>
                             <div class="export-dropdown" id="rm-export-dropdown" style="display: none;">
-                                <button class="btn-primary" id="rm-export-main-btn" onclick="toggleExportMenu(event)">
+                                <button class="btn-primary" id="rm-export-main-btn">
                                     <i data-lucide="file-down" style="width: 15px; height: 15px;"></i>
                                     <span>Export Report</span>
                                     <span class="caret">▼</span>
                                 </button>
                                 <div class="dropdown-menu" id="rm-export-menu">
-                                    <button class="dropdown-item" onclick="exportReport('pdf')"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i> <span>Export as PDF (.pdf)</span></button>
-                                    <button class="dropdown-item" onclick="exportReport('docx')"><i data-lucide="file-type-2" style="width: 14px; height: 14px;"></i> <span>Export as Word (.docx)</span></button>
+                                    <button class="dropdown-item" data-export-format="pdf"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i> <span>Export as PDF (.pdf)</span></button>
+                                    <button class="dropdown-item" data-export-format="docx"><i data-lucide="file-type-2" style="width: 14px; height: 14px;"></i> <span>Export as Word (.docx)</span></button>
                                 </div>
                             </div>
 

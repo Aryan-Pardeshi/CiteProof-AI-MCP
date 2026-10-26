@@ -3,6 +3,7 @@ import logging
 import os
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from langchain_community.cache import SQLiteCache
@@ -133,6 +134,12 @@ async def ainvoke_llm(llm, *args, **kwargs):
             await asyncio.sleep(_retry_delay(attempt))
 
 
+OPENROUTER_APP_HEADERS = {
+    "HTTP-Referer": "https://citeproof.top",
+    "X-Title": "CiteProof",
+}
+
+
 def get_llm(model: str | None = None, role: str | None = None, temperature: float = 0.0) -> ChatOpenAI:
     api_key, base_url = get_llm_config()
     if not api_key or api_key == "your_api_key_here" or api_key == "your_key_here":
@@ -153,13 +160,20 @@ def get_llm(model: str | None = None, role: str | None = None, temperature: floa
     model = require_safe_model(model)
 
     timeout_val = float(os.getenv("LLM_REQUEST_TIMEOUT", "60.0"))
+    kwargs = {}
+    host = (urlparse(base_url or "").hostname or "").lower()
+    if host == "openrouter.ai" or host.endswith(".openrouter.ai"):
+        # App attribution: OpenRouter lists usage under this name and site
+        # instead of "Unknown".
+        kwargs["default_headers"] = dict(OPENROUTER_APP_HEADERS)
     return ChatOpenAI(
         model=model,
         openai_api_key=api_key,
         openai_api_base=base_url,
         temperature=temperature,
         request_timeout=timeout_val,
-        max_retries=0
+        max_retries=0,
+        **kwargs,
     )
 
 

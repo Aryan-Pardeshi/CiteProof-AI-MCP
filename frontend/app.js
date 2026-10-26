@@ -306,7 +306,22 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-// marked, DOMPurify and lucide come from a CDN. If that request is blocked the page must
+// Returns the normalised href only for an http: or https: URL, else null, so a
+// javascript: or data: URL from model output or paper metadata never becomes a link.
+function safeHttpUrl(value) {
+    if (value === undefined || value === null) return null;
+    const str = String(value).trim();
+    if (!str) return null;
+    try {
+        const parsed = new URL(str);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
+    } catch {
+        // Not a URL.
+    }
+    return null;
+}
+
+// marked, DOMPurify and lucide are vendored files. If one fails to load the page must
 // fail closed safely instead of passing unescaped content to HTML sinks.
 function sanitizeHtml(rawHtml) {
     if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
@@ -1639,7 +1654,7 @@ function showResumeBanner(data) {
     banner.innerHTML = `
         <div style="display: flex; align-items: center; gap: 0.6rem;">
             <i data-lucide="rotate-ccw" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
-            <span><strong>Session Resumed:</strong> Rehydrated session <code>${shortId}</code> — Status: <em>${statusText}</em></span>
+            <span><strong>Session Resumed:</strong> Rehydrated session <code>${shortId}</code> — Status: <em>${escapeHtml(statusText)}</em></span>
         </div>
         <button id="rm-banner-reset-btn" class="btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;">
             <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
@@ -2225,6 +2240,17 @@ function renderRMHitlPanel(checkpoint) {
             const resolved = ['resolved', 'verified'].includes(e.verification_status);
             const confColor = resolved ? 'rgba(34,197,94,0.18)' : 'rgba(234,179,8,0.18)';
             const confTextColor = resolved ? '#16a34a' : '#ca8a04';
+            let sourceHtml = '';
+            if (e.doi) {
+                sourceHtml = `<a href="https://doi.org/${encodeURIComponent(e.doi)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.72rem; color: var(--academic-blue); text-decoration: none;">Source &rarr;</a>`;
+            } else if (e.source_url) {
+                const safeSource = safeHttpUrl(e.source_url);
+                if (safeSource) {
+                    sourceHtml = `<a href="${escapeHtml(safeSource)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.72rem; color: var(--academic-blue); text-decoration: none;">Source &rarr;</a>`;
+                } else {
+                    sourceHtml = `<span style="font-size: 0.72rem; color: var(--text-secondary);">${escapeHtml(e.source_url)}</span>`;
+                }
+            }
             return `
             <div class="evidence-extract-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.02)); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.65rem; margin-bottom: 0.5rem; font-size: 0.82rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
@@ -2237,8 +2263,8 @@ function renderRMHitlPanel(checkpoint) {
                 </div>
                 <p style="margin: 0.25rem 0; font-weight: 500;">${escapeHtml(e.claim_summary || '')}</p>
                 ${e.exact_quote ? `<p style="margin: 0.25rem 0; font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">&ldquo;${escapeHtml(String(e.exact_quote).slice(0, 180))}${String(e.exact_quote).length > 180 ? '&hellip;' : ''}&rdquo;</p>` : ''}
-                ${(e.source_url || e.doi) ? `<div style="margin-top: 0.25rem;"><a href="${e.doi ? `https://doi.org/${escapeHtml(e.doi)}` : escapeHtml(e.source_url)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.72rem; color: var(--academic-blue); text-decoration: none;">Source &rarr;</a></div>` : ''}
-                ${e.reported_value != null ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">Metric: <code>${escapeHtml(e.metric_name || '')} = ${e.reported_value}</code></div>` : ''}
+                ${sourceHtml ? `<div style="margin-top: 0.25rem;">${sourceHtml}</div>` : ''}
+                ${e.reported_value != null ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">Metric: <code>${escapeHtml(e.metric_name || '')} = ${escapeHtml(String(e.reported_value))}</code></div>` : ''}
             </div>
         `;
         }).join('');
@@ -2574,7 +2600,7 @@ function openPaperInspector(paper) {
         let pdfLink = '<span style="color: var(--text-muted);">No PDF Direct Link</span>';
         if (typeof paper.pdf_url === 'string' && paper.pdf_url.trim()) {
             try {
-                const parsedUrl = new URL(paper.pdf_url.trim());
+                const parsedUrl = new URL(safeHttpUrl(paper.pdf_url) || 'invalid:');
                 if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
                     const safeHref = escapeHtml(parsedUrl.href);
                     pdfLink = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color: var(--emerald-accent);">[Open Access PDF Link]</a>`;
@@ -2834,15 +2860,49 @@ function linkCitations(html) {
 
     if (byLastNameYear.size === 0) return html;
 
-    return html.replace(
-        /\(([A-Z][a-zA-Z'-]+)(?:\s+et al\.)?,\s*(\d{4})\)/g,
-        (match, lastName, year) => {
-            const key = `${lastName.toLowerCase()}|${year}`;
-            const paperIdx = byLastNameYear.get(key);
-            if (paperIdx === undefined) return match;
-            return `<a href="#" class="citation-link" data-paper-index="${paperIdx}">${match}</a>`;
+    // Work on text nodes of the sanitised DOM, never on the HTML string: a
+    // regex over markup can match inside an attribute value and break out of it.
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const root = template.content;
+    const skipTags = new Set(['A', 'CODE', 'PRE', 'SCRIPT', 'STYLE']);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            for (let parent = node.parentNode; parent && parent !== root; parent = parent.parentNode) {
+                if (skipTags.has(parent.nodeName)) return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+        },
+    });
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+    const citationRegex = /\(([A-Z][a-zA-Z'-]+)(?:\s+et al\.)?,\s*(\d{4})\)/;
+    textNodes.forEach((node) => {
+        let rest = node;
+        while (rest && rest.nodeValue) {
+            const match = citationRegex.exec(rest.nodeValue);
+            if (!match) break;
+            const end = match.index + match[0].length;
+            const paperIdx = byLastNameYear.get(`${match[1].toLowerCase()}|${match[2]}`);
+            if (paperIdx === undefined) {
+                rest = end < rest.nodeValue.length ? rest.splitText(end) : null;
+                continue;
+            }
+            const matchNode = match.index > 0 ? rest.splitText(match.index) : rest;
+            const after = matchNode.nodeValue.length > match[0].length
+                ? matchNode.splitText(match[0].length)
+                : null;
+            const link = document.createElement('a');
+            link.href = '#';
+            link.className = 'citation-link';
+            link.dataset.paperIndex = String(paperIdx);
+            link.textContent = match[0];
+            matchNode.parentNode.replaceChild(link, matchNode);
+            rest = after;
         }
-    );
+    });
+    return template.innerHTML;
 }
 
 function updatePaperStats(markdownText) {
@@ -2992,6 +3052,12 @@ function toggleExportMenu(event) {
         menu.classList.toggle("show");
     }
 }
+
+// Bound here rather than with onclick attributes so the CSP needs no 'unsafe-inline'.
+document.getElementById("rm-export-main-btn")?.addEventListener("click", toggleExportMenu);
+document.querySelectorAll("#rm-export-menu [data-export-format]").forEach((item) => {
+    item.addEventListener("click", () => exportReport(item.dataset.exportFormat));
+});
 
 document.addEventListener("click", () => {
     const menu = document.getElementById("rm-export-menu");
@@ -3274,7 +3340,7 @@ function renderWorkers() {
         card.innerHTML = `
             <div class="worker-header">
                 <strong>${escapeHtml(id.replace('_', ' '))}</strong>
-                <span class="worker-status ${w.status}">${w.status}</span>
+                <span class="worker-status ${escapeHtml(w.status)}">${escapeHtml(w.status)}</span>
             </div>
             <div class="worker-task">${escapeHtml(w.task)}</div>
             ${searches.length ? `<div class="worker-queries">${
@@ -3289,11 +3355,12 @@ function renderCitations(citations) {
     if (!dom.workspaceSourcesContainer) return;
     dom.workspaceSourcesContainer.innerHTML = '';
     citations.forEach(url => {
-        const card = document.createElement('a');
+        const safeUrl = safeHttpUrl(url);
+        const card = document.createElement(safeUrl ? 'a' : 'div');
         card.className = 'source-card';
-        card.href = url;
-        card.target = '_blank';
-        card.rel = 'noopener noreferrer';
+        if (safeUrl) card.href = safeUrl;
+        if (safeUrl) card.target = '_blank';
+        if (safeUrl) card.rel = 'noopener noreferrer';
         card.innerHTML = `<i data-lucide="link"></i><span>${escapeHtml(url)}</span>`;
         dom.workspaceSourcesContainer.appendChild(card);
     });
