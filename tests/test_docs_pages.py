@@ -523,7 +523,7 @@ def test_mcp_hub_hero_styles_and_copy_handler_exist() -> None:
         "prefers-reduced-motion",
     ):
         assert selector in css, selector
-    assert 'href="/mcp.css?v=2.0.0"' in text(HUB)
+    assert 'href="/mcp.css?v=2.1.0"' in text(HUB)
     script = text("docs.js")
     assert "[data-copy-target]" in script
     assert "Copied to clipboard" in script

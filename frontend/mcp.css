@@ -400,6 +400,12 @@
   text-underline-offset: 3px;
 }
 
+.mcp-trademark-note {
+  margin-top: 18px;
+  padding: 0 4px;
+  text-align: center;
+}
+
 .mcp-docs-home-link:hover {
   color: var(--cp-ink);
 }
