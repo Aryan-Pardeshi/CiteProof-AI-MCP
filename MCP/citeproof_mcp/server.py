@@ -9,6 +9,7 @@ from citeproof_mcp import __version__
 from citeproof_mcp.compat import MCPServer
 from citeproof_mcp.tools import (
     core,
+    events,
     evidence_checks,
     extraction,
     prisma,
@@ -33,7 +34,7 @@ INSTRUCTIONS = (
     "is false, error says what to change."
 )
 
-TOOL_MODULES = (core, protocol, prisma, extraction, evidence_checks, review)
+TOOL_MODULES = (core, protocol, prisma, extraction, evidence_checks, review, events)
 
 
 def _server_version() -> str:
