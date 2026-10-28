@@ -205,15 +205,15 @@ async def test_blind_screening_flow_and_leak_prevention() -> None:
     assert rec_a1["ok"] is True
 
     # 3. Bob records decisions for paper 1 and paper 2 with secret reasons
-    secret_reason_1 = "SecretPeerReasonBobP1"
-    secret_reason_2 = "SecretPeerReasonBobP2"
+    peer_reason_1 = "PeerReasonBobP1"
+    peer_reason_2 = "PeerReasonBobP2"
     rec_b1 = await call(
         "screening_record",
         review_id=rid,
         paper_ref="10.1001/p1",
         stage="title_abstract",
         decision="exclude",
-        reason=secret_reason_1,
+        reason=peer_reason_1,
         reviewer="bob",
         title="Paper One Title",
     )
@@ -225,7 +225,7 @@ async def test_blind_screening_flow_and_leak_prevention() -> None:
         paper_ref="10.1001/p2",
         stage="title_abstract",
         decision="exclude",
-        reason=secret_reason_2,
+        reason=peer_reason_2,
         reviewer="bob",
         title="Paper Two Title",
     )
@@ -263,7 +263,7 @@ async def test_blind_screening_flow_and_leak_prevention() -> None:
     assert list_alice["records"][0]["reviewer"] == "alice"
     assert list_alice["hidden_blind_rows"] == 2
     assert "hidden" in list_alice["blind_note"].lower()
-    assert secret_reason_1 not in json.dumps(list_alice["records"])
+    assert peer_reason_1 not in json.dumps(list_alice["records"])
 
     # B) without as_reviewer: all open blind rows are hidden, total == 0
     list_anon = await call("screening_list", review_id=rid, stage="title_abstract")
@@ -303,20 +303,20 @@ async def test_blind_screening_flow_and_leak_prevention() -> None:
     assert stage_info["mode"] == "blind"
     assert stage_info["closed_at"] is None
     assert stage_info["decided_counts"] == {"alice": 1, "bob": 2}
-    assert secret_reason_1 not in json.dumps(status_res)
-    assert secret_reason_2 not in json.dumps(status_res)
+    assert peer_reason_1 not in json.dumps(status_res)
+    assert peer_reason_2 not in json.dumps(status_res)
 
     bundle_md = await call("export_bundle", review_id=rid, format="markdown")
     assert bundle_md["ok"] is True
-    assert secret_reason_1 not in bundle_md["content"]
-    assert secret_reason_2 not in bundle_md["content"]
+    assert peer_reason_1 not in bundle_md["content"]
+    assert peer_reason_2 not in bundle_md["content"]
     assert "10.1001/p2" not in bundle_md["content"]
     assert "kappa" not in bundle_md["content"].lower()
 
     bundle_js = await call("export_bundle", review_id=rid, format="json")
     assert bundle_js["ok"] is True
-    assert secret_reason_1 not in bundle_js["content"]
-    assert secret_reason_2 not in bundle_js["content"]
+    assert peer_reason_1 not in bundle_js["content"]
+    assert peer_reason_2 not in bundle_js["content"]
     assert "10.1001/p2" not in bundle_js["content"]
     js_data = json.loads(bundle_js["content"])
     assert len(js_data["screening_decisions"]) == 0
@@ -390,7 +390,7 @@ async def test_blind_screening_flow_and_leak_prevention() -> None:
 
     # E) export_bundle now includes decisions and agreement
     bundle_closed_md = await call("export_bundle", review_id=rid, format="markdown")
-    assert secret_reason_1 in bundle_closed_md["content"]
+    assert peer_reason_1 in bundle_closed_md["content"]
     assert "### Reviewer agreement" in bundle_closed_md["content"]
 
 
