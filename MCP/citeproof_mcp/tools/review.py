@@ -78,6 +78,26 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
     source_changes = source_tracking.source_changes_rows(conn)
     distinct_texts = source_tracking.distinct_source_texts_by_paper(conn)
 
+    open_stages = prisma.open_blind_stages(conn)
+    stages_conf = prisma.stage_settings(conn)
+    screening_stages_info: dict[str, dict[str, Any]] = {}
+    for stage_name in prisma.STAGES:
+        st_row = stages_conf.get(stage_name)
+        mode = st_row["mode"] if st_row else "unblinded"
+        expected = st_row["reviewers"] if st_row else []
+        closed_at = st_row["closed_at"] if st_row else None
+        counts_rows = conn.execute(
+            "SELECT reviewer, COUNT(*) AS c FROM screening WHERE stage = ? GROUP BY reviewer ORDER BY reviewer",
+            (stage_name,),
+        ).fetchall()
+        decided_counts = {r["reviewer"]: int(r["c"]) for r in counts_rows}
+        screening_stages_info[stage_name] = {
+            "mode": mode,
+            "expected_reviewers": expected,
+            "decided_counts": decided_counts,
+            "closed_at": closed_at,
+        }
+
     warnings: list[str] = []
     if source_changes:
         newest_changes = source_changes[-SAMPLE:]
@@ -116,13 +136,22 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         if status["invariant_errors"]:
             steps["full_text_screening"].append("Fix the screening decisions behind the PRISMA invariant errors.")
     for stage in prisma.STAGES:
-        names = reviewers.get(stage, [])
-        if len(names) >= 2:
+        if stage in open_stages:
             steps[f"{stage}_screening"].append(
-                f"Check agreement at {stage} with screening_agreement (reviewers: {', '.join(names[:5])})."
+                f"Finish blind screening for stage {stage} and call screening_stage_close."
             )
+        else:
+            names = reviewers.get(stage, [])
+            if len(names) >= 2:
+                steps[f"{stage}_screening"].append(
+                    f"Check agreement at {stage} with screening_agreement (reviewers: {', '.join(names[:5])})."
+                )
     if (status and status["studies_included"]) and not any(len(n) >= 2 for n in reviewers.values()):
         warnings.append("Every screening decision is by one reviewer; report single-reviewer screening (PRISMA item 8).")
+    screening_warns = prisma.screening_warnings(conn, stage=None)
+    for sw in screening_warns:
+        if sw not in warnings:
+            warnings.append(sw)
     if no_rows:
         steps["data_extraction"].append(f"Record evidence rows with evidence_record for {len(no_rows)} included study(ies).")
     stray = sorted(with_rows - included_set) if included else []
@@ -172,6 +201,8 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         "protocol": {k: proto[k] for k in ("complete", "missing_required", "missing_recommended")},
         "prisma": prisma_part,
         "screening_reviewers": reviewers,
+        "screening_stages": screening_stages_info,
+        "reviewers": prisma.reviewer_rows(conn),
         "included_studies": len(included),
         "extraction": {
             "rows": len(rows),
@@ -210,6 +241,9 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
 def review_status(review_id: ReviewId, reviewer: ReviewerOpt = None) -> dict[str, Any]:
     """One-call overview of a review: what is recorded, what is missing, warnings and the next steps in order.
 
+    Always pass warnings (such as human screening caution and same-model warnings)
+    to the user.
+
     Call at the start of a session (to pick up where the review stopped) and before
     writing the report. It reads every record; it never changes anything.
 
@@ -217,10 +251,11 @@ def review_status(review_id: ReviewId, reviewer: ReviewerOpt = None) -> dict[str
     protocol, searching, deduplication, title_abstract_screening,
     full_text_screening, data_extraction, risk_of_bias, claim_checking, reporting),
     protocol (complete, missing fields), prisma (key counts, complete, or error),
-    screening_reviewers (per stage), included_studies, extraction (rows and gaps),
-    risk_of_bias (coverage of included studies), claims (counts), dois (checked,
-    retracted, not_found, included DOIs not yet checked), warnings, next_steps
-    (at most 10, in workflow order). Lists of paper_refs show the first 20.
+    screening_reviewers (per stage), screening_stages, reviewers, included_studies,
+    extraction (rows and gaps), risk_of_bias (coverage of included studies),
+    claims (counts), dois (checked, retracted, not_found, included DOIs not yet
+    checked), warnings, next_steps (at most 10, in workflow order). Lists of
+    paper_refs show the first 20.
     """
     with store.review_db(review_id) as conn:
         return {"ok": True, **build_overview(conn, reviewer)}
@@ -238,11 +273,18 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         diagram = prisma_render.build_mermaid(status)
     except store.StoreError as exc:
         status, diagram = {"error": str(exc)}, None
-    screening = prisma.screening_rows(conn)
+    open_stages = prisma.open_blind_stages(conn)
+    all_screening = prisma.screening_rows(conn)
+    if open_stages:
+        visible_screening = [r for r in all_screening if r["stage"] not in open_stages]
+    else:
+        visible_screening = all_screening
     claims = evidence_checks.claim_rows(conn)
     stages = prisma.reviewers_by_stage(conn)
     agreements = []
     for stage, names in stages.items():
+        if stage in open_stages:
+            continue
         for a, b in list(combinations(names, 2))[:5]:
             result = prisma.agreement(conn, stage, a, b)
             result["disagreements"] = result["disagreements"][:50]
@@ -250,6 +292,7 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
     rob = evidence_checks.rob_overview(conn)
     source_changes = source_tracking.source_changes_rows(conn)
     distinct_texts = source_tracking.distinct_source_texts_by_paper(conn)
+    screening_warns = prisma.screening_warnings(conn, stage=None)
     return {
         "bundle_version": 1,
         "generated_at": store.now_iso(),
@@ -261,8 +304,11 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         "dedup": prisma.dedup_record(conn),
         "prisma": status,
         "prisma_flow_mermaid": diagram,
-        "screening_decisions": screening[:MAX_EXPORT_ROWS],
-        "screening_decisions_total": len(screening),
+        "screening_decisions": visible_screening[:MAX_EXPORT_ROWS],
+        "screening_decisions_total": len(visible_screening),
+        "screening_stages": overview.get("screening_stages", {}),
+        "reviewers": prisma.reviewer_rows(conn),
+        "screening_warnings": screening_warns,
         "agreement": agreements,
         "evidence_table": extraction.evidence_rows(conn),
         "risk_of_bias": {"papers": rob["papers"], "domain_records": evidence_checks.rob_rows(conn), "rules": evidence_checks.OVERALL_RULES},
@@ -271,7 +317,7 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         "doi_checks": core.doi_check_rows(conn),
         "source_changes": source_changes,
         "distinct_source_texts": distinct_texts,
-        "truncated": len(screening) > MAX_EXPORT_ROWS or len(claims) > MAX_EXPORT_ROWS,
+        "truncated": len(visible_screening) > MAX_EXPORT_ROWS or len(claims) > MAX_EXPORT_ROWS,
     }
 
 
@@ -331,6 +377,35 @@ def _markdown(b: dict[str, Any]) -> str:
         out += [f"- {_t(e)}" for e in status["invariant_errors"]]
         out += ["", "```mermaid", b["prisma_flow_mermaid"], "```"]
     out += ["", "## Screening decisions", ""]
+    screening_warns = b.get("screening_warnings", [])
+    if screening_warns:
+        out += ["### Screening cautions", ""]
+        out += [f"- Warning: {_t(w)}" for w in screening_warns]
+        out += [""]
+
+    stages_info = b.get("screening_stages", {})
+    blind_stages = {s: info for s, info in stages_info.items() if info.get("mode") == "blind"}
+    if blind_stages:
+        out += ["### Screening stage settings", ""]
+        for s_name, s_info in sorted(blind_stages.items()):
+            closed = s_info.get("closed_at")
+            state_str = f"closed at {closed}" if closed else "open (blinded)"
+            exp_str = ", ".join(s_info.get("expected_reviewers", [])) or "none"
+            dec_str = ", ".join(f"{k}: {v}" for k, v in sorted(s_info.get("decided_counts", {}).items())) or "none"
+            out.append(f"- **{s_name}**: mode={s_info['mode']} ({state_str}); expected reviewers: {exp_str}; decided counts: {dec_str}")
+        out += [""]
+
+    rev_rows = b.get("reviewers", [])
+    if rev_rows:
+        out += ["### Reviewers", ""]
+        out.append(
+            md_table(
+                ["Reviewer", "Type", "Model ID", "Run ref"],
+                [[r["name"], r["reviewer_type"], r.get("model_id") or "", r.get("run_ref") or ""] for r in rev_rows],
+            )
+        )
+        out += [""]
+
     shown = b["screening_decisions"]
     out.append(f"{b['screening_decisions_total']} decisions" + (f" (first {len(shown)} shown)" if len(shown) < b["screening_decisions_total"] else "") + ".")
     if shown:
@@ -424,6 +499,9 @@ def export_bundle(
     reviewer: ReviewerOpt = None,
 ) -> dict[str, Any]:
     """Export the whole audit trail as one text document for the review's supplementary material.
+
+    Always pass warnings (such as human screening caution and same-model warnings)
+    to the user.
 
     Contains: review metadata, protocol and amendments, search log, deduplication,
     PRISMA counts and invariants with a Mermaid flow diagram, every screening
