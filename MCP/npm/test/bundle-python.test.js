@@ -28,7 +28,8 @@ function withTempDir(run) {
 test('package.json publishes python/ and builds it in prepack', () => {
   assert.ok(pkg.files.includes('python/'));
   assert.equal(pkg.scripts.prepack, 'node scripts/bundle-python.js');
-  assert.equal(pkg.version, '0.2.1');
+  const pyproject = fs.readFileSync(path.join(__dirname, '..', '..', 'pyproject.toml'), 'utf8');
+  assert.equal(pkg.version, /^version = "([^"]+)"/m.exec(pyproject)[1]);
 });
 
 test('the bundle copies the package, NOTICE and licences', () => {
