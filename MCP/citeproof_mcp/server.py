@@ -14,6 +14,7 @@ from citeproof_mcp.tools import (
     prisma,
     protocol,
     review,
+    stats_checks,
 )
 
 INSTRUCTIONS = (
@@ -33,7 +34,7 @@ INSTRUCTIONS = (
     "is false, error says what to change."
 )
 
-TOOL_MODULES = (core, protocol, prisma, extraction, evidence_checks, review)
+TOOL_MODULES = (core, protocol, prisma, extraction, evidence_checks, review, stats_checks)
 
 
 def _server_version() -> str:
