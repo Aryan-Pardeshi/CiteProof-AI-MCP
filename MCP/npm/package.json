@@ -1,6 +1,6 @@
 {
   "name": "citeproof-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Audit layer for AI literature reviews: run the CiteProof MCP server over stdio with npx. Records PRISMA counts, screening decisions, evidence checks and citation checks supplied by your research agent.",
   "license": "MIT",
   "author": "Aryan Pardeshi",

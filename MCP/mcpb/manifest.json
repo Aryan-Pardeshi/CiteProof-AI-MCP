@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "citeproof",
   "display_name": "CiteProof",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Local audit trail for AI-assisted systematic reviews: PRISMA counts, screening decisions, evidence and risk-of-bias records, DOI and quote checks.",
   "long_description": "CiteProof records and checks what your research agent supplies during a systematic review: the protocol, PRISMA 2020 search and screening counts, extracted evidence, risk-of-bias judgements, claim support, and citation checks, then exports the whole audit trail as one document.\n\nEverything runs on your computer. Review data is stored in a local SQLite database (default `~/.citeproof-mcp`) and is never uploaded. The only network calls made by the server are DOI lookups in `verify_dois` (Crossref, then doi.org). The extension does not search the literature, read papers or make scientific judgements for you, and it contains no language model.\n\nThe extension runs the same Node launcher as the npm package and includes the Python server source. The launcher uses uvx when it is present, otherwise a suitable local Python with the included server source, and only then installs uv and downloads the server wheel, which requires network access.",
   "author": {
