@@ -23,7 +23,7 @@ from citeproof_mcp.tools import (
     core,  # noqa: F401
     evidence_checks,  # noqa: F401
     extraction,  # noqa: F401
-    prisma,  # noqa: F401
+    prisma,
     protocol,  # noqa: F401
     source_tracking,  # noqa: F401
 )
@@ -67,7 +67,8 @@ store.register_schema(
     )
 )
 
-EXCLUDED_TABLES = {"meta", "review_events", "review_events_meta"}
+# retrieved_records/retrieval_runs are a snapshot replaced whole on every dedup; logging them adds noise, not history.
+EXCLUDED_TABLES = {"meta", "review_events", "review_events_meta", "retrieved_records", "retrieval_runs"}
 
 ReviewId = Annotated[str, Field(description="The id returned by review_create.")]
 
@@ -297,6 +298,9 @@ def review_history(
     new_row, changed_fields), total (matching events count), next_offset (offset for
     the next page, or null).
 
+    Screening events of a stage that is still open blind are left out until
+    screening_stage_close.
+
     Does NOT provide cryptographic tamper-proofing or hash chaining: records are
     append-only by convention and SQLite triggers within the review file; someone with
     direct file access can modify the database file directly.
@@ -338,6 +342,10 @@ def review_history(
         if clean_row_key is not None:
             clauses.append("row_key = ?")
             params.append(clean_row_key)
+        # Screening row_key is paper_ref|stage|reviewer; history must not reveal decisions of an open blind stage.
+        for stage in sorted(prisma.open_blind_stages(conn)):
+            clauses.append("NOT (table_name = 'screening' AND row_key LIKE ?)")
+            params.append(f"%|{stage}|%")
 
         where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
         total = int(conn.execute(f"SELECT COUNT(*) FROM review_events {where}", params).fetchone()[0])

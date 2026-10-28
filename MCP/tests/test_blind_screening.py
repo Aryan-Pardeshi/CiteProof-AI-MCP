@@ -612,7 +612,7 @@ async def test_open_blind_stage_cannot_leak_through_counts_or_mode_switch() -> N
     rid = (await call("review_create", title="Blind leaks", question="Test"))["review_id"]
     await call("screening_stage_set", review_id=rid, stage="title_abstract", mode="blind", reviewers=["alice", "bob"])
     await call(
-        "screening_record", review_id=rid, paper_ref="10.1/a", stage="title_abstract", decision="exclude",
+        "screening_record", review_id=rid, paper_ref="10.1000/a", stage="title_abstract", decision="exclude",
         reason="wrong population", reviewer="alice",
     )
     for tool in ("prisma_status", "export_bundle"):

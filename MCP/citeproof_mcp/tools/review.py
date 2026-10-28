@@ -6,6 +6,7 @@ This module owns no tables. It reads the other modules only through their public
 read functions.
 """
 
+import hashlib
 import json
 import sqlite3
 from itertools import combinations
@@ -13,16 +14,19 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
-from citeproof_mcp import store
+from citeproof_mcp import __version__, store
 from citeproof_mcp.compat import MCPServer
 from citeproof_mcp.tools import (
     core,
+    events,
     evidence_checks,
     extraction,
+    identity,
     prisma,
     prisma_render,
     protocol,
     source_tracking,
+    stats_checks,
 )
 from citeproof_mcp.tools.common import choice_arg, md_cell, md_table, safe_tool
 
@@ -204,6 +208,7 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         "screening_stages": screening_stages_info,
         "reviewers": prisma.reviewer_rows(conn),
         "included_studies": len(included),
+        "studies": {k: v for k, v in identity.identity_summary(conn, included).items() if k.endswith("_count")},
         "extraction": {
             "rows": len(rows),
             "studies_with_rows": len(with_rows),
@@ -295,6 +300,7 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
     screening_warns = prisma.screening_warnings(conn, stage=None)
     return {
         "bundle_version": 1,
+        "server_version": __version__,
         "generated_at": store.now_iso(),
         "review": store.read_meta(conn),
         "status": {k: overview[k] for k in ("phase", "warnings", "next_steps")},
@@ -317,6 +323,11 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         "doi_checks": core.doi_check_rows(conn),
         "source_changes": source_changes,
         "distinct_source_texts": distinct_texts,
+        "studies": identity.identity_summary(conn, prisma.included_refs(conn, reviewer)),
+        "paper_aliases": identity.alias_rows(conn)[:MAX_EXPORT_ROWS],
+        "recall_check": identity.latest_recall_check(conn),
+        "stats_checks": stats_checks.stats_check_rows(conn)[:MAX_EXPORT_ROWS],
+        "events": events.event_summary(conn),
         "truncated": len(visible_screening) > MAX_EXPORT_ROWS or len(claims) > MAX_EXPORT_ROWS,
     }
 
@@ -486,6 +497,46 @@ def _markdown(b: dict[str, Any]) -> str:
             )
         )
 
+    studies = b["studies"]
+    out += ["", "## Reports and studies", ""]
+    out.append(f"{studies['report_count']} included report(s) from {studies['study_count']} study(ies).")
+    if studies["groups"]:
+        out.append(
+            md_table(
+                ["Study", "Reports", "Linked"],
+                [[g["study_id"], "; ".join(g["reports"]), "no" if g["unlinked"] else "yes"] for g in studies["groups"]],
+            )
+        )
+
+    recall = b["recall_check"]
+    out += ["", "## Known-item recall", ""]
+    if recall:
+        c = recall["counts"]
+        out.append(
+            f"Checked {recall['checked_at']}: {c['found']} found, {c['not_found']} not found, "
+            f"{c['unresolved']} unresolved (recall {recall['recall']}). Seed recall does not show the search was exhaustive."
+        )
+    else:
+        out.append("No known-item recall check recorded.")
+
+    out += ["", "## Statistical consistency checks", ""]
+    if b["stats_checks"]:
+        out.append(
+            md_table(
+                ["Check", "Paper", "Label", "Status", "Checked at"],
+                [[s["kind"], s["paper_ref"] or "", s["label"] or "", s["status"], s["checked_at"]] for s in b["stats_checks"]],
+            )
+        )
+    else:
+        out.append("No statistical checks recorded.")
+
+    ev = b["events"]
+    out += ["", "## Change history", ""]
+    out.append(
+        f"{ev['count']} recorded event(s), last seq {ev['last_seq']}, baseline {ev['baseline_at']}. "
+        "Use review_history for the full log."
+    )
+
     out += ["", "## Open items", ""]
     out += [f"- Warning: {_t(w)}" for w in b["status"]["warnings"]]
     out += [f"- Next: {_t(s)}" for s in b["status"]["next_steps"]]
@@ -497,6 +548,10 @@ def export_bundle(
     review_id: ReviewId,
     format: Annotated[str, Field(description="'markdown' (readable report appendix) or 'json' (complete machine-readable record).")] = "markdown",
     reviewer: ReviewerOpt = None,
+    save: Annotated[
+        bool,
+        Field(description="Also write the document to <CITEPROOF_MCP_HOME>/exports/ and return its path and SHA-256."),
+    ] = False,
 ) -> dict[str, Any]:
     """Export the whole audit trail as one text document for the review's supplementary material.
 
@@ -507,23 +562,37 @@ def export_bundle(
     PRISMA counts and invariants with a Mermaid flow diagram, every screening
     decision (up to 5000), reviewer agreement for each reviewer pair, evidence
     table, risk-of-bias judgements with the overall rules, claim checks, saved DOI
-    checks, and the open warnings and next steps. Source texts are not included
-    (only their lengths and hashes, in json).
+    checks, reports-to-studies grouping and aliases, the latest known-item recall
+    check, saved statistical checks, the change-history summary, and the open
+    warnings and next steps. Source texts are not included (only their lengths and
+    hashes, in json).
 
-    Returns: format, content (the document; save it yourself, nothing is written to
-    disk), chars, suggested_filename, truncated (more than 5000 screening decisions
-    or claims), phase.
+    Returns: format, content (the document), chars, sha256 (of the UTF-8 content),
+    suggested_filename, saved_path (with save=true, else null; an existing file of
+    the same name is replaced), truncated (more than 5000 screening decisions or
+    claims), phase.
     """
     fmt = choice_arg(format, "format", ("markdown", "json"))
     with store.review_db(review_id) as conn:
         bundle = _collect(conn, reviewer)
     content = json.dumps(bundle, indent=1, ensure_ascii=False, default=str) if fmt == "json" else _markdown(bundle)
+    data = content.encode("utf-8")
+    filename = f"{review_id}-audit-bundle.{'json' if fmt == 'json' else 'md'}"
+    saved_path = None
+    if save:
+        # review_id already passed REVIEW_ID_RE inside review_db, so the name cannot leave the folder.
+        folder = store.data_dir() / "exports"
+        folder.mkdir(exist_ok=True)
+        (folder / filename).write_bytes(data)
+        saved_path = str(folder / filename)
     return {
         "ok": True,
         "format": fmt,
         "content": content,
         "chars": len(content),
-        "suggested_filename": f"{review_id}-audit-bundle.{'json' if fmt == 'json' else 'md'}",
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "suggested_filename": filename,
+        "saved_path": saved_path,
         "truncated": bundle["truncated"],
         "phase": bundle["status"]["phase"],
     }

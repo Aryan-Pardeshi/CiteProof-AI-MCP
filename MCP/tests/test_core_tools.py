@@ -331,6 +331,22 @@ async def test_list_tools_descriptions() -> None:
         "rob_summary",
         "review_status",
         "export_bundle",
+        "reviewer_record",
+        "screening_stage_set",
+        "screening_stage_close",
+        "paper_resolve",
+        "paper_alias_record",
+        "study_link",
+        "study_unlink",
+        "study_overview",
+        "recall_seed_record",
+        "recall_check",
+        "stats_check_ratio_ci",
+        "stats_recompute_2x2",
+        "stats_check_evidence",
+        "prisma_excluded_studies",
+        "manuscript_check",
+        "review_history",
     }
     assert set(tools_by_name) == expected_tools
     for name in expected_tools:

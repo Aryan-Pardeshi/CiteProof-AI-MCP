@@ -298,6 +298,11 @@ def _conflicts_for(conn: sqlite3.Connection, alias: str) -> list[dict[str, Any]]
     return [dict(r) for r in rows]
 
 
+def latest_recall_check(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    row = conn.execute("SELECT id, result FROM recall_checks ORDER BY id DESC LIMIT 1").fetchone()
+    return {"check_id": row["id"], **json.loads(row["result"])} if row else None
+
+
 def identity_summary(conn: sqlite3.Connection, included_refs: list[str]) -> dict[str, Any]:
     """Report and study counts for the included reports (used by review_status and export).
 
