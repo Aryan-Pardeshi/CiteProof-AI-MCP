@@ -639,6 +639,7 @@ def dedup_papers(
         warnings.append(f"{no_key} record(s) have no DOI, PMID or title and cannot be matched.")
 
     recorded = False
+    identity_counts = {"aliases_recorded": 0, "alias_conflicts": 0}
     if review_id is not None and str(review_id).strip():
         with store.review_db(review_id, write=True) as conn:
             identified, _, _ = search_totals(conn)
@@ -646,6 +647,9 @@ def dedup_papers(
                 fail("no searches are recorded yet; record every search with prisma_record_search first")
             if len(papers) == identified:
                 _save_dedup(conn, removed, f"{dedup.METHOD} ({len(papers)} records checked)")
+                from citeproof_mcp.tools import identity
+
+                identity_counts = identity.record_dedup(conn, papers, result)
                 recorded = True
             else:
                 # One review has one dedup count. A partial or batched call must never replace it.
@@ -666,6 +670,8 @@ def dedup_papers(
         "truncated": cut_a or cut_b,
         "recorded": recorded,
         "method": dedup.METHOD,
+        "aliases_recorded": identity_counts["aliases_recorded"],
+        "alias_conflicts": identity_counts["alias_conflicts"],
         "warnings": warnings,
         "note": (
             "Only the duplicate count is computed. Records are not merged: copy any field you need from the "
