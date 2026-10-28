@@ -7,12 +7,12 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from langgraph.types import Command
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from backend.app.agents.research_mode.writing import EV_MARKER_RE
@@ -80,21 +80,32 @@ def prune_old_buffers():
         active_research_tasks.pop(tid, None)
 
 
+# Bounds on request fields: these texts go into LLM prompts paid for by the
+# server's key, and FastAPI parses the body before any handler runs.
+MAX_PROBLEM_CHARS = 4000
+MAX_LIST_ITEMS = 10
+MAX_ITEM_CHARS = 1000
+MAX_MESSAGE_CHARS = 4000
+MAX_THREAD_ID_CHARS = 100
+BoundedItem = Annotated[str, Field(max_length=MAX_ITEM_CHARS)]
+ModelName = Annotated[str, Field(max_length=200)]
+
+
 class ResearchModeStartRequest(BaseModel):
-    problem_statement: str
-    research_objectives: list[str] = []
-    research_questions: list[str] = []
-    models: dict[str, str] = {}
+    problem_statement: str = Field(max_length=MAX_PROBLEM_CHARS)
+    research_objectives: list[BoundedItem] = Field(default_factory=list, max_length=MAX_LIST_ITEMS)
+    research_questions: list[BoundedItem] = Field(default_factory=list, max_length=MAX_LIST_ITEMS)
+    models: dict[ModelName, ModelName] = Field(default_factory=dict, max_length=MAX_LIST_ITEMS)
 
 
 class ResearchModeApproveRequest(BaseModel):
-    thread_id: str
-    message: str = ""
+    thread_id: str = Field(max_length=MAX_THREAD_ID_CHARS)
+    message: str = Field(default="", max_length=MAX_MESSAGE_CHARS)
     from_seq: int | None = None
 
 
 class ResearchModeCancelRequest(BaseModel):
-    thread_id: str
+    thread_id: str = Field(max_length=MAX_THREAD_ID_CHARS)
 
 
 async def _broadcast_event(thread_id: str, payload: dict[str, Any], is_node_event: bool = True):
