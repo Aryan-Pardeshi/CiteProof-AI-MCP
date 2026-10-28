@@ -24,10 +24,12 @@ from citeproof_mcp.tools import (
     protocol,
 )
 from citeproof_mcp.tools.common import (
+    LIST_CAP,
     MAX_TEXT_CHARS,
     cap,
     choice_arg,
     fail,
+    int_arg,
     md_table,
     safe_tool,
 )
@@ -344,7 +346,7 @@ def find_reviewer_counts(text: str) -> list[dict[str, Any]]:
 
 ROB_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
     ("RoB 2", "rob2", re.compile(r"\brob\s*2\b|\bcochrane\s+risk\s+of\s+bias\s+2\b", re.IGNORECASE)),
-    ("RoB 1", "rob1", re.compile(r"\brob\s*1\b|\bcochrane\s+risk\s+of\s+bias(?:\s+tool)?\b", re.IGNORECASE)),
+    ("RoB 1", "rob1", re.compile(r"\brob\s*1\b|\bcochrane\s+risk\s+of\s+bias\b(?!\s*(?:tool\s*)?(?:2|ii|version\s*2)\b)(?:\s+tool)?\b", re.IGNORECASE)),
     ("ROBINS-I", "robins_i", re.compile(r"\brobins[- ]i\b", re.IGNORECASE)),
     ("ROBINS-E", "robins_e", re.compile(r"\brobins[- ]e\b", re.IGNORECASE)),
     ("Newcastle-Ottawa", "nos", re.compile(r"(?i:\bnewcastle[- ]ottawa\b)|\bNOS\b")),
@@ -400,6 +402,16 @@ SYNTHESIS_RE = re.compile(
 )
 
 
+def synthesis_classes(text: str) -> set[str]:
+    """Synthesis model types named in text: 'random', 'fixed' and/or 'narrative'."""
+    low = text.lower()
+    return {
+        name
+        for name, pattern in (("random", r"\brandom[- ]effects?\b"), ("fixed", r"\bfixed[- ]effects?\b"), ("narrative", r"\bnarrative\b"))
+        if re.search(pattern, low)
+    }
+
+
 def find_synthesis_methods(text: str) -> list[dict[str, Any]]:
     """Find synthesis methods stated in text."""
     out: list[dict[str, Any]] = []
@@ -426,6 +438,7 @@ def prisma_excluded_studies(
         str,
         Field(description="'markdown' (table for report appendix) or 'json' (structured rows)."),
     ] = "markdown",
+    offset: Annotated[int, Field(description="Rows to skip, for paging; each call returns up to 200 rows.")] = 0,
 ) -> dict[str, Any]:
     """Table of full-text excluded studies, their citations and recorded exclusion reasons.
 
@@ -434,7 +447,8 @@ def prisma_excluded_studies(
     compute_status's excluded_full_text count.
 
     Returns: ok, format, papers (count), by_reason (counts per reason), reconciliation
-    (rows, excluded_full_text, reconciles, explanation), truncated, and table (when markdown)
+    (rows, excluded_full_text, reconciles, explanation; always over every row), truncated,
+    next_offset (pass as offset for the next page of up to 200 rows), and table (when markdown)
     or rows (when json). Each row in rows has paper_ref, citation, reasons, reason_missing.
 
     Does NOT verify the scientific validity of exclusion decisions or reasons; reports
@@ -479,34 +493,26 @@ def prisma_excluded_studies(
             "reason_missing": reason_missing,
         })
 
-    capped_rows, truncated = cap(all_rows)
-    displayed_count = len(capped_rows)
+    skip = int_arg(offset, "offset", min_value=0)
+    capped_rows = all_rows[skip : skip + LIST_CAP]
     papers_count = len(all_rows)
+    truncated = skip + len(capped_rows) < papers_count
 
-    reconciles = False
+    # Reconcile the full row set; paging only limits what is shown.
     explanation: str | None = None
-    if status_excluded is not None:
-        if displayed_count == status_excluded and not truncated:
-            reconciles = True
-            explanation = None
-        elif truncated:
-            reconciles = False
-            explanation = (
-                f"Excluded studies table is truncated to {displayed_count} rows (out of {papers_count}); "
-                f"does not reconcile with PRISMA status count ({status_excluded})."
-            )
-        else:
-            reconciles = False
-            explanation = (
-                f"Excluded studies rows ({displayed_count}) do not reconcile with PRISMA status "
-                f"excluded_full_text ({status_excluded})."
-            )
-    else:
+    if status_excluded is None:
         reconciles = False
         explanation = f"PRISMA status could not be computed: {status_err}"
+    else:
+        reconciles = papers_count == status_excluded
+        if not reconciles:
+            explanation = (
+                f"Excluded studies rows ({papers_count}) do not reconcile with PRISMA status "
+                f"excluded_full_text ({status_excluded})."
+            )
 
     reconciliation = {
-        "rows": displayed_count,
+        "rows": papers_count,
         "excluded_full_text": status_excluded,
         "reconciles": reconciles,
         "explanation": explanation,
@@ -519,6 +525,7 @@ def prisma_excluded_studies(
         "by_reason": dict(sorted(by_reason.items(), key=lambda kv: (-kv[1], kv[0]))),
         "reconciliation": reconciliation,
         "truncated": truncated,
+        "next_offset": skip + len(capped_rows) if truncated else None,
     }
 
     if fmt == "markdown":
@@ -890,10 +897,8 @@ def manuscript_check(
                     iso_d = df["iso_date"]
                     m_str = df["month_str"]
 
-                    matched_date = bool(
-                        (iso_d and (iso_d in rec_dates or m_str in rec_months))
-                        or m_str in rec_months
-                    )
+                    # A stated day must match a recorded day; month precision only when no day is stated.
+                    matched_date = any(d.startswith(iso_d) for d in rec_dates) if iso_d else m_str in rec_months
 
                     if not matched_date:
                         findings.append({
@@ -916,7 +921,8 @@ def manuscript_check(
             rev_counts = find_reviewer_counts(sec_text)
             for rc in rev_counts:
                 stated_cnt = rc["stated_count"]
-                if not any(by_stage.values()):
+                if not recorded_reviewers:
+                    # Only 'primary' (or nothing) recorded: the record has no reviewer-level data to contradict.
                     findings.append({
                         "kind": "reviewer_count",
                         "severity": "unknown",
@@ -926,7 +932,10 @@ def manuscript_check(
                         "stated": stated_cnt,
                         "recorded": None,
                         "field": "reviewer_count",
-                        "message": "No screening decisions are recorded in the audit trail to check reviewer count against.",
+                        "message": (
+                            "The audit trail has no decisions under individual reviewer names (only 'primary' or "
+                            "none), so the stated reviewer count cannot be checked."
+                        ),
                     })
                 elif stated_cnt != recorded_reviewers:
                     findings.append({
@@ -1005,9 +1014,9 @@ def manuscript_check(
                         "message": "The audit record has no recorded synthesis method to compare with.",
                     })
                 else:
-                    norm_stated = re.sub(r"[\s\-]+", "_", stated_synth.lower())
-                    norm_rec = re.sub(r"[\s\-]+", "_", rec_synth.lower())
-                    if norm_stated != norm_rec and norm_stated not in norm_rec and norm_rec not in norm_stated:
+                    # Compare the model type, not the wording ("random-effects model" vs "... meta-analysis").
+                    rec_classes = synthesis_classes(rec_synth)
+                    if rec_classes and not synthesis_classes(stated_synth) & rec_classes:
                         findings.append({
                             "kind": "synthesis_method",
                             "severity": "mismatch",

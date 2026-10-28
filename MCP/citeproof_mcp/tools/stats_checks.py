@@ -190,7 +190,8 @@ def _ratio_assumptions(decimals: int, rel_tol: float, level: float | None) -> li
         level_text,
         (
             "The back-calculated p-value is two-sided and assumes a normal log-scale estimate: "
-            "p = erfc(|ln estimate| / (SE * sqrt(2)))."
+            "p = erfc(|ln estimate| / (SE * sqrt(2))). A reported p passes when it lies in the range of p over "
+            "every estimate and limit within half a unit of the reported values, widened by rel_tol."
         ),
         (
             f"Reported values are rounded to {decimals} decimals. A value is consistent when it differs from the "
@@ -202,6 +203,21 @@ def _ratio_assumptions(decimals: int, rel_tol: float, level: float | None) -> li
         ),
         "This checks internal arithmetic consistency only, not whether the paper's analysis, data or model are correct.",
     ]
+
+
+def _p_range(estimate: float, lower: float, upper: float, h: float, z: float) -> tuple[float, float]:
+    """Smallest and largest two-sided p for unrounded values within +-h of the reported ones.
+
+    p falls as |ln estimate| grows and as SE shrinks, so the extremes are: the estimate
+    furthest from 1 with the narrowest interval, and the estimate closest to 1 with the widest.
+    """
+    e_lo, e_hi = max(MIN_POSITIVE, estimate - h), estimate + h
+    far = max(abs(math.log(e_lo)), abs(math.log(e_hi)))
+    near = 0.0 if e_lo <= 1 <= e_hi else min(abs(math.log(e_lo)), abs(math.log(e_hi)))
+    se_narrow = (math.log(upper - h) - math.log(lower + h)) / (2 * z) if upper - h > lower + h else 0.0
+    se_wide = (math.log(upper + h) - math.log(max(MIN_POSITIVE, lower - h))) / (2 * z)
+    p_low = math.erfc(far / se_narrow / math.sqrt(2)) if se_narrow > 0 else 0.0
+    return p_low, math.erfc(near / se_wide / math.sqrt(2))
 
 
 def _ratio_ci_result(
@@ -342,24 +358,25 @@ def _ratio_ci_result(
             )
             warnings.append("The interval has zero width on the log scale; check the limits before using the p-value.")
         else:
-            p_tolerance = h + rel_tol * abs(p_back)
-            p_ok = abs(p_value - p_back) <= p_tolerance
+            p_low, p_high = _p_range(estimate, lower, upper, h, z)
+            p_low, p_high = p_low * (1 - rel_tol), min(1.0, p_high * (1 + rel_tol))
+            p_ok = p_low <= p_value <= p_high
             checks.append(
                 {
                     "check": "p_value",
                     "passed": p_ok,
                     "detail": (
                         f"reported p={_fmt(p_value)}, back-calculated p={_fmt(p_back)}, "
-                        f"tolerance={_fmt(p_tolerance)}"
+                        f"range over the rounding of estimate and limits={_fmt(p_low)} to {_fmt(p_high)}"
                     ),
                 }
             )
             if not p_ok:
                 warnings.append(
-                    f"The reported p-value is inconsistent with the p-value back-calculated from the interval "
-                    f"under the stated rounding (reported {_fmt(p_value)}, back-calculated {_fmt(p_back)}, "
-                    f"tolerance {_fmt(p_tolerance)}). Check whether the p-value belongs to the same estimate "
-                    "and analysis."
+                    f"The reported p-value is inconsistent with the interval under the stated rounding "
+                    f"(reported {_fmt(p_value)}; any estimate and limits that round to the reported ones give "
+                    f"p between {_fmt(p_low)} and {_fmt(p_high)}). Check whether the p-value belongs to the same "
+                    "estimate and analysis."
                 )
 
     result.update(

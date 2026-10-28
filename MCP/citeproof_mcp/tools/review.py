@@ -403,7 +403,10 @@ def _markdown(b: dict[str, Any]) -> str:
             state_str = f"closed at {closed}" if closed else "open (blinded)"
             exp_str = ", ".join(s_info.get("expected_reviewers", [])) or "none"
             dec_str = ", ".join(f"{k}: {v}" for k, v in sorted(s_info.get("decided_counts", {}).items())) or "none"
-            out.append(f"- **{s_name}**: mode={s_info['mode']} ({state_str}); expected reviewers: {exp_str}; decided counts: {dec_str}")
+            out.append(
+                f"- **{s_name}**: mode={s_info['mode']} ({state_str}); expected reviewers: {_t(exp_str)}; "
+                f"decided counts: {_t(dec_str)}"
+            )
         out += [""]
 
     rev_rows = b.get("reviewers", [])

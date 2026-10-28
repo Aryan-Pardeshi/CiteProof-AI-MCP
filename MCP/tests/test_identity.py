@@ -181,8 +181,9 @@ async def test_manual_alias_requires_replace_and_keeps_the_previous_mapping() ->
     resolved = await call("paper_resolve", review_id=rid, paper_refs=["10.1000/preprint"])
     row = resolved["refs"][0]
     assert row["canonical_ref"] == "10.1000/final"
-    assert row["status"] == "conflict"
-    assert row["conflicts"][0]["existing_ref"] == "10.1000/published"
+    # The explicit replace is the user's decision, so nothing is left open; the old mapping stays in alias_conflicts.
+    assert row["status"] == "resolved"
+    assert row["conflicts"] == []
 
 
 @pytest.mark.asyncio
@@ -363,23 +364,24 @@ async def test_recall_check_found_not_found_unresolved_and_per_source() -> None:
 @pytest.mark.asyncio
 async def test_recall_marks_a_seed_with_an_alias_conflict_unresolved() -> None:
     rid = await _review()
-    await _search(rid, hits=1)
-    assert (
-        await call(
-            "dedup_papers",
-            papers=[{"doi": "10.1000/a", "title": "Seed report for the conflict", "year": 2020}],
-            review_id=rid,
-        )
-    )["recorded"] is True
-    await call("recall_seed_record", review_id=rid, paper_refs=["10.1000/a"])
-    await call("paper_alias_record", review_id=rid, alias="10.1000/a", canonical_ref="10.1000/b", replace=True)
-    await call("paper_alias_record", review_id=rid, alias="10.1000/a", canonical_ref="10.1000/c", replace=True)
+    # Two DOIs in one cluster (shared PMID): the second DOI is a recorded, open conflict.
+    papers = [
+        {"doi": "10.1000/a", "pmid": "111", "title": "Seed report for the conflict", "year": 2020},
+        {"doi": "10.1000/b", "pmid": "111", "title": "Seed report for the conflict", "year": 2020},
+    ]
+    await _search(rid, hits=2)
+    assert (await call("dedup_papers", papers=papers, review_id=rid))["recorded"] is True
+    await call("recall_seed_record", review_id=rid, paper_refs=["10.1000/b"])
 
     result = await call("recall_check", review_id=rid)
     assert result["counts"] == {"found": 0, "not_found": 0, "unresolved": 1}
     assert result["recall"] is None
-    assert result["seeds"][0]["status"] == "unresolved"
     assert "alias conflict" in result["seeds"][0]["reason"]
+
+    # Deciding the mapping clears the conflict, and the seed counts again.
+    await call("paper_alias_record", review_id=rid, alias="10.1000/b", canonical_ref="10.1000/a")
+    result = await call("recall_check", review_id=rid)
+    assert result["counts"] == {"found": 1, "not_found": 0, "unresolved": 0}
 
 
 @pytest.mark.asyncio
@@ -407,3 +409,36 @@ async def test_identity_tools_reject_invalid_input() -> None:
     assert "labels" in mismatch["error"]
 
     assert (await call("recall_check", review_id=rid))["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_review_fixes_conflict_resolution_labels_late_alias_and_stale_snapshot() -> None:
+    rid = await _review()
+    papers = [
+        {"id": "a", "doi": "10.1000/pre", "title": "Preprint of the trial report", "year": 2020, "source": "PubMed"},
+        {"id": "b", "doi": "10.1000/other", "title": "Another unrelated trial report", "year": 2021, "source": "Embase"},
+    ]
+    await _search(rid, hits=len(papers))
+    assert (await call("dedup_papers", papers=papers, review_id=rid))["recorded"] is True
+
+    # Repeated labels and repeated refs keep their positions.
+    seeds = await call(
+        "recall_seed_record", review_id=rid, paper_refs=["10.1000/pub", "10.1000/pub", "10.1000/other"],
+        labels=["PubMed", "PubMed", "Embase"],
+    )
+    assert seeds["ok"] is True and seeds["added"] == 2
+
+    # A manual alias made after the dedup applies to the stored records.
+    await call("paper_alias_record", review_id=rid, alias="10.1000/pre", canonical_ref="10.1000/pub")
+    check = await call("recall_check", review_id=rid)
+    assert {s["paper_ref"]: s["status"] for s in check["seeds"]} == {"10.1000/pub": "found", "10.1000/other": "found"}
+
+    # An explicit mapping resolves an open conflict; the provenance row stays.
+    await call("paper_alias_record", review_id=rid, alias="10.1000/pre", canonical_ref="10.1000/other", replace=True)
+    resolved = await call("paper_resolve", review_id=rid, paper_refs=["10.1000/pre"])
+    assert resolved["refs"][0]["status"] == "resolved"
+
+    # A dedup count recorded elsewhere invalidates the snapshot.
+    await call("prisma_record_dedup", review_id=rid, duplicates_removed=0, method="manual count in EndNote")
+    stale = await call("recall_check", review_id=rid)
+    assert stale["counts"]["unresolved"] == 2

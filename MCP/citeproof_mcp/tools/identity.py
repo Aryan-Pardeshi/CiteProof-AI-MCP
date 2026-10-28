@@ -41,6 +41,7 @@ store.register_schema(
             proposed_ref TEXT NOT NULL,
             origin TEXT NOT NULL,
             seen_at TEXT NOT NULL,
+            resolved_at TEXT,
             PRIMARY KEY (alias, proposed_ref)
         )""",
         """CREATE TABLE IF NOT EXISTS retrieved_records (
@@ -57,7 +58,8 @@ store.register_schema(
         """CREATE TABLE IF NOT EXISTS retrieval_runs (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             records INTEGER NOT NULL,
-            recorded_at TEXT NOT NULL
+            recorded_at TEXT NOT NULL,
+            dedup TEXT NOT NULL
         )""",
         """CREATE TABLE IF NOT EXISTS study_reports (
             paper_ref TEXT PRIMARY KEY,
@@ -290,9 +292,10 @@ def _aliases_for(conn: sqlite3.Connection, canonical_ref: str) -> list[str]:
 
 
 def _conflicts_for(conn: sqlite3.Connection, alias: str) -> list[dict[str, Any]]:
+    """Open conflicts only; paper_alias_record resolves them and the rows stay for provenance."""
     rows = conn.execute(
         "SELECT alias, existing_ref, proposed_ref, origin, seen_at FROM alias_conflicts "
-        "WHERE alias = ? ORDER BY proposed_ref",
+        "WHERE alias = ? AND resolved_at IS NULL ORDER BY proposed_ref",
         (alias,),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -404,9 +407,10 @@ def record_dedup(conn: sqlite3.Connection, papers: list[dict[str, Any]], result:
             ),
         )
     conn.execute(
-        """INSERT INTO retrieval_runs (id, records, recorded_at) VALUES (1, ?, ?)
-           ON CONFLICT(id) DO UPDATE SET records = excluded.records, recorded_at = excluded.recorded_at""",
-        (len(papers), now),
+        """INSERT INTO retrieval_runs (id, records, recorded_at, dedup) VALUES (1, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET records = excluded.records, recorded_at = excluded.recorded_at,
+               dedup = excluded.dedup""",
+        (len(papers), now, json.dumps(prisma.dedup_record(conn), sort_keys=True)),
     )
     return {"aliases_recorded": aliases_recorded, "alias_conflicts": len(seen)}
 
@@ -509,7 +513,9 @@ def paper_alias_record(
         canonical = resolve_ref(conn, canonical_clean)
         row = conn.execute("SELECT canonical_ref FROM paper_aliases WHERE alias = ?", (alias_clean,)).fetchone()
         previous = row[0] if row else None
-        if previous is not None and previous != canonical and not replace:
+        # dedup maps every identifier to its own canonical; a self-mapping is not a decision to override.
+        self_mapped = previous == alias_clean
+        if previous is not None and previous != canonical and not self_mapped and not replace:
             fail(
                 f"alias '{alias_clean}' already maps to '{previous}'; send replace=true to point it at "
                 f"'{canonical}' (the previous mapping is kept in alias_conflicts)"
@@ -522,15 +528,20 @@ def paper_alias_record(
                 (alias_clean, canonical, _kind(alias_clean), ORIGIN_MANUAL, now),
             )
         elif replaced:
-            conn.execute(
-                "INSERT INTO alias_conflicts (alias, existing_ref, proposed_ref, origin, seen_at) "
-                "VALUES (?, ?, ?, ?, ?) ON CONFLICT(alias, proposed_ref) DO NOTHING",
-                (alias_clean, previous, canonical, ORIGIN_MANUAL, now),
-            )
+            if not self_mapped:
+                conn.execute(
+                    "INSERT INTO alias_conflicts (alias, existing_ref, proposed_ref, origin, seen_at) "
+                    "VALUES (?, ?, ?, ?, ?) ON CONFLICT(alias, proposed_ref) DO NOTHING",
+                    (alias_clean, previous, canonical, ORIGIN_MANUAL, now),
+                )
             conn.execute(
                 "UPDATE paper_aliases SET canonical_ref = ?, kind = ?, origin = ?, created_at = ? WHERE alias = ?",
                 (canonical, _kind(alias_clean), ORIGIN_MANUAL, now, alias_clean),
             )
+        # An explicit mapping is the user's decision: close every open conflict for this alias, keep the rows.
+        conn.execute(
+            "UPDATE alias_conflicts SET resolved_at = ? WHERE alias = ? AND resolved_at IS NULL", (now, alias_clean)
+        )
     return {
         "ok": True,
         "alias": alias_clean,
@@ -756,18 +767,18 @@ def recall_seed_record(
 
     Does NOT search for the seeds or decide eligibility; it records what you send.
     """
-    refs = _refs(paper_refs)
-    label_list = list_arg(labels, "labels", max_items=MAX_REFS, max_len=200) if labels is not None else []
-    if labels is not None and label_list and len(label_list) != len(refs):
+    _refs(paper_refs)  # type and size checks; pairing below keeps the caller's positions
+    if labels is not None and (not isinstance(labels, list) or len(labels) != len(paper_refs)):
         fail("labels must have one entry per paper_ref, in the same order (or be omitted)")
     pairs: list[tuple[str, str | None]] = []
     seen: set[str] = set()
-    for index, value in enumerate(refs):
+    for index, value in enumerate(paper_refs):
         ref = paper_ref_arg(value)
+        label = text_arg(labels[index], f"labels[{index}]", required=False, max_len=200) if labels else None
         if ref in seen:
             continue
         seen.add(ref)
-        pairs.append((ref, label_list[index] if label_list else None))
+        pairs.append((ref, label))
     with store.review_db(review_id, write=True) as conn:
         now = store.now_iso()
         removed = conn.execute("DELETE FROM recall_seeds").rowcount if replace else 0
@@ -830,9 +841,10 @@ def recall_check(review_id: ReviewId) -> dict[str, Any]:
         ]
         if not seed_rows:
             fail("no recall seeds are recorded; call recall_seed_record first with the known eligible papers")
-        run = conn.execute("SELECT records, recorded_at FROM retrieval_runs WHERE id = 1").fetchone()
+        run = conn.execute("SELECT records, recorded_at, dedup FROM retrieval_runs WHERE id = 1").fetchone()
         dedup = prisma.dedup_record(conn)
-        has_snapshot = run is not None and dedup is not None
+        # The snapshot is valid only for the dedup record it was taken with; a later manual count replaces it.
+        has_snapshot = run is not None and dedup is not None and run["dedup"] == json.dumps(dedup, sort_keys=True)
         records = (
             [
                 dict(r)
@@ -847,6 +859,8 @@ def recall_check(review_id: ReviewId) -> dict[str, Any]:
         checked_at = store.now_iso()
         source_counts: dict[str, dict[str, Any]] = {}
         for record in records:
+            # Aliases recorded after the dedup (e.g. preprint -> published) apply to the records too.
+            record["canonical_ref"] = resolve_ref(conn, record["paper_ref"]) if record["paper_ref"] else None
             source = record["source"] or "unknown"
             entry = source_counts.setdefault(
                 source, {"source": source, "records": 0, "found": 0, "missed": 0, "unresolved": 0}

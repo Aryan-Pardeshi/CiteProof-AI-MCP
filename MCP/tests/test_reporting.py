@@ -276,8 +276,7 @@ async def test_prisma_excluded_studies_reconciliation_true_and_cannot_reconcile(
     assert res1["reconciliation"]["excluded_full_text"] == 1
     assert res1["reconciliation"]["explanation"] is None
 
-    # 2. State where it cannot reconcile:
-    # Insert 205 records so rows is capped at LIST_CAP (200), but total is 205
+    # 2. 205 rows: the page shows 200, but reconciliation covers every row and paging reaches the rest.
     batch = [
         {
             "paper_ref": f"10.2000/trunc_{i:04d}",
@@ -294,10 +293,12 @@ async def test_prisma_excluded_studies_reconciliation_true_and_cannot_reconcile(
     assert res2["ok"] is True
     assert res2["truncated"] is True
     assert res2["papers"] == 205
-    assert res2["reconciliation"]["rows"] == 200
+    assert res2["reconciliation"]["rows"] == 205
     assert res2["reconciliation"]["excluded_full_text"] == 205
-    assert res2["reconciliation"]["reconciles"] is False
-    assert "truncated" in res2["reconciliation"]["explanation"]
+    assert res2["reconciliation"]["reconciles"] is True
+    assert res2["next_offset"] == 200
+    page2 = await call("prisma_excluded_studies", review_id=rid, format="json", offset=200)
+    assert len(page2["rows"]) == 5 and page2["truncated"] is False and page2["next_offset"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -678,3 +679,14 @@ def test_lowercase_words_are_not_read_as_abbreviations() -> None:
     assert reporting.find_rob_tools(text) == []
     assert reporting.find_reviewer_counts(text) == []
     assert reporting.find_reviewer_counts("Two review authors screened")[0]["stated_count"] == 2
+
+
+def test_review_fixes_rob1_and_synthesis_classes() -> None:
+    from citeproof_mcp.tools import reporting
+
+    keys = {t["key"] for t in reporting.find_rob_tools("We used the Cochrane risk of bias 2 tool.")}
+    assert keys == {"rob2"}
+    assert {t["key"] for t in reporting.find_rob_tools("Cochrane risk of bias tool")} == {"rob1"}
+    assert reporting.synthesis_classes("random-effects model") == reporting.synthesis_classes(
+        "random-effects meta-analysis"
+    ) == {"random"}
