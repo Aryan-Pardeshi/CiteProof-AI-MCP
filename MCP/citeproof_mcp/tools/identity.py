@@ -699,9 +699,11 @@ def study_overview(
             study_id = study_of(conn, row["paper_ref"])
             if study_id is None:
                 continue
+            # Same key evidence_record stores; evidence_rows() does not return the column.
+            outcome_key = re.sub(r"\s+", " ", row["outcome"].strip().lower())
             entry = by_outcome.setdefault(
-                (study_id, row["outcome_key"]),
-                {"study_id": study_id, "outcome_key": row["outcome_key"], "outcome": row["outcome"], "reports": set()},
+                (study_id, outcome_key),
+                {"study_id": study_id, "outcome_key": outcome_key, "outcome": row["outcome"], "reports": set()},
             )
             entry["reports"].add(row["paper_ref"])
     risk = [
