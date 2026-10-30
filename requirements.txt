@@ -13,7 +13,7 @@ aiosqlite>=0.22.1
 tavily-python==0.8.5
 httpx==0.28.1
 matplotlib>=3.11.2
-openai>=3.35.1
+openai>=3.39.0
 feedparser>=6.0.14
 fpdf2>=2.8.9
 pypdf>=6.21.1
