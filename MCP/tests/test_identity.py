@@ -544,3 +544,42 @@ async def test_unlinked_report_never_shares_a_group_with_a_study_id() -> None:
     overview = await call("study_overview", review_id=rid)
     assert overview["study_count"] == 2
     assert [g["reports"] for g in overview["groups"] if g["unlinked"]] == [["pmid:123"]]
+
+
+@pytest.mark.asyncio
+async def test_status_coverage_resolves_aliases() -> None:
+    rid = await _review()
+    await _include(rid, "pmid:123")
+    await call("paper_alias_record", review_id=rid, alias="pmid:123", canonical_ref="10.1000/x")
+    rec = await call(
+        "evidence_record", review_id=rid, paper_ref="10.1000/x", outcome="mortality", study_design="RCT",
+        quote="240 participants were analysed", source_text="In total 240 participants were analysed.",
+    )
+    assert rec["ok"] is True, rec
+    rob = await call(
+        "rob_record", review_id=rid, paper_ref="10.1000/x", tool="rob2", domain="randomisation_process",
+        judgement="low", quote="randomised by a central computer", source_text="Patients were randomised by a central computer.",
+    )
+    assert rob["ok"] is True, rob
+
+    status = await call("review_status", review_id=rid)
+    assert not any("evidence_record" in s for s in status["next_steps"]), status["next_steps"]
+    assert not any("not included at full_text" in w for w in status["warnings"]), status["warnings"]
+    assert not any("Assess risk of bias" in s for s in status["next_steps"]), status["next_steps"]
+
+
+@pytest.mark.asyncio
+async def test_study_link_moves_every_stored_link_of_an_aliased_report() -> None:
+    rid = await _review()
+    await call("study_link", review_id=rid, study_id="S1", paper_refs=["10.1000/d"])
+    await call("study_link", review_id=rid, study_id="S2", paper_refs=["pmid:9"])
+    await call("paper_alias_record", review_id=rid, alias="pmid:9", canonical_ref="10.1000/d")
+
+    refused = await call("study_link", review_id=rid, study_id="S3", paper_refs=["10.1000/d"])
+    assert refused["ok"] is False and "S1" in refused["error"] and "S2" in refused["error"]
+
+    moved = await call("study_link", review_id=rid, study_id="S3", paper_refs=["10.1000/d"], replace=True)
+    assert moved["ok"] is True, moved
+    assert {m["from_study"] for m in moved["moved"]} == {"S1", "S2"}
+    again = await call("study_link", review_id=rid, study_id="S3", paper_refs=["pmid:9"])
+    assert again["ok"] is True and again["unchanged"] == ["10.1000/d"], again

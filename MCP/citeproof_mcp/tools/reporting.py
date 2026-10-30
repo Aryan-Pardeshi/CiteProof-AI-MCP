@@ -110,6 +110,16 @@ def number_matches(stated_str: str, recorded_val: float | None) -> bool:
     return abs(stated_val - float(recorded_val)) <= (tol + 1e-9)
 
 
+def stated_numbers_agree(a_str: str, b_str: str) -> bool:
+    """Two stated numbers can be the same value when their rounding intervals overlap (1.234 and 1.2)."""
+    try:
+        a = float(a_str.replace("−", "-").strip())
+        b = float(b_str.replace("−", "-").strip())
+    except ValueError:
+        return False
+    return abs(a - b) <= get_decimal_tolerance(a_str) + get_decimal_tolerance(b_str) + 1e-9
+
+
 # ---------------------------------------------------------------------------
 # Effect estimate extraction patterns
 # ---------------------------------------------------------------------------
@@ -847,9 +857,9 @@ def manuscript_check(
         for i, e1 in enumerate(section_stated_effects):
             for e2 in section_stated_effects[i + 1:]:
                 sec1, sec2 = e1["section"], e2["section"]
-                if sec1 != sec2 and e1["measure"] == e2["measure"] and number_matches(e1["estimate_str"], float(e2["estimate_str"].replace("−", "-"))):
-                    l_match = number_matches(e1["lower_str"], float(e2["lower_str"].replace("−", "-")))
-                    u_match = number_matches(e1["upper_str"], float(e2["upper_str"].replace("−", "-")))
+                if sec1 != sec2 and e1["measure"] == e2["measure"] and stated_numbers_agree(e1["estimate_str"], e2["estimate_str"]):
+                    l_match = stated_numbers_agree(e1["lower_str"], e2["lower_str"])
+                    u_match = stated_numbers_agree(e1["upper_str"], e2["upper_str"])
                     if not (l_match and u_match):
                         pair_key = (e1["measure"], e1["estimate_str"], min(sec1, sec2), max(sec1, sec2))
                         if pair_key not in seen_eff_pairs:

@@ -565,13 +565,9 @@ def paper_alias_record(
     }
 
 
-def _linked_rows(conn: sqlite3.Connection, refs: list[str]) -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    for ref in refs:
-        rows = _link_rows(conn, ref)
-        if rows:
-            out[ref] = rows[0]
-    return out
+def _linked_rows(conn: sqlite3.Connection, refs: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """Every stored link per ref: a DOI and a PMID linked before they were aliased give two rows."""
+    return {ref: rows for ref in refs if (rows := _link_rows(conn, ref))}
 
 
 @safe_tool
@@ -616,7 +612,8 @@ def study_link(
         existing = _linked_rows(conn, resolved)
         blocked = [
             {"paper_ref": ref, "study_id": row["study_id"]}
-            for ref, row in existing.items()
+            for ref, rows in existing.items()
+            for row in rows
             if row["study_id"] != study
         ]
         if blocked and not replace:
@@ -627,25 +624,30 @@ def study_link(
             )
         now = store.now_iso()
         for ref in resolved:
-            row = existing.get(ref)
-            if row is None:
+            rows = existing.get(ref)
+            if not rows:
                 conn.execute(
                     "INSERT INTO study_reports (paper_ref, study_id, note, linked_at) VALUES (?, ?, ?, ?)",
                     (ref, study, note_clean, now),
                 )
                 linked.append(ref)
-            elif row["study_id"] == study:
-                if note_clean is not None and note_clean != row["note"]:
-                    conn.execute(
-                        "UPDATE study_reports SET note = ? WHERE paper_ref = ?", (note_clean, row["paper_ref"])
-                    )
+                continue
+            old = [row for row in rows if row["study_id"] != study]
+            if not old:
+                for row in rows:
+                    if note_clean is not None and note_clean != row["note"]:
+                        conn.execute(
+                            "UPDATE study_reports SET note = ? WHERE paper_ref = ?", (note_clean, row["paper_ref"])
+                        )
                 unchanged.append(ref)
-            else:
+                continue
+            for row in old:
                 conn.execute(
                     "UPDATE study_reports SET study_id = ?, note = COALESCE(?, note), linked_at = ? WHERE paper_ref = ?",
                     (study, note_clean, now, row["paper_ref"]),
                 )
-                moved.append({"paper_ref": ref, "from_study": row["study_id"], "to_study": study})
+            for from_study in sorted({row["study_id"] for row in old}):
+                moved.append({"paper_ref": ref, "from_study": from_study, "to_study": study})
         reports_in_study = int(
             conn.execute("SELECT COUNT(*) FROM study_reports WHERE study_id = ?", (study,)).fetchone()[0]
         )

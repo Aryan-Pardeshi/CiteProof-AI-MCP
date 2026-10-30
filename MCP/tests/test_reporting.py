@@ -542,6 +542,26 @@ async def test_manuscript_check_ci_limit_mismatch_and_cross_section() -> None:
     assert "Abstract" in cross_eff[0]["section"]
     assert "Results" in cross_eff[0]["section"]
 
+    # 3. The same estimate at lower precision later on is still compared (either order).
+    for first, second in (("Results", "Abstract"), ("Abstract", "Results")):
+        texts = {
+            "Results": "Mortality was reduced (RR 0.823, 95% CI 0.701 to 0.960).",
+            "Abstract": "Mortality was reduced (RR 0.8, 95% CI 0.5 to 0.6).",
+        }
+        res_prec = await call("manuscript_check", review_id=rid, sections={first: texts[first], second: texts[second]})
+        assert len([f for f in res_prec["findings"] if f["kind"] == "cross_section_effect"]) == 1, (first, res_prec)
+
+    # 4. Rounded limits that agree with the precise ones are not a conflict.
+    res_round = await call(
+        "manuscript_check",
+        review_id=rid,
+        sections={
+            "Results": "Mortality was reduced (RR 0.823, 95% CI 0.701 to 0.960).",
+            "Abstract": "Mortality was reduced (RR 0.8, 95% CI 0.7 to 1.0).",
+        },
+    )
+    assert not [f for f in res_round["findings"] if f["kind"] == "cross_section_effect"]
+
 
 @pytest.mark.asyncio
 async def test_manuscript_check_databases_named_and_omitted() -> None:

@@ -68,10 +68,15 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
     claims = evidence_checks.claims_summary(conn)
     dois = core.doi_check_rows(conn)
 
-    with_rows = {r["paper_ref"] for r in rows}
-    no_rows = [p for p in included if p not in with_rows]
-    rob_by_paper = {p["paper_ref"]: p for p in rob["papers"]}
-    no_rob = [p for p in included if p not in rob_by_paper]
+    # Coverage compares canonical refs, so a PMID decision and a DOI evidence row of one paper match.
+    def canon(ref: str) -> str:
+        return identity.resolve_ref(conn, ref)
+
+    included_canon = {canon(p) for p in included}
+    with_rows = {canon(r["paper_ref"]) for r in rows}
+    no_rows = [p for p in included if canon(p) not in with_rows]
+    rob_refs = {canon(p["paper_ref"]) for p in rob["papers"]}
+    no_rob = [p for p in included if canon(p) not in rob_refs]
     rob_incomplete = [p["paper_ref"] for p in rob["papers"] if p["overall"] == "incomplete"]
     doi_by_ref = {d["doi"]: d for d in dois}
     retracted = [d["doi"] for d in dois if d["retracted"]]
@@ -160,7 +165,7 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
             warnings.append(sw)
     if no_rows:
         steps["data_extraction"].append(f"Record evidence rows with evidence_record for {len(no_rows)} included study(ies).")
-    stray = sorted(with_rows - included_set) if included else []
+    stray = sorted({r["paper_ref"] for r in rows if canon(r["paper_ref"]) not in included_canon}) if included else []
     if stray:
         warnings.append(f"{len(stray)} evidence row paper(s) are not included at full_text: {', '.join(stray[:5])}.")
     if no_rob:
