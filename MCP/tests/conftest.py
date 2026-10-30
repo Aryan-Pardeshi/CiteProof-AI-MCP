@@ -7,7 +7,11 @@ import json
 
 import pytest
 from citeproof_mcp.server import build_server
-from mcp.client import Client
+
+try:
+    from mcp.client import Client
+except ImportError:  # mcp 1.x (Claude Science's bundled runtime) has no Client class; same in-memory session.
+    from mcp.shared.memory import create_connected_server_and_client_session as Client
 
 
 @pytest.fixture(autouse=True)
@@ -24,5 +28,5 @@ async def call(name, **arguments):
     """
     async with Client(build_server()) as c:
         result = await c.call_tool(name, arguments)
-    assert not result.is_error, result
+    assert not getattr(result, "is_error", None) and not getattr(result, "isError", None), result
     return json.loads(result.content[0].text)
