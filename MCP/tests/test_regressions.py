@@ -12,9 +12,8 @@ from citeproof_mcp import store
 from citeproof_mcp.server import build_server
 from citeproof_mcp.tools import prisma
 from citeproof_mcp.tools.quotes import check_quote, extract_numbers, quote_in_source
-from mcp.client import Client
 
-from tests.conftest import call
+from tests.conftest import Client, call
 
 
 async def _review() -> str:
@@ -29,10 +28,10 @@ async def _review() -> str:
 @pytest.mark.asyncio
 async def test_required_arguments_are_required_in_schema() -> None:
     async with Client(build_server()) as c:
-        tools = {t.name: t for t in (await c.list_tools()).tools}
-    claim_required = set(tools["claim_record"].input_schema["required"])
+        schemas = {t.name: t.model_dump(by_alias=True)["inputSchema"] for t in (await c.list_tools()).tools}
+    claim_required = set(schemas["claim_record"]["required"])
     assert {"review_id", "claim_text", "paper_ref", "label", "reason"} <= claim_required
-    assert set(tools["evidence_record"].input_schema["required"]) >= {"quote", "source_text", "outcome"}
+    assert set(schemas["evidence_record"]["required"]) >= {"quote", "source_text", "outcome"}
 
 
 @pytest.mark.asyncio

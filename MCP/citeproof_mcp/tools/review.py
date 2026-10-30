@@ -6,6 +6,7 @@ This module owns no tables. It reads the other modules only through their public
 read functions.
 """
 
+import hashlib
 import json
 import sqlite3
 from itertools import combinations
@@ -13,16 +14,19 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
-from citeproof_mcp import store
+from citeproof_mcp import __version__, store
 from citeproof_mcp.compat import MCPServer
 from citeproof_mcp.tools import (
     core,
+    events,
     evidence_checks,
     extraction,
+    identity,
     prisma,
     prisma_render,
     protocol,
     source_tracking,
+    stats_checks,
 )
 from citeproof_mcp.tools.common import choice_arg, md_cell, md_table, safe_tool
 
@@ -64,10 +68,15 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
     claims = evidence_checks.claims_summary(conn)
     dois = core.doi_check_rows(conn)
 
-    with_rows = {r["paper_ref"] for r in rows}
-    no_rows = [p for p in included if p not in with_rows]
-    rob_by_paper = {p["paper_ref"]: p for p in rob["papers"]}
-    no_rob = [p for p in included if p not in rob_by_paper]
+    # Coverage compares canonical refs, so a PMID decision and a DOI evidence row of one paper match.
+    def canon(ref: str) -> str:
+        return identity.resolve_ref(conn, ref)
+
+    included_canon = {canon(p) for p in included}
+    with_rows = {canon(r["paper_ref"]) for r in rows}
+    no_rows = [p for p in included if canon(p) not in with_rows]
+    rob_refs = {canon(p["paper_ref"]) for p in rob["papers"]}
+    no_rob = [p for p in included if canon(p) not in rob_refs]
     rob_incomplete = [p["paper_ref"] for p in rob["papers"] if p["overall"] == "incomplete"]
     doi_by_ref = {d["doi"]: d for d in dois}
     retracted = [d["doi"] for d in dois if d["retracted"]]
@@ -77,6 +86,26 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
 
     source_changes = source_tracking.source_changes_rows(conn)
     distinct_texts = source_tracking.distinct_source_texts_by_paper(conn)
+
+    open_stages = prisma.open_blind_stages(conn)
+    stages_conf = prisma.stage_settings(conn)
+    screening_stages_info: dict[str, dict[str, Any]] = {}
+    decisions = prisma.screening_rows(conn)
+    for stage_name in prisma.STAGES:
+        st_row = stages_conf.get(stage_name)
+        mode = st_row["mode"] if st_row else "unblinded"
+        expected = st_row["reviewers"] if st_row else []
+        closed_at = st_row["closed_at"] if st_row else None
+        decided_counts: dict[str, int] = {}
+        for r in decisions:  # sorted by reviewer, so the counts keep that order
+            if r["stage"] == stage_name:
+                decided_counts[r["reviewer"]] = decided_counts.get(r["reviewer"], 0) + 1
+        screening_stages_info[stage_name] = {
+            "mode": mode,
+            "expected_reviewers": expected,
+            "decided_counts": decided_counts,
+            "closed_at": closed_at,
+        }
 
     warnings: list[str] = []
     if source_changes:
@@ -97,7 +126,9 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         steps["protocol"].append(f"Complete the protocol with protocol_record: {', '.join(proto['missing_required'])}.")
     if status_error:
         warnings.append(status_error)
-        steps["title_abstract_screening"].append("Record consensus screening decisions under reviewer 'primary'.")
+        # Consensus is refused at an open blind stage; the close step below comes first.
+        if not open_stages:
+            steps["title_abstract_screening"].append("Record consensus screening decisions under reviewer 'primary'.")
     if status is not None:
         warnings.extend(status["warnings"])
         warnings.extend(status["invariant_errors"])
@@ -116,16 +147,25 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         if status["invariant_errors"]:
             steps["full_text_screening"].append("Fix the screening decisions behind the PRISMA invariant errors.")
     for stage in prisma.STAGES:
-        names = reviewers.get(stage, [])
-        if len(names) >= 2:
+        if stage in open_stages:
             steps[f"{stage}_screening"].append(
-                f"Check agreement at {stage} with screening_agreement (reviewers: {', '.join(names[:5])})."
+                f"Finish blind screening for stage {stage} and call screening_stage_close."
             )
+        else:
+            names = reviewers.get(stage, [])
+            if len(names) >= 2:
+                steps[f"{stage}_screening"].append(
+                    f"Check agreement at {stage} with screening_agreement (reviewers: {', '.join(names[:5])})."
+                )
     if (status and status["studies_included"]) and not any(len(n) >= 2 for n in reviewers.values()):
         warnings.append("Every screening decision is by one reviewer; report single-reviewer screening (PRISMA item 8).")
+    screening_warns = prisma.screening_warnings(conn, stage=None)
+    for sw in screening_warns:
+        if sw not in warnings:
+            warnings.append(sw)
     if no_rows:
         steps["data_extraction"].append(f"Record evidence rows with evidence_record for {len(no_rows)} included study(ies).")
-    stray = sorted(with_rows - included_set) if included else []
+    stray = sorted({r["paper_ref"] for r in rows if canon(r["paper_ref"]) not in included_canon}) if included else []
     if stray:
         warnings.append(f"{len(stray)} evidence row paper(s) are not included at full_text: {', '.join(stray[:5])}.")
     if no_rob:
@@ -172,7 +212,10 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         "protocol": {k: proto[k] for k in ("complete", "missing_required", "missing_recommended")},
         "prisma": prisma_part,
         "screening_reviewers": reviewers,
+        "screening_stages": screening_stages_info,
+        "reviewers": prisma.reviewer_rows(conn),
         "included_studies": len(included),
+        "studies": {k: v for k, v in identity.identity_summary(conn, included).items() if k.endswith("_count")},
         "extraction": {
             "rows": len(rows),
             "studies_with_rows": len(with_rows),
@@ -210,6 +253,9 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
 def review_status(review_id: ReviewId, reviewer: ReviewerOpt = None) -> dict[str, Any]:
     """One-call overview of a review: what is recorded, what is missing, warnings and the next steps in order.
 
+    Always pass warnings (such as human screening caution and same-model warnings)
+    to the user.
+
     Call at the start of a session (to pick up where the review stopped) and before
     writing the report. It reads every record; it never changes anything.
 
@@ -217,10 +263,11 @@ def review_status(review_id: ReviewId, reviewer: ReviewerOpt = None) -> dict[str
     protocol, searching, deduplication, title_abstract_screening,
     full_text_screening, data_extraction, risk_of_bias, claim_checking, reporting),
     protocol (complete, missing fields), prisma (key counts, complete, or error),
-    screening_reviewers (per stage), included_studies, extraction (rows and gaps),
-    risk_of_bias (coverage of included studies), claims (counts), dois (checked,
-    retracted, not_found, included DOIs not yet checked), warnings, next_steps
-    (at most 10, in workflow order). Lists of paper_refs show the first 20.
+    screening_reviewers (per stage), screening_stages, reviewers, included_studies,
+    extraction (rows and gaps), risk_of_bias (coverage of included studies),
+    claims (counts), dois (checked, retracted, not_found, included DOIs not yet
+    checked), warnings, next_steps (at most 10, in workflow order). Lists of
+    paper_refs show the first 20.
     """
     with store.review_db(review_id) as conn:
         return {"ok": True, **build_overview(conn, reviewer)}
@@ -238,11 +285,18 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         diagram = prisma_render.build_mermaid(status)
     except store.StoreError as exc:
         status, diagram = {"error": str(exc)}, None
-    screening = prisma.screening_rows(conn)
+    open_stages = prisma.open_blind_stages(conn)
+    all_screening = prisma.screening_rows(conn)
+    if open_stages:
+        visible_screening = [r for r in all_screening if r["stage"] not in open_stages]
+    else:
+        visible_screening = all_screening
     claims = evidence_checks.claim_rows(conn)
     stages = prisma.reviewers_by_stage(conn)
     agreements = []
     for stage, names in stages.items():
+        if stage in open_stages:
+            continue
         for a, b in list(combinations(names, 2))[:5]:
             result = prisma.agreement(conn, stage, a, b)
             result["disagreements"] = result["disagreements"][:50]
@@ -250,8 +304,12 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
     rob = evidence_checks.rob_overview(conn)
     source_changes = source_tracking.source_changes_rows(conn)
     distinct_texts = source_tracking.distinct_source_texts_by_paper(conn)
+    screening_warns = prisma.screening_warnings(conn, stage=None)
+    aliases = identity.alias_rows(conn)
+    stats_rows = stats_checks.stats_check_rows(conn)
     return {
         "bundle_version": 1,
+        "server_version": __version__,
         "generated_at": store.now_iso(),
         "review": store.read_meta(conn),
         "status": {k: overview[k] for k in ("phase", "warnings", "next_steps")},
@@ -261,8 +319,11 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         "dedup": prisma.dedup_record(conn),
         "prisma": status,
         "prisma_flow_mermaid": diagram,
-        "screening_decisions": screening[:MAX_EXPORT_ROWS],
-        "screening_decisions_total": len(screening),
+        "screening_decisions": visible_screening[:MAX_EXPORT_ROWS],
+        "screening_decisions_total": len(visible_screening),
+        "screening_stages": overview.get("screening_stages", {}),
+        "reviewers": prisma.reviewer_rows(conn),
+        "screening_warnings": screening_warns,
         "agreement": agreements,
         "evidence_table": extraction.evidence_rows(conn),
         "risk_of_bias": {"papers": rob["papers"], "domain_records": evidence_checks.rob_rows(conn), "rules": evidence_checks.OVERALL_RULES},
@@ -271,7 +332,12 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         "doi_checks": core.doi_check_rows(conn),
         "source_changes": source_changes,
         "distinct_source_texts": distinct_texts,
-        "truncated": len(screening) > MAX_EXPORT_ROWS or len(claims) > MAX_EXPORT_ROWS,
+        "studies": identity.identity_summary(conn, prisma.included_refs(conn, reviewer)),
+        "paper_aliases": aliases[:MAX_EXPORT_ROWS],
+        "recall_check": identity.latest_recall_check(conn),
+        "stats_checks": stats_rows[:MAX_EXPORT_ROWS],
+        "events": events.event_summary(conn),
+        "truncated": any(len(rows) > MAX_EXPORT_ROWS for rows in (visible_screening, claims, aliases, stats_rows)),
     }
 
 
@@ -294,6 +360,18 @@ def _markdown(b: dict[str, Any]) -> str:
         ("All judgements in this bundle were made by the reviewing agent. The server stored them, checked quotes "
         "against the source text supplied with them, and computed the counts."),
         "",
+        *(
+            [
+                (
+                    f"**Warning: this bundle is incomplete.** Screening decisions, claims, paper aliases and "
+                    f"statistical checks are each capped at {MAX_EXPORT_ROWS} rows, and at least one list was cut. "
+                    "Keep the review database file with this bundle."
+                ),
+                "",
+            ]
+            if b["truncated"]
+            else []
+        ),
         "## Protocol",
         "",
     ]
@@ -331,6 +409,38 @@ def _markdown(b: dict[str, Any]) -> str:
         out += [f"- {_t(e)}" for e in status["invariant_errors"]]
         out += ["", "```mermaid", b["prisma_flow_mermaid"], "```"]
     out += ["", "## Screening decisions", ""]
+    screening_warns = b.get("screening_warnings", [])
+    if screening_warns:
+        out += ["### Screening cautions", ""]
+        out += [f"- Warning: {_t(w)}" for w in screening_warns]
+        out += [""]
+
+    stages_info = b.get("screening_stages", {})
+    blind_stages = {s: info for s, info in stages_info.items() if info.get("mode") == "blind"}
+    if blind_stages:
+        out += ["### Screening stage settings", ""]
+        for s_name, s_info in sorted(blind_stages.items()):
+            closed = s_info.get("closed_at")
+            state_str = f"closed at {closed}" if closed else "open (blinded)"
+            exp_str = ", ".join(s_info.get("expected_reviewers", [])) or "none"
+            dec_str = ", ".join(f"{k}: {v}" for k, v in sorted(s_info.get("decided_counts", {}).items())) or "none"
+            out.append(
+                f"- **{s_name}**: mode={s_info['mode']} ({state_str}); expected reviewers: {_t(exp_str)}; "
+                f"decided counts: {_t(dec_str)}"
+            )
+        out += [""]
+
+    rev_rows = b.get("reviewers", [])
+    if rev_rows:
+        out += ["### Reviewers", ""]
+        out.append(
+            md_table(
+                ["Reviewer", "Type", "Model ID", "Run ref"],
+                [[r["name"], r["reviewer_type"], r.get("model_id") or "", r.get("run_ref") or ""] for r in rev_rows],
+            )
+        )
+        out += [""]
+
     shown = b["screening_decisions"]
     out.append(f"{b['screening_decisions_total']} decisions" + (f" (first {len(shown)} shown)" if len(shown) < b["screening_decisions_total"] else "") + ".")
     if shown:
@@ -411,6 +521,46 @@ def _markdown(b: dict[str, Any]) -> str:
             )
         )
 
+    studies = b["studies"]
+    out += ["", "## Reports and studies", ""]
+    out.append(f"{studies['report_count']} included report(s) from {studies['study_count']} study(ies).")
+    if studies["groups"]:
+        out.append(
+            md_table(
+                ["Study", "Reports", "Linked"],
+                [[g["study_id"], "; ".join(g["reports"]), "no" if g["unlinked"] else "yes"] for g in studies["groups"]],
+            )
+        )
+
+    recall = b["recall_check"]
+    out += ["", "## Known-item recall", ""]
+    if recall:
+        c = recall["counts"]
+        out.append(
+            f"Checked {recall['checked_at']}: {c['found']} found, {c['not_found']} not found, "
+            f"{c['unresolved']} unresolved (recall {recall['recall']}). Seed recall does not show the search was exhaustive."
+        )
+    else:
+        out.append("No known-item recall check recorded.")
+
+    out += ["", "## Statistical consistency checks", ""]
+    if b["stats_checks"]:
+        out.append(
+            md_table(
+                ["Check", "Paper", "Label", "Status", "Checked at"],
+                [[s["kind"], s["paper_ref"] or "", s["label"] or "", s["status"], s["checked_at"]] for s in b["stats_checks"]],
+            )
+        )
+    else:
+        out.append("No statistical checks recorded.")
+
+    ev = b["events"]
+    out += ["", "## Change history", ""]
+    out.append(
+        f"{ev['count']} recorded event(s), last seq {ev['last_seq']}, baseline {ev['baseline_at']}. "
+        "Use review_history for the full log."
+    )
+
     out += ["", "## Open items", ""]
     out += [f"- Warning: {_t(w)}" for w in b["status"]["warnings"]]
     out += [f"- Next: {_t(s)}" for s in b["status"]["next_steps"]]
@@ -422,30 +572,51 @@ def export_bundle(
     review_id: ReviewId,
     format: Annotated[str, Field(description="'markdown' (readable report appendix) or 'json' (complete machine-readable record).")] = "markdown",
     reviewer: ReviewerOpt = None,
+    save: Annotated[
+        bool,
+        Field(description="Also write the document to <CITEPROOF_MCP_HOME>/exports/ and return its path and SHA-256."),
+    ] = False,
 ) -> dict[str, Any]:
     """Export the whole audit trail as one text document for the review's supplementary material.
+
+    Always pass warnings (such as human screening caution and same-model warnings)
+    to the user.
 
     Contains: review metadata, protocol and amendments, search log, deduplication,
     PRISMA counts and invariants with a Mermaid flow diagram, every screening
     decision (up to 5000), reviewer agreement for each reviewer pair, evidence
     table, risk-of-bias judgements with the overall rules, claim checks, saved DOI
-    checks, and the open warnings and next steps. Source texts are not included
-    (only their lengths and hashes, in json).
+    checks, reports-to-studies grouping and aliases, the latest known-item recall
+    check, saved statistical checks, the change-history summary, and the open
+    warnings and next steps. Source texts are not included (only their lengths and
+    hashes, in json).
 
-    Returns: format, content (the document; save it yourself, nothing is written to
-    disk), chars, suggested_filename, truncated (more than 5000 screening decisions
-    or claims), phase.
+    Returns: format, content (the document), chars, sha256 (of the UTF-8 content),
+    suggested_filename, saved_path (with save=true, else null; an existing file of
+    the same name is replaced), truncated (more than 5000 screening decisions,
+    claims, paper aliases or stats checks), phase.
     """
     fmt = choice_arg(format, "format", ("markdown", "json"))
     with store.review_db(review_id) as conn:
         bundle = _collect(conn, reviewer)
     content = json.dumps(bundle, indent=1, ensure_ascii=False, default=str) if fmt == "json" else _markdown(bundle)
+    data = content.encode("utf-8")
+    filename = f"{review_id}-audit-bundle.{'json' if fmt == 'json' else 'md'}"
+    saved_path = None
+    if save:
+        # review_id already passed REVIEW_ID_RE inside review_db, so the name cannot leave the folder.
+        folder = store.data_dir() / "exports"
+        folder.mkdir(exist_ok=True)
+        (folder / filename).write_bytes(data)
+        saved_path = str(folder / filename)
     return {
         "ok": True,
         "format": fmt,
         "content": content,
         "chars": len(content),
-        "suggested_filename": f"{review_id}-audit-bundle.{'json' if fmt == 'json' else 'md'}",
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "suggested_filename": filename,
+        "saved_path": saved_path,
         "truncated": bundle["truncated"],
         "phase": bundle["status"]["phase"],
     }

@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "citeproof",
   "display_name": "CiteProof",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Local audit trail for AI-assisted systematic reviews: PRISMA counts, screening decisions, evidence and risk-of-bias records, DOI and quote checks.",
   "long_description": "CiteProof records and checks what your research agent supplies during a systematic review: the protocol, PRISMA 2020 search and screening counts, extracted evidence, risk-of-bias judgements, claim support, and citation checks, then exports the whole audit trail as one document.\n\nEverything runs on your computer. Review data is stored in a local SQLite database (default `~/.citeproof-mcp`) and is never uploaded. The only network calls made by the server are DOI lookups in `verify_dois` (Crossref, then doi.org). The extension does not search the literature, read papers or make scientific judgements for you, and it contains no language model.\n\nThe extension runs the same Node launcher as the npm package and includes the Python server source. The launcher uses uvx when it is present, otherwise a suitable local Python with the included server source, and only then installs uv and downloads the server wheel, which requires network access.",
   "author": {
@@ -129,6 +129,70 @@
     {
       "name": "export_bundle",
       "description": "Export the whole audit trail as one text document for the review's supplementary material."
+    },
+    {
+      "name": "reviewer_record",
+      "description": "Record reviewer type ('human', 'model', or 'unknown') and model identity."
+    },
+    {
+      "name": "screening_stage_set",
+      "description": "Configure a screening stage mode ('blind' or 'unblinded') and its expected reviewers."
+    },
+    {
+      "name": "screening_stage_close",
+      "description": "Close an open blind screening stage and unblind peer decisions and agreement."
+    },
+    {
+      "name": "paper_resolve",
+      "description": "Resolve paper refs through the canonical alias map."
+    },
+    {
+      "name": "paper_alias_record",
+      "description": "Record one manual alias, for example a preprint DOI that belongs to a published paper."
+    },
+    {
+      "name": "study_link",
+      "description": "Link one or more reports to a study so reports and studies can be counted separately."
+    },
+    {
+      "name": "study_unlink",
+      "description": "Remove the study link from one or more reports, leaving the reports themselves intact."
+    },
+    {
+      "name": "study_overview",
+      "description": "Count included reports separately from studies and flag outcomes one study reports twice."
+    },
+    {
+      "name": "recall_seed_record",
+      "description": "Record a small seed set of known eligible papers for a known-item recall check."
+    },
+    {
+      "name": "recall_check",
+      "description": "Compare the recorded seed set with the retrieved records of the last full dedup."
+    },
+    {
+      "name": "stats_check_ratio_ci",
+      "description": "Check whether a ratio estimate is consistent with its confidence interval and optional p-value."
+    },
+    {
+      "name": "stats_recompute_2x2",
+      "description": "Recompute RR, OR and RD from arm-level events and totals, optionally comparing a reported result."
+    },
+    {
+      "name": "stats_check_evidence",
+      "description": "Run the ratio-CI consistency check over every stored evidence row that has a ratio measure."
+    },
+    {
+      "name": "prisma_excluded_studies",
+      "description": "Table of full-text excluded studies, their citations and recorded exclusion reasons."
+    },
+    {
+      "name": "manuscript_check",
+      "description": "Check manuscript sections against recorded review audit data."
+    },
+    {
+      "name": "review_history",
+      "description": "Query the append-only event history for a review, oldest first."
     }
   ],
   "user_config": {

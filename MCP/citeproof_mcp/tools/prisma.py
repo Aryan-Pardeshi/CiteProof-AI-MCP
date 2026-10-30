@@ -2,10 +2,13 @@
 """PRISMA 2020 identification and screening: search log, deduplication, screening
 decisions, reviewer agreement, flow counts, flow diagrams and the reporting checklist.
 
-Tables owned here: ``prisma_searches``, ``prisma_dedup``, ``screening``. Other modules
-read them only through the public functions in the "Read API" section.
+Tables owned here: ``prisma_searches``, ``prisma_dedup``, ``screening``, ``reviewers``,
+``screening_stages``. Other modules read them only through the public functions in the
+"Read API" section.
 """
 
+import itertools
+import json
 import re
 import sqlite3
 from datetime import date, datetime, timedelta
@@ -24,6 +27,7 @@ from citeproof_mcp.tools.common import (
     choice_arg,
     fail,
     int_arg,
+    list_arg,
     paper_ref_arg,
     reviewer_arg,
     safe_tool,
@@ -54,6 +58,20 @@ store.register_schema(
             title TEXT,
             updated_at TEXT NOT NULL,
             PRIMARY KEY (paper_ref, stage, reviewer)
+        )""",
+        """CREATE TABLE IF NOT EXISTS reviewers (
+            name TEXT PRIMARY KEY,
+            reviewer_type TEXT NOT NULL CHECK (reviewer_type IN ('human','model','unknown')),
+            model_id TEXT,
+            run_ref TEXT,
+            updated_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE IF NOT EXISTS screening_stages (
+            stage TEXT PRIMARY KEY,
+            mode TEXT NOT NULL CHECK (mode IN ('blind','unblinded')),
+            reviewers TEXT NOT NULL,
+            closed_at TEXT,
+            updated_at TEXT NOT NULL
         )""",
     )
 )
@@ -111,10 +129,186 @@ def dedup_record(conn: sqlite3.Connection) -> dict[str, Any] | None:
 
 def screening_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT paper_ref, stage, reviewer, decision, reason, title, updated_at FROM screening "
-        "ORDER BY reviewer, stage, paper_ref"
+        """SELECT screening.paper_ref, screening.stage, screening.reviewer, screening.decision,
+                  screening.reason, screening.title, screening.updated_at,
+                  COALESCE(reviewers.reviewer_type, 'unknown') AS reviewer_type,
+                  reviewers.model_id, reviewers.run_ref
+           FROM screening
+           LEFT JOIN reviewers ON screening.reviewer = reviewers.name
+           ORDER BY screening.reviewer, screening.stage, screening.paper_ref"""
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def reviewer_rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    registered = {
+        r["name"]: dict(r)
+        for r in conn.execute(
+            "SELECT name, reviewer_type, model_id, run_ref, updated_at FROM reviewers ORDER BY name"
+        ).fetchall()
+    }
+    for r in conn.execute("SELECT DISTINCT reviewer FROM screening ORDER BY reviewer").fetchall():
+        name = r["reviewer"]
+        if name not in registered:
+            registered[name] = {
+                "name": name,
+                "reviewer_type": "unknown",
+                "model_id": None,
+                "run_ref": None,
+                "updated_at": "",
+            }
+    return [registered[k] for k in sorted(registered.keys())]
+
+
+def reviewer_meta(conn: sqlite3.Connection, name: str) -> dict[str, Any]:
+    row = conn.execute(
+        "SELECT name, reviewer_type, model_id, run_ref, updated_at FROM reviewers WHERE name = ?", (name,)
+    ).fetchone()
+    if row:
+        return dict(row)
+    return {
+        "name": name,
+        "reviewer_type": "unknown",
+        "model_id": None,
+        "run_ref": None,
+        "updated_at": "",
+    }
+
+
+def stage_settings(conn: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT stage, mode, reviewers, closed_at, updated_at FROM screening_stages ORDER BY stage"
+    ).fetchall()
+    out: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        revs = json.loads(r["reviewers"]) if r["reviewers"] else []
+        out[r["stage"]] = {
+            "stage": r["stage"],
+            "mode": r["mode"],
+            "reviewers": revs,
+            "closed_at": r["closed_at"],
+            "updated_at": r["updated_at"],
+        }
+    return out
+
+
+def stage_setting(conn: sqlite3.Connection, stage: str) -> dict[str, Any] | None:
+    row = conn.execute(
+        "SELECT stage, mode, reviewers, closed_at, updated_at FROM screening_stages WHERE stage = ?",
+        (stage,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "stage": row["stage"],
+        "mode": row["mode"],
+        "reviewers": json.loads(row["reviewers"]) if row["reviewers"] else [],
+        "closed_at": row["closed_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def open_blind_stages(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute(
+        "SELECT stage FROM screening_stages WHERE mode = 'blind' AND closed_at IS NULL"
+    ).fetchall()
+    return {r[0] for r in rows}
+
+
+def _refuse_while_blind(conn: sqlite3.Connection, name: str) -> None:
+    open_stages = sorted(open_blind_stages(conn))
+    if open_stages and name != "primary":
+        fail(
+            f"PRISMA counts for reviewer '{name}' are hidden while stage(s) {', '.join(open_stages)} are blind; "
+            "close the stage with screening_stage_close first"
+        )
+
+
+def is_open_blind_stage(conn: sqlite3.Connection, stage: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM screening_stages WHERE stage = ? AND mode = 'blind' AND closed_at IS NULL",
+        (stage,),
+    ).fetchone()
+    return row is not None
+
+
+def screening_warnings(conn: sqlite3.Connection, stage: str | None = None) -> list[str]:
+    warnings: list[str] = []
+
+    if stage is not None:
+        total_decisions = int(conn.execute("SELECT COUNT(*) FROM screening WHERE stage = ?", (stage,)).fetchone()[0])
+        distinct_revs = [
+            r[0]
+            for r in conn.execute(
+                "SELECT DISTINCT reviewer FROM screening WHERE stage = ? ORDER BY reviewer",
+                (stage,),
+            ).fetchall()
+        ]
+    else:
+        total_decisions = int(conn.execute("SELECT COUNT(*) FROM screening").fetchone()[0])
+        distinct_revs = [
+            r[0]
+            for r in conn.execute(
+                "SELECT DISTINCT reviewer FROM screening ORDER BY reviewer"
+            ).fetchall()
+        ]
+
+    if total_decisions > 0:
+        has_human = False
+        if distinct_revs:
+            ph = ",".join("?" for _ in distinct_revs)
+            found_human = conn.execute(
+                f"SELECT 1 FROM reviewers WHERE name IN ({ph}) AND reviewer_type = 'human' LIMIT 1",
+                distinct_revs,
+            ).fetchone()
+            if found_human:
+                has_human = True
+        if not has_human:
+            is_blind = False
+            if stage is not None:
+                setting = stage_setting(conn, stage)
+                if setting and setting["mode"] == "blind":
+                    is_blind = True
+            if is_blind:
+                warnings.append(
+                    "Blind screening was done by AI reviewers only. A human reviewer has not been recorded for these papers. Human screening and sign-off are still required."
+                )
+            else:
+                warnings.append(
+                    "Screening was done by AI reviewers only, or reviewer types are not recorded. A human reviewer has not been recorded for these papers. Human screening and sign-off are still required."
+                )
+
+    stages_to_check = [stage] if stage is not None else list(STAGES)
+    for stg in stages_to_check:
+        stg_revs = [
+            r[0]
+            for r in conn.execute(
+                "SELECT DISTINCT reviewer FROM screening WHERE stage = ? AND reviewer != 'primary' ORDER BY reviewer",
+                (stg,),
+            ).fetchall()
+        ]
+        if len(stg_revs) >= 2:
+            model_by_rev: dict[str, str] = {}
+            for rev_name in stg_revs:
+                meta = reviewer_meta(conn, rev_name)
+                if meta["reviewer_type"] == "model" and meta["model_id"] and meta["model_id"].strip():
+                    model_by_rev[rev_name] = meta["model_id"].strip()
+            groups: dict[str, list[str]] = {}
+            display_model: dict[str, str] = {}
+            for rev_name, mid in model_by_rev.items():
+                norm = mid.lower()
+                groups.setdefault(norm, []).append(rev_name)
+                if norm not in display_model:
+                    display_model[norm] = mid
+            for norm, group in sorted(groups.items()):
+                if len(group) >= 2:
+                    sorted_group = sorted(group)
+                    for rev_x, rev_y in itertools.combinations(sorted_group, 2):
+                        w = f"Reviewers {rev_x} and {rev_y} are runs of the same model ({display_model[norm]}); their agreement is not independent validation."
+                        if w not in warnings:
+                            warnings.append(w)
+
+    return warnings
 
 
 def reviewers_by_stage(conn: sqlite3.Connection) -> dict[str, list[str]]:
@@ -125,18 +319,24 @@ def reviewers_by_stage(conn: sqlite3.Connection) -> dict[str, list[str]]:
 
 
 def resolve_reviewer(conn: sqlite3.Connection, reviewer: str | None) -> str | None:
-    """The reviewer whose decisions drive the PRISMA counts (see prisma_status)."""
+    """The reviewer whose decisions drive the PRISMA counts (see prisma_status).
+
+    While a stage is open blind only 'primary' can be counted: one reviewer's counts would reveal their
+    decisions to the others.
+    """
     known = [r[0] for r in conn.execute("SELECT DISTINCT reviewer FROM screening ORDER BY reviewer")]
     if reviewer is not None and str(reviewer).strip():
         name = reviewer_arg(reviewer)
         if known and name not in known:
             fail(f"reviewer '{name}' has no screening decisions; reviewers with decisions: {', '.join(known)}")
+        _refuse_while_blind(conn, name)
         return name
     if not known:
         return None
     if "primary" in known:
         return "primary"
     if len(known) == 1:
+        _refuse_while_blind(conn, known[0])
         return known[0]
     fail(
         f"Multiple reviewers found in screening decisions ({', '.join(known)}). Pass reviewer=<name>, "
@@ -161,7 +361,17 @@ def included_refs(conn: sqlite3.Connection, reviewer: str | None = None) -> list
     return [r[0] for r in rows]
 
 
-def _reason_counts(conn: sqlite3.Connection, reviewer: str, stage: str) -> dict[str, int]:
+def exclusion_rows(conn: sqlite3.Connection, reviewer: str, stage: str) -> list[dict[str, Any]]:
+    """Exclude decisions (paper_ref, reason, title) of one reviewer at one stage, by paper_ref."""
+    rows = conn.execute(
+        "SELECT paper_ref, reason, title FROM screening "
+        "WHERE reviewer = ? AND stage = ? AND decision = 'exclude' ORDER BY paper_ref",
+        (reviewer, stage),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def reason_counts(conn: sqlite3.Connection, reviewer: str, stage: str) -> dict[str, int]:
     counts: dict[str, int] = {}
     for r in conn.execute(
         "SELECT reason FROM screening WHERE reviewer = ? AND stage = ? AND decision = 'exclude'", (reviewer, stage)
@@ -212,8 +422,8 @@ def compute_status(conn: sqlite3.Connection, reviewer: str | None = None) -> dic
                 (used,),
             )
         ]
-        reasons_ft = _reason_counts(conn, used, "full_text")
-        reasons_ta = _reason_counts(conn, used, "title_abstract")
+        reasons_ft = reason_counts(conn, used, "full_text")
+        reasons_ta = reason_counts(conn, used, "title_abstract")
 
     def c(stage: str, decision: str | None = None) -> int:
         return sum(v for (s, d), v in counts.items() if s == stage and (decision is None or d == decision))
@@ -278,12 +488,18 @@ def compute_status(conn: sqlite3.Connection, reviewer: str | None = None) -> dic
         next_steps.append("PRISMA counts are complete; render them with prisma_flow_diagram.")
 
     orphan_list, _ = cap(orphans, 20)
+    from citeproof_mcp.tools import identity
+
+    # studies_included counts reports (the invariants need that); linked reports of one study count once here.
+    study_count = identity.identity_summary(conn, included_refs(conn, used))["study_count"] if used else included
     return {
         "reviewer_used": used,
         "invariants_valid": not errors,
         "invariant_errors": errors,
         "warnings": warnings,
         **tracker.model_dump(),
+        "reports_included": included,
+        "study_count": study_count,
         "exclusion_reasons_title_abstract": reasons_ta,
         "full_text_pending": pending,
         "records_awaiting_screening": awaiting,
@@ -528,6 +744,11 @@ def prisma_record_search(
         dedup_cleared = False
         if search_log_changed:
             dedup_cleared = conn.execute("DELETE FROM prisma_dedup").rowcount > 0
+            from citeproof_mcp.tools import identity
+
+            # The retrieved-record snapshot belongs to the old search set too; a later manual
+            # dedup count must not make recall_check treat it as current.
+            identity.clear_retrieval_snapshot(conn)
         if dedup_cleared:
             warnings.append(
                 "The search log changed, so the earlier deduplication record was cleared. "
@@ -639,6 +860,7 @@ def dedup_papers(
         warnings.append(f"{no_key} record(s) have no DOI, PMID or title and cannot be matched.")
 
     recorded = False
+    identity_counts = {"aliases_recorded": 0, "alias_conflicts": 0}
     if review_id is not None and str(review_id).strip():
         with store.review_db(review_id, write=True) as conn:
             identified, _, _ = search_totals(conn)
@@ -646,6 +868,9 @@ def dedup_papers(
                 fail("no searches are recorded yet; record every search with prisma_record_search first")
             if len(papers) == identified:
                 _save_dedup(conn, removed, f"{dedup.METHOD} ({len(papers)} records checked)")
+                from citeproof_mcp.tools import identity
+
+                identity_counts = identity.record_dedup(conn, papers, result)
                 recorded = True
             else:
                 # One review has one dedup count. A partial or batched call must never replace it.
@@ -666,6 +891,8 @@ def dedup_papers(
         "truncated": cut_a or cut_b,
         "recorded": recorded,
         "method": dedup.METHOD,
+        "aliases_recorded": identity_counts["aliases_recorded"],
+        "alias_conflicts": identity_counts["alias_conflicts"],
         "warnings": warnings,
         "note": (
             "Only the duplicate count is computed. Records are not merged: copy any field you need from the "
@@ -698,7 +925,9 @@ def screening_record(
     Use for single decisions; use screening_record_many for batches. PRISMA counts
     use the reviewer named 'primary' (or the only reviewer). With two independent
     reviewers, record each under their own name, compare with screening_agreement,
-    then record the consensus under 'primary'.
+    then record the consensus under 'primary'. Reviewer 'primary' cannot record
+    consensus while a stage is in open blind mode (consensus is recorded after the
+    stage is closed).
 
     Returns: updated, paper_ref (canonical form), stage, reviewer, decision,
     stage_counts (this reviewer's decisions so far at this stage), warnings
@@ -710,6 +939,8 @@ def screening_record(
         {"paper_ref": paper_ref, "stage": stage, "decision": decision, "reason": reason, "reviewer": reviewer, "title": title}
     )
     with store.review_db(review_id, write=True) as conn:
+        if d["reviewer"] == "primary" and is_open_blind_stage(conn, d["stage"]):
+            fail("consensus is recorded after the stage is closed")
         updated, warnings = _upsert_decision(conn, d, store.now_iso())
         stage_counts = {
             r["decision"]: int(r["c"])
@@ -747,7 +978,8 @@ def screening_record_many(
 
     Same rules as screening_record. If any item is invalid, or the same
     paper_ref + stage + reviewer appears twice, nothing is written and the result
-    names the item: {ok: false, error, index}.
+    names the item: {ok: false, error, index}. Reviewer 'primary' cannot record
+    consensus while a stage is in open blind mode.
 
     Returns: count, inserted_count, updated_count, warning_count, warnings (first 50).
     """
@@ -776,6 +1008,13 @@ def screening_record_many(
     warnings: list[str] = []
     now = store.now_iso()
     with store.review_db(review_id, write=True) as conn:
+        for idx, d in enumerate(cleaned):
+            if d["reviewer"] == "primary" and is_open_blind_stage(conn, d["stage"]):
+                return {
+                    "ok": False,
+                    "error": f"Item at index {idx}: consensus is recorded after the stage is closed",
+                    "index": idx,
+                }
         for d in cleaned:
             updated, item_warnings = _upsert_decision(conn, d, now)
             updated_count += int(updated)
@@ -798,42 +1037,103 @@ def screening_list(
     reviewer: Annotated[str | None, Field(description="Filter: reviewer name.")] = None,
     decision: Annotated[str | None, Field(description="Filter: 'include', 'exclude' or 'not_retrieved'.")] = None,
     paper_ref: Annotated[str | None, Field(description="Filter: one paper.")] = None,
+    as_reviewer: Annotated[
+        str | None,
+        Field(description="Caller's own reviewer name. At an open blind stage, peer decisions are hidden and excluded from total."),
+    ] = None,
     limit: Annotated[int, Field(description="Page size, 1 to 200.")] = 200,
     offset: Annotated[int, Field(description="Rows to skip, for paging.")] = 0,
 ) -> dict[str, Any]:
     """List recorded screening decisions, newest first, one page at a time.
 
+    At an open blind stage, rows are returned only when reviewer == as_reviewer.
+    Rows of other reviewers at that stage are not returned and not counted in total;
+    without as_reviewer, every open-blind-stage row is hidden.
+
     Returns: records (paper_ref, stage, reviewer, decision, reason, title,
-    updated_at), count (rows in this page), total (rows matching the filters),
-    truncated (more rows after this page), next_offset (pass it as offset to get
-    the next page, or null).
+    updated_at, reviewer_type, model_id, run_ref), count (rows in this page),
+    total (rows matching the filters and visibility), truncated (more rows after
+    this page), next_offset (pass it as offset to get the next page, or null),
+    hidden_blind_rows (count of hidden peer rows), blind_note.
+
+    Does NOT reveal peer decisions during an open blind stage.
     """
-    clauses: list[str] = []
-    params: list[Any] = []
+    base_clauses: list[str] = []
+    base_params: list[Any] = []
     if stage is not None and str(stage).strip():
-        clauses.append("stage = ?")
-        params.append(choice_arg(stage, "stage", STAGES, STAGE_ALIASES))
+        base_clauses.append("screening.stage = ?")
+        base_params.append(choice_arg(stage, "stage", STAGES, STAGE_ALIASES))
     if reviewer is not None and str(reviewer).strip():
-        clauses.append("reviewer = ?")
-        params.append(reviewer_arg(reviewer))
-    if decision is not None and str(decision).strip():
-        clauses.append("decision = ?")
-        params.append(choice_arg(decision, "decision", DECISIONS, DECISION_ALIASES))
+        base_clauses.append("screening.reviewer = ?")
+        base_params.append(reviewer_arg(reviewer))
     if paper_ref is not None and str(paper_ref).strip():
-        clauses.append("paper_ref = ?")
-        params.append(paper_ref_arg(paper_ref))
+        base_clauses.append("screening.paper_ref = ?")
+        base_params.append(paper_ref_arg(paper_ref))
+    # The hidden-row count ignores the decision filter: a filtered count would reveal peers' decision totals.
+    hid_base_clauses, hid_base_params = list(base_clauses), list(base_params)
+    if decision is not None and str(decision).strip():
+        base_clauses.append("screening.decision = ?")
+        base_params.append(choice_arg(decision, "decision", DECISIONS, DECISION_ALIASES))
+    as_rev_clean = (
+        reviewer_arg(as_reviewer, "as_reviewer", default=None)
+        if as_reviewer is not None and str(as_reviewer).strip()
+        else None
+    )
+
     page = int_arg(limit, "limit", min_value=1, max_value=LIST_CAP)
     skip = int_arg(offset, "offset", min_value=0)
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+
     with store.review_db(review_id) as conn:
-        total = int(conn.execute(f"SELECT COUNT(*) FROM screening {where}", params).fetchone()[0])
+        open_stages = sorted(open_blind_stages(conn))
+        if open_stages:
+            ph = ",".join("?" for _ in open_stages)
+            if as_rev_clean is not None:
+                vis_cond = f"(screening.stage NOT IN ({ph}) OR screening.reviewer = ?)"
+                hid_cond = f"(screening.stage IN ({ph}) AND screening.reviewer != ?)"
+                vis_extra = open_stages + [as_rev_clean]
+                hid_extra = open_stages + [as_rev_clean]
+            else:
+                vis_cond = f"(screening.stage NOT IN ({ph}))"
+                hid_cond = f"(screening.stage IN ({ph}))"
+                vis_extra = list(open_stages)
+                hid_extra = list(open_stages)
+
+            vis_clauses = base_clauses + [vis_cond]
+            vis_params = base_params + vis_extra
+            hid_clauses = hid_base_clauses + [hid_cond]
+            hid_params = hid_base_params + hid_extra
+
+            where_hid = "WHERE " + " AND ".join(hid_clauses)
+            hidden_count = int(conn.execute(f"SELECT COUNT(*) FROM screening {where_hid}", hid_params).fetchone()[0])
+        else:
+            vis_clauses = base_clauses
+            vis_params = base_params
+            hidden_count = 0
+
+        where_vis = ("WHERE " + " AND ".join(vis_clauses)) if vis_clauses else ""
+        total = int(conn.execute(f"SELECT COUNT(*) FROM screening {where_vis}", vis_params).fetchone()[0])
         rows = conn.execute(
-            f"SELECT paper_ref, stage, reviewer, decision, reason, title, updated_at FROM screening {where} "
-            "ORDER BY updated_at DESC, rowid DESC LIMIT ? OFFSET ?",
-            params + [page, skip],
+            f"""SELECT screening.paper_ref, screening.stage, screening.reviewer, screening.decision,
+                       screening.reason, screening.title, screening.updated_at,
+                       COALESCE(reviewers.reviewer_type, 'unknown') AS reviewer_type,
+                       reviewers.model_id, reviewers.run_ref
+                FROM screening
+                LEFT JOIN reviewers ON screening.reviewer = reviewers.name
+                {where_vis}
+                ORDER BY screening.updated_at DESC, screening.rowid DESC
+                LIMIT ? OFFSET ?""",
+            vis_params + [page, skip],
         ).fetchall()
+
     records = [dict(r) for r in rows]
     more = skip + len(records) < total
+    if hidden_count > 0:
+        blind_note = f"{hidden_count} decision(s) at open blind stage(s) are hidden to maintain blinding."
+    elif open_stages:
+        blind_note = f"Stage(s) {', '.join(open_stages)} are in open blind mode."
+    else:
+        blind_note = None
+
     return {
         "ok": True,
         "records": records,
@@ -841,6 +1141,8 @@ def screening_list(
         "total": total,
         "truncated": more,
         "next_offset": skip + len(records) if more else None,
+        "hidden_blind_rows": hidden_count,
+        "blind_note": blind_note,
     }
 
 
@@ -853,16 +1155,22 @@ def screening_agreement(
 ) -> dict[str, Any]:
     """Cohen's kappa between two reviewers' include/exclude decisions at one stage.
 
+    Always pass warnings (such as human screening caution and same-model warnings)
+    to the user.
+
     Uses only papers both reviewers decided with include or exclude
     ('not_retrieved' pairs are counted in not_judged). kappa = (po - pe) / (1 - pe);
     it is null with interpretation 'undefined' when nothing is shared or both
     reviewers put every paper in the same category (pe = 1).
 
-    Returns: shared, agree, table (2x2 counts), po, pe, kappa, interpretation
-    (Landis and Koch bands: poor < 0 <= slight <= 0.20 < fair <= 0.40 < moderate
-    <= 0.60 < substantial <= 0.80 < almost perfect), disagreement_count,
-    disagreements (paper_ref, title, a, b, reason_a, reason_b; capped at 200),
-    truncated, only_a and only_b (papers seen by one reviewer), not_judged, next_step.
+    At an open blind stage, agreement figures (kappa, table, disagreements) are hidden
+    until the stage is closed with screening_stage_close.
+
+    Returns: reviewer_a_type, reviewer_b_type, reviewer_a_model_id, reviewer_b_model_id,
+    warnings, plus (when unblinded): shared, agree, table (2x2 counts), po, pe, kappa,
+    interpretation (Landis and Koch bands), disagreement_count, disagreements (capped),
+    truncated, only_a, only_b, not_judged, next_step; or (when blinded): blinded=True,
+    next_step.
 
     Does NOT resolve disagreements: decide each one and record it under 'primary'.
     """
@@ -872,7 +1180,32 @@ def screening_agreement(
     if rev_a == rev_b:
         fail("reviewer_a and reviewer_b must be distinct reviewers")
     with store.review_db(review_id) as conn:
+        meta_a = reviewer_meta(conn, rev_a)
+        meta_b = reviewer_meta(conn, rev_b)
+        is_open = is_open_blind_stage(conn, stage_clean)
+        warnings = screening_warnings(conn, stage=stage_clean)
+
+        if is_open:
+            step = (
+                f"Stage '{stage_clean}' is in open blind mode. Finish screening decisions for all expected "
+                "reviewers and call screening_stage_close to unblind and view agreement."
+            )
+            return {
+                "ok": True,
+                "stage": stage_clean,
+                "reviewer_a": rev_a,
+                "reviewer_b": rev_b,
+                "blinded": True,
+                "reviewer_a_type": meta_a["reviewer_type"],
+                "reviewer_b_type": meta_b["reviewer_type"],
+                "reviewer_a_model_id": meta_a["model_id"],
+                "reviewer_b_model_id": meta_b["model_id"],
+                "warnings": warnings,
+                "next_step": step,
+            }
+
         result = agreement(conn, stage_clean, rev_a, rev_b)
+
     if result["disagreement_count"]:
         step = (
             f"Resolve the {result['disagreement_count']} disagreement(s) and record each consensus decision "
@@ -882,7 +1215,248 @@ def screening_agreement(
         step = "Have each reviewer decide the papers only the other one saw, then re-run this check."
     else:
         step = "No disagreements to resolve."
-    return {"ok": True, **result, "next_step": step}
+
+    return {
+        "ok": True,
+        **result,
+        "blinded": False,
+        "reviewer_a_type": meta_a["reviewer_type"],
+        "reviewer_b_type": meta_b["reviewer_type"],
+        "reviewer_a_model_id": meta_a["model_id"],
+        "reviewer_b_model_id": meta_b["model_id"],
+        "warnings": warnings,
+        "next_step": step,
+    }
+
+
+@safe_tool
+def reviewer_record(
+    review_id: ReviewId,
+    reviewer: Annotated[str, Field(description="Reviewer name (1-40 chars, stored lower-case). 'primary' types whoever records consensus decisions.")],
+    reviewer_type: Annotated[str, Field(description="Reviewer type: 'human', 'model', or 'unknown'.")],
+    model_id: Annotated[str | None, Field(description="Model identifier (max 200 chars), allowed only when reviewer_type is 'model'.")] = None,
+    run_ref: Annotated[str | None, Field(description="Optional run or configuration reference (max 200 chars).")] = None,
+) -> dict[str, Any]:
+    """Record reviewer type ('human', 'model', or 'unknown') and model identity.
+
+    The MCP server has no user login and cannot verify caller identity. Blinding
+    and reviewer types are by convention, with an audit trail, not a guarantee.
+    One agent can still call tools under another reviewer's name, and two runs of
+    the same model are not independent reviewers. Reviewer type is self-declared;
+    no output may call a review verified or independent because of it.
+
+    model_id is only allowed when reviewer_type is 'model'. For model reviewers
+    without a model_id, the record is saved with a warning that same-model checks
+    cannot run. Reviewer 'primary' holds consensus decisions; typing it 'human'
+    records a human adjudicator, which clears the AI-only screening warning.
+
+    Returns: name, reviewer, reviewer_type, model_id, run_ref, updated_at, warnings.
+
+    Does NOT verify caller identity or authenticate models.
+    """
+    rev = reviewer_arg(reviewer, "reviewer", default=None)
+    rev_type = choice_arg(reviewer_type, "reviewer_type", ("human", "model", "unknown"))
+    model_clean = text_arg(model_id, "model_id", required=False, max_len=200)
+    run_clean = text_arg(run_ref, "run_ref", required=False, max_len=200)
+    if rev_type != "model" and model_clean is not None:
+        fail("model_id is only allowed when reviewer_type is 'model'")
+    warnings: list[str] = []
+    if rev_type == "model" and not model_clean:
+        warnings.append(f"Reviewer '{rev}' is recorded as 'model' without a model_id; same-model checks cannot run.")
+    now = store.now_iso()
+    with store.review_db(review_id, write=True) as conn:
+        conn.execute(
+            """INSERT INTO reviewers (name, reviewer_type, model_id, run_ref, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(name) DO UPDATE SET
+                   reviewer_type = excluded.reviewer_type,
+                   model_id = excluded.model_id,
+                   run_ref = excluded.run_ref,
+                   updated_at = excluded.updated_at""",
+            (rev, rev_type, model_clean, run_clean, now),
+        )
+    return {
+        "ok": True,
+        "name": rev,
+        "reviewer": rev,
+        "reviewer_type": rev_type,
+        "model_id": model_clean,
+        "run_ref": run_clean,
+        "updated_at": now,
+        "warnings": warnings,
+    }
+
+
+@safe_tool
+def screening_stage_set(
+    review_id: ReviewId,
+    stage: Annotated[str, Field(description="Stage: 'title_abstract' or 'full_text'.")],
+    mode: Annotated[str, Field(description="Mode: 'blind' or 'unblinded'.")],
+    reviewers: Annotated[list[str], Field(description="Expected reviewer names for this stage (for 'blind', at least 2 distinct reviewers, none 'primary').")],
+) -> dict[str, Any]:
+    """Configure a screening stage mode ('blind' or 'unblinded') and its expected reviewers.
+
+    The MCP server has no model or user login; reviewer names are supplied by the
+    caller. Blinding is by convention, with an audit trail, not a guarantee.
+    One agent can still call tools under another reviewer's name, and two runs of
+    the same model are not independent reviewers. At an open blind stage, peer
+    decisions and agreement are hidden until the stage is closed with
+    screening_stage_close.
+
+    Setting a stage to 'blind' requires at least 2 distinct reviewer names, none
+    'primary'. Changing an already closed blind stage back to blind fails, and so does
+    making a stage blind after decisions are recorded at it.
+
+    Returns: stage, mode, reviewers, closed_at, updated_at.
+
+    Does NOT enforce physical isolation between screening processes.
+    """
+    stage_clean = choice_arg(stage, "stage", STAGES, STAGE_ALIASES)
+    mode_clean = choice_arg(mode, "mode", ("blind", "unblinded"))
+    raw_revs = list_arg(reviewers, "reviewers")
+    clean_revs: list[str] = []
+    for r in raw_revs:
+        name = reviewer_arg(r, "reviewers")
+        if name not in clean_revs:
+            clean_revs.append(name)
+
+    if mode_clean == "blind":
+        if "primary" in clean_revs:
+            fail("reviewer 'primary' is reserved for consensus decisions and cannot be a blind reviewer")
+        if len(clean_revs) < 2:
+            fail("a blind screening stage requires at least 2 distinct reviewer names")
+
+    now = store.now_iso()
+    with store.review_db(review_id, write=True) as conn:
+        existing = conn.execute(
+            "SELECT mode, closed_at FROM screening_stages WHERE stage = ?", (stage_clean,)
+        ).fetchone()
+        if existing and existing["mode"] == "blind" and existing["closed_at"] is not None and mode_clean == "blind":
+            fail(f"stage '{stage_clean}' was already closed; a closed blind stage cannot be set back to blind")
+        if existing and existing["mode"] == "blind" and existing["closed_at"] is None and mode_clean == "unblinded":
+            fail(f"stage '{stage_clean}' is open blind; unblind it with screening_stage_close once every reviewer has decided")
+        already_open_blind = existing and existing["mode"] == "blind" and existing["closed_at"] is None
+        if mode_clean == "blind" and not already_open_blind and conn.execute(
+            "SELECT 1 FROM screening WHERE stage = ? LIMIT 1", (stage_clean,)
+        ).fetchone():
+            fail(f"stage '{stage_clean}' already has screening decisions; set blind mode before anyone records a decision")
+
+        closed_at = None
+        conn.execute(
+            """INSERT INTO screening_stages (stage, mode, reviewers, closed_at, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(stage) DO UPDATE SET
+                   mode = excluded.mode,
+                   reviewers = excluded.reviewers,
+                   closed_at = excluded.closed_at,
+                   updated_at = excluded.updated_at""",
+            (stage_clean, mode_clean, json.dumps(clean_revs), closed_at, now),
+        )
+
+    return {
+        "ok": True,
+        "stage": stage_clean,
+        "mode": mode_clean,
+        "reviewers": clean_revs,
+        "closed_at": closed_at,
+        "updated_at": now,
+    }
+
+
+@safe_tool
+def screening_stage_close(
+    review_id: ReviewId,
+    stage: Annotated[str, Field(description="Stage to close: 'title_abstract' or 'full_text'.")],
+) -> dict[str, Any]:
+    """Close an open blind screening stage and unblind peer decisions and agreement.
+
+    The explicit close rule requires:
+    1. At least one paper exists with decisions recorded by expected reviewers.
+    2. Every expected reviewer has recorded a decision for every paper that any
+       expected reviewer recorded at this stage.
+
+    If these conditions are not met, the call fails and lists (capped) the missing
+    (reviewer, paper_ref) pairs and count. On success, closed_at is set, the stage
+    becomes unblinded, agreement (including kappa and disagreements) becomes visible,
+    and consensus/adjudication decisions may be recorded under reviewer 'primary'.
+
+    Returns: stage, closed_at, papers_count, decisions_count, reviewer_counts.
+
+    Does NOT resolve disagreements or verify consensus.
+    """
+    stage_clean = choice_arg(stage, "stage", STAGES, STAGE_ALIASES)
+    with store.review_db(review_id, write=True) as conn:
+        existing = conn.execute(
+            "SELECT mode, reviewers, closed_at FROM screening_stages WHERE stage = ?", (stage_clean,)
+        ).fetchone()
+        if not existing:
+            fail(f"stage '{stage_clean}' has not been configured with screening_stage_set")
+        if existing["mode"] != "blind":
+            fail(f"stage '{stage_clean}' is not in blind mode; only blind stages are closed")
+        if existing["closed_at"] is not None:
+            fail(f"stage '{stage_clean}' was already closed at {existing['closed_at']}")
+
+        expected_reviewers: list[str] = json.loads(existing["reviewers"]) if existing["reviewers"] else []
+        if not expected_reviewers:
+            fail(f"stage '{stage_clean}' has no expected reviewers configured")
+
+        ph = ",".join("?" for _ in expected_reviewers)
+        paper_rows = conn.execute(
+            f"SELECT DISTINCT paper_ref FROM screening WHERE stage = ? AND reviewer IN ({ph}) ORDER BY paper_ref",
+            [stage_clean] + expected_reviewers,
+        ).fetchall()
+        papers = [r[0] for r in paper_rows]
+        if not papers:
+            fail(f"no screening decisions recorded by expected reviewers at stage '{stage_clean}'; at least one paper is required to close")
+
+        decided_rows = conn.execute(
+            f"SELECT paper_ref, reviewer FROM screening WHERE stage = ? AND reviewer IN ({ph})",
+            [stage_clean] + expected_reviewers,
+        ).fetchall()
+        decided_set = {(r["paper_ref"], r["reviewer"]) for r in decided_rows}
+
+        missing_pairs = []
+        for p in papers:
+            for rev in expected_reviewers:
+                if (p, rev) not in decided_set:
+                    missing_pairs.append({"reviewer": rev, "paper_ref": p})
+
+        if missing_pairs:
+            listed, _ = cap(missing_pairs)
+            pairs_str = ", ".join(f"({m['reviewer']}, {m['paper_ref']})" for m in listed[:10])
+            more_str = f" and {len(missing_pairs) - 10} more" if len(missing_pairs) > 10 else ""
+            return {
+                "ok": False,
+                "error": (
+                    f"cannot close stage '{stage_clean}': {len(missing_pairs)} missing decision(s) across expected reviewers. "
+                    f"Missing (reviewer, paper_ref): {pairs_str}{more_str}"
+                ),
+                "missing_count": len(missing_pairs),
+                "missing_pairs": listed,
+            }
+
+        now = store.now_iso()
+        conn.execute(
+            "UPDATE screening_stages SET closed_at = ?, updated_at = ? WHERE stage = ?",
+            (now, now, stage_clean),
+        )
+        counts_by_rev = {
+            r["reviewer"]: int(r["c"])
+            for r in conn.execute(
+                f"SELECT reviewer, COUNT(*) AS c FROM screening WHERE stage = ? AND reviewer IN ({ph}) GROUP BY reviewer ORDER BY reviewer",
+                [stage_clean] + expected_reviewers,
+            ).fetchall()
+        }
+        total_decisions = sum(counts_by_rev.values())
+
+    return {
+        "ok": True,
+        "stage": stage_clean,
+        "closed_at": now,
+        "papers_count": len(papers),
+        "decisions_count": total_decisions,
+        "reviewer_counts": counts_by_rev,
+    }
 
 
 @safe_tool
@@ -898,7 +1472,9 @@ def prisma_status(review_id: ReviewId, reviewer: ReviewerOpt = None) -> dict[str
     Returns: reviewer_used, the PRISMA counts (records_identified, records_by_source,
     duplicates_removed, records_after_dedup, records_screened, excluded_title_abstract,
     full_text_requested, full_text_unavailable, full_text_assessed, excluded_full_text,
-    studies_included), exclusion_reasons (full-text reasons, as PRISMA reports them),
+    studies_included, which counts reports), reports_included, study_count (reports
+    linked to one study with study_link count once), exclusion_reasons (full-text
+    reasons, as PRISMA reports them),
     exclusion_reasons_title_abstract, full_text_pending, records_awaiting_screening,
     searches_recorded, dedup_recorded, dedup_method, invariants_valid,
     invariant_errors (arithmetic that does not add up), warnings, complete (true when
@@ -999,6 +1575,9 @@ def register(server: MCPServer) -> None:
         screening_record_many,
         screening_list,
         screening_agreement,
+        reviewer_record,
+        screening_stage_set,
+        screening_stage_close,
         prisma_status,
         prisma_flow_diagram,
         prisma_checklist,

@@ -37,20 +37,25 @@ Research agent
 
 CiteProof does **not** independently decide whether a study should be included, whether a claim is true, or whether a risk-of-bias judgement is scientifically correct. Those are the researcher's or agent's judgements; the server checks structure, rules, and the evidence supplied to it.
 
+Blinding is by convention, with an audit trail, not a guarantee: the server cannot verify caller identity or authenticate models. Two runs of the same model are not independent reviewers, and reviewer types are self-declared. Statistical and manuscript checks report detected inconsistencies, never that a paper is wrong; seed recall is not proof that a search was exhaustive. The server contains no language model.
+
 ## Tool overview
 
-The server exposes 24 tools. Use [`docs/SPEC.md`](docs/SPEC.md) for the full argument schemas, output fields, validation rules, and examples.
+The server exposes 40 tools. Use [`docs/SPEC.md`](docs/SPEC.md) for the full argument schemas, output fields, validation rules, and examples.
 
 | Workflow stage | Tools |
 |---|---|
 | Review setup and status | `review_create`, `review_list`, `protocol_record`, `review_status` |
 | Searches and deduplication | `prisma_record_search`, `dedup_papers`, `prisma_record_dedup` |
-| Screening and agreement | `screening_record`, `screening_record_many`, `screening_list`, `screening_agreement` |
-| PRISMA reporting | `prisma_status`, `prisma_flow_diagram`, `prisma_checklist` |
+| Search validation | `recall_seed_record`, `recall_check` |
+| Screening and agreement | `screening_record`, `screening_record_many`, `screening_list`, `screening_agreement`, `reviewer_record`, `screening_stage_set`, `screening_stage_close` |
+| Paper and study identity | `paper_resolve`, `paper_alias_record`, `study_link`, `study_unlink`, `study_overview` |
+| PRISMA reporting | `prisma_status`, `prisma_flow_diagram`, `prisma_checklist`, `prisma_excluded_studies` |
 | Evidence and claims | `evidence_record`, `evidence_table`, `claim_record`, `claim_report` |
+| Statistical checks | `stats_check_ratio_ci`, `stats_recompute_2x2`, `stats_check_evidence` |
 | Risk of bias | `rob_record`, `rob_summary` |
-| References and prose | `verify_dois`, `resolve_citations`, `lint_prose` |
-| Export | `export_bundle` |
+| References, manuscript and prose | `verify_dois`, `resolve_citations`, `lint_prose`, `manuscript_check` |
+| History and export | `review_history`, `export_bundle` |
 
 ## Requirements
 
