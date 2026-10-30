@@ -85,16 +85,16 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
     open_stages = prisma.open_blind_stages(conn)
     stages_conf = prisma.stage_settings(conn)
     screening_stages_info: dict[str, dict[str, Any]] = {}
+    decisions = prisma.screening_rows(conn)
     for stage_name in prisma.STAGES:
         st_row = stages_conf.get(stage_name)
         mode = st_row["mode"] if st_row else "unblinded"
         expected = st_row["reviewers"] if st_row else []
         closed_at = st_row["closed_at"] if st_row else None
-        counts_rows = conn.execute(
-            "SELECT reviewer, COUNT(*) AS c FROM screening WHERE stage = ? GROUP BY reviewer ORDER BY reviewer",
-            (stage_name,),
-        ).fetchall()
-        decided_counts = {r["reviewer"]: int(r["c"]) for r in counts_rows}
+        decided_counts: dict[str, int] = {}
+        for r in decisions:  # sorted by reviewer, so the counts keep that order
+            if r["stage"] == stage_name:
+                decided_counts[r["reviewer"]] = decided_counts.get(r["reviewer"], 0) + 1
         screening_stages_info[stage_name] = {
             "mode": mode,
             "expected_reviewers": expected,
