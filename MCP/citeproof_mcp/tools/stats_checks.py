@@ -231,6 +231,7 @@ def _ratio_ci_result(
     p_value: float | None,
     decimals: int,
     rel_tol: float,
+    p_decimals: int | None = None,
 ) -> dict[str, Any]:
     h = 0.5 * 10.0 ** (-decimals)
     checks: list[dict[str, Any]] = []
@@ -362,8 +363,10 @@ def _ratio_ci_result(
         else:
             p_low, p_high = _p_range(estimate, lower, upper, h, z)
             p_low, p_high = p_low * (1 - rel_tol), min(1.0, p_high * (1 + rel_tol))
-            # The reported p is rounded too: 0.05 stands for anything in [0.045, 0.055).
-            p_h = 0.5 * 10.0 ** min(0, Decimal(repr(p_value)).as_tuple().exponent)
+            # The reported p is rounded too: 0.05 stands for anything in [0.045, 0.055). A float drops
+            # trailing zeros (0.0500 -> 0.05), so p_decimals, when sent, gives the written precision.
+            p_places = p_decimals if p_decimals is not None else max(0, -Decimal(repr(p_value)).as_tuple().exponent)
+            p_h = 0.5 * 10.0 ** -p_places
             p_ok = p_value - p_h <= p_high and p_value + p_h >= p_low
             checks.append(
                 {
@@ -405,6 +408,10 @@ def stats_check_ratio_ci(
     ci_upper: Annotated[float, Field(description="The reported upper confidence limit.")],
     ci_level: Annotated[float, Field(description="Confidence level in percent: 95 for a 95% CI.")] = 95,
     p_value: Annotated[float | None, Field(description="Optional reported two-sided p-value, e.g. 0.045.")] = None,
+    p_decimals: Annotated[
+        int | None,
+        Field(description="Decimals the paper wrote for p, e.g. 4 for 'p = 0.0500'. Default: read from p_value, which loses trailing zeros."),
+    ] = None,
     decimals: Decimals = 2,
     rel_tol: RelTol = 0.01,
     review_id: ReviewIdOpt = None,
@@ -444,13 +451,14 @@ def stats_check_ratio_ci(
         fail("ci_upper is required; send the reported upper confidence limit")
     level = _level_arg(ci_level)
     p_reported = float_arg(p_value, "p_value")
+    p_places = int_arg(p_decimals, "p_decimals", min_value=0, max_value=10) if p_decimals is not None else None
     decimals_clean = _decimals_arg(decimals)
     rel_tol_clean = _rel_tol_arg(rel_tol)
     ref = _optional_ref(paper_ref)
     label_clean = _optional_label(label)
 
     result = _ratio_ci_result(
-        measure_clean, est, lower, upper, level, p_reported, decimals_clean, rel_tol_clean
+        measure_clean, est, lower, upper, level, p_reported, decimals_clean, rel_tol_clean, p_places
     )
     inputs = {
         "measure": measure_clean,
@@ -459,6 +467,7 @@ def stats_check_ratio_ci(
         "ci_upper": upper,
         "ci_level": level * 100,
         "p_value": p_reported,
+        "p_decimals": p_places,
         "decimals": decimals_clean,
         "rel_tol": rel_tol_clean,
         "paper_ref": ref,

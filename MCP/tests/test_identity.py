@@ -482,3 +482,18 @@ async def test_search_log_change_drops_the_retrieval_snapshot() -> None:
     await call("prisma_record_dedup", review_id=rid, duplicates_removed=old["duplicates_removed"], method=old["method"])
     stale = await call("recall_check", review_id=rid)
     assert stale["counts"] == {"found": 0, "not_found": 0, "unresolved": 1}
+
+
+@pytest.mark.asyncio
+async def test_prisma_flow_counts_linked_studies_and_reports() -> None:
+    rid = await _review()
+    refs = ["10.1000/s1a", "10.1000/s1b", "10.1000/s2"]
+    for ref in refs:
+        await _include(rid, ref)
+    await call("study_link", review_id=rid, study_id="S1", paper_refs=refs[:2])
+    status = await call("prisma_status", review_id=rid)
+    assert (status["studies_included"], status["reports_included"], status["study_count"]) == (3, 3, 2)
+    flow = await call("prisma_flow_diagram", review_id=rid, format="markdown")
+    assert "Studies included in review: 2" in flow["diagram"] and "Reports of included studies: 3" in flow["diagram"]
+    check = await call("prisma_checklist", review_id=rid, report_text="Two studies were included. 2 studies were included.")
+    assert all(n["matches"] for n in check["numbers"] if n["field"] == "studies_included")

@@ -478,12 +478,18 @@ def compute_status(conn: sqlite3.Connection, reviewer: str | None = None) -> dic
         next_steps.append("PRISMA counts are complete; render them with prisma_flow_diagram.")
 
     orphan_list, _ = cap(orphans, 20)
+    from citeproof_mcp.tools import identity
+
+    # studies_included counts reports (the invariants need that); linked reports of one study count once here.
+    study_count = identity.identity_summary(conn, included_refs(conn, used))["study_count"] if used else included
     return {
         "reviewer_used": used,
         "invariants_valid": not errors,
         "invariant_errors": errors,
         "warnings": warnings,
         **tracker.model_dump(),
+        "reports_included": included,
+        "study_count": study_count,
         "exclusion_reasons_title_abstract": reasons_ta,
         "full_text_pending": pending,
         "records_awaiting_screening": awaiting,
@@ -1458,7 +1464,9 @@ def prisma_status(review_id: ReviewId, reviewer: ReviewerOpt = None) -> dict[str
     Returns: reviewer_used, the PRISMA counts (records_identified, records_by_source,
     duplicates_removed, records_after_dedup, records_screened, excluded_title_abstract,
     full_text_requested, full_text_unavailable, full_text_assessed, excluded_full_text,
-    studies_included), exclusion_reasons (full-text reasons, as PRISMA reports them),
+    studies_included, which counts reports), reports_included, study_count (reports
+    linked to one study with study_link count once), exclusion_reasons (full-text
+    reasons, as PRISMA reports them),
     exclusion_reasons_title_abstract, full_text_pending, records_awaiting_screening,
     searches_recorded, dedup_recorded, dedup_method, invariants_valid,
     invariant_errors (arithmetic that does not add up), warnings, complete (true when

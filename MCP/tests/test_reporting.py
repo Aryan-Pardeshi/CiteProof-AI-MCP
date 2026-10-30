@@ -244,9 +244,12 @@ async def test_prisma_excluded_studies_multiple_reasons() -> None:
     res = await call("prisma_excluded_studies", review_id=rid, format="json")
     assert res["ok"] is True
     assert res["papers"] == 2
-    assert res["by_reason"]["wrong population"] == 2
-    assert res["by_reason"]["wrong comparator"] == 1
-    assert res["by_reason"]["ineligible design"] == 1
+    # by_reason matches prisma_status: each report counts once, under its whole reason text.
+    status = await call("prisma_status", review_id=rid)
+    assert res["by_reason"] == status["exclusion_reasons"] == {
+        "wrong population; wrong comparator": 1,
+        "wrong population; ineligible design": 1,
+    }
 
     r1 = next(r for r in res["rows"] if r["paper_ref"] == "10.1000/paper1")
     assert r1["reasons"] == ["wrong population", "wrong comparator"]
@@ -698,3 +701,23 @@ def test_pubmed_central_is_not_pubmed() -> None:
     assert both == {"PubMed Central", "PubMed"}
     assert reporting.normalize_db_name("PMC") == "PubMed Central"
     assert reporting.normalize_db_name("PubMed") == "PubMed"
+
+
+@pytest.mark.asyncio
+async def test_manuscript_check_compares_ci_level_and_ratio_of_means() -> None:
+    rid = (await call("review_create", title="CI level", question="Q?"))["review_id"]
+    await call("screening_record", review_id=rid, paper_ref="10.1000/a", stage="title_abstract", decision="include")
+    await call("screening_record", review_id=rid, paper_ref="10.1000/a", stage="full_text", decision="include")
+    rec = await call(
+        "evidence_record", review_id=rid, paper_ref="10.1000/a", outcome="pain", study_design="RCT",
+        quote="ratio of means 1.20 (95% CI 1.05 to 1.37)", source_text="Pain: ratio of means 1.20 (95% CI 1.05 to 1.37).",
+        effect_measure="rom", effect_estimate=1.2, ci_lower=1.05, ci_upper=1.37, ci_level=95,
+    )
+    assert rec["ok"] is True, rec
+
+    same = await call("manuscript_check", review_id=rid, sections={"Results": "ROM 1.20 (95% CI 1.05 to 1.37)."})
+    assert not [f for f in same["findings"] if f["kind"] == "effect_estimate"]
+
+    other = await call("manuscript_check", review_id=rid, sections={"Results": "ratio of means 1.20 (90% CI 1.05 to 1.37)."})
+    level = [f for f in other["findings"] if f.get("field") == "ci_level"]
+    assert len(level) == 1 and level[0]["stated"] == "90% CI" and level[0]["recorded"] == "95% CI"

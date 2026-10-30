@@ -139,6 +139,8 @@ MEASURE_NORM: dict[str, str] = {
     "incidence rate ratios": "irr",
     "rate ratio": "irr",
     "rate ratios": "irr",
+    "ratio of means": "rom",
+    "ratios of means": "rom",
     "rr": "rr",
     "or": "or",
     "hr": "hr",
@@ -146,19 +148,20 @@ MEASURE_NORM: dict[str, str] = {
     "smd": "smd",
     "rd": "rd",
     "irr": "irr",
+    "rom": "rom",
 }
 
 EFFECT_REGEX = re.compile(
     # Spelled-out names ignore case; abbreviations must be upper case so prose "or"/"md" never match.
     r"\b(?P<measure>(?i:standardi[sz]ed\s+mean\s+differences?|hedges['’]?\s*g|"
     r"relative\s+risks?|risk\s+ratios?|odds\s+ratios?|hazard\s+ratios?|"
-    r"mean\s+differences?|risk\s+differences?|incidence\s+rate\s+ratios?|rate\s+ratios?)|"
-    r"RR|OR|HR|MD|SMD|RD|IRR)\b"
+    r"mean\s+differences?|risk\s+differences?|incidence\s+rate\s+ratios?|rate\s+ratios?|ratios?\s+of\s+means)|"
+    r"RR|OR|HR|MD|SMD|RD|IRR|ROM)\b"
     r"\s*(?:=|:|\bof\b)?\s*"
     r"(?P<estimate>[-−]?\d+(?:\.\d+)?)"
     r"\s*(?:,|;)?\s*"
     r"(?:[\(\[]\s*)?"
-    r"(?:(?:90%|95%|99%)\s+)?(?:CI|confidence\s+intervals?)\s*(?:=|:|,)?\s*"
+    r"(?:(?P<level>\d{2}(?:\.\d+)?)\s*%\s*)?(?:CI|confidence\s+intervals?)\s*(?:=|:|,)?\s*"
     r"(?P<lower>[-−]?\d+(?:\.\d+)?)"
     r"\s*(?:to|–|—|-|,)\s*"
     r"(?P<upper>[-−]?\d+(?:\.\d+)?)\s*[\)\]]?"
@@ -180,6 +183,7 @@ def find_effect_estimates(text: str) -> list[dict[str, Any]]:
             "estimate": m.group("estimate"),
             "lower": m.group("lower"),
             "upper": m.group("upper"),
+            "level": m.group("level"),
             "start": m.start(),
             "end": m.end(),
             "line": line,
@@ -450,7 +454,7 @@ def prisma_excluded_studies(
     reasons consistently with PRISMA flow counts, and checks reconciliation against
     compute_status's excluded_full_text count.
 
-    Returns: ok, format, papers (count), by_reason (counts per reason), reconciliation
+    Returns: ok, format, papers (count), by_reason (the same counts as prisma_status exclusion_reasons), reconciliation
     (rows, excluded_full_text, reconciles, explanation; always over every row), truncated,
     next_offset (pass as offset for the next page of up to 200 rows), and table (when markdown)
     or rows (when json). Each row in rows has paper_ref, citation, reasons, reason_missing.
@@ -471,6 +475,8 @@ def prisma_excluded_studies(
                 "ORDER BY paper_ref",
                 (used_reviewer,),
             ).fetchall()
+        # Counted exactly as the PRISMA flow counts them: one reason string per report.
+        by_reason = prisma._reason_counts(conn, used_reviewer, "full_text") if used_reviewer else {}
 
         status: dict[str, Any] | None = None
         status_excluded: int | None = None
@@ -482,14 +488,11 @@ def prisma_excluded_studies(
             status_err = str(exc)
 
     all_rows: list[dict[str, Any]] = []
-    by_reason: dict[str, int] = defaultdict(int)
 
     for r in raw_rows:
         paper_ref = str(r["paper_ref"])
         citation = format_citation(paper_ref, r["title"])
         reasons, reason_missing = parse_reasons(r["reason"])
-        for rsn in reasons:
-            by_reason[rsn] += 1
         all_rows.append({
             "paper_ref": paper_ref,
             "citation": citation,
@@ -762,6 +765,7 @@ def manuscript_check(
                 est_str = eff["estimate"]
                 l_str = eff["lower"]
                 u_str = eff["upper"]
+                ci_text = f"{eff['level']}% CI" if eff["level"] else "CI"
                 line = eff["line"]
                 excerpt = eff["excerpt"]
 
@@ -788,7 +792,7 @@ def manuscript_check(
                         "section": sec_name,
                         "line": line,
                         "excerpt": excerpt,
-                        "stated": f"{meas.upper()} {est_str} (95% CI {l_str} to {u_str})",
+                        "stated": f"{meas.upper()} {est_str} ({ci_text} {l_str} to {u_str})",
                         "recorded": None,
                         "field": "effect_estimate",
                         "message": (
@@ -798,10 +802,30 @@ def manuscript_check(
                     })
                 else:
                     # Check CI limits against matching estimate rows
-                    exact_ci_match = any(
-                        number_matches(l_str, r.get("ci_lower")) and number_matches(u_str, r.get("ci_upper"))
-                        for r in matching_est_rows
-                    )
+                    ci_rows = [
+                        r for r in matching_est_rows
+                        if number_matches(l_str, r.get("ci_lower")) and number_matches(u_str, r.get("ci_upper"))
+                    ]
+                    exact_ci_match = bool(ci_rows)
+                    # Evidence rows store the level in percent; a row without one used the 95% default.
+                    if ci_rows and eff["level"] and not any(
+                        number_matches(eff["level"], r.get("ci_level") or 95) for r in ci_rows
+                    ):
+                        rec_level = ci_rows[0].get("ci_level") or 95
+                        findings.append({
+                            "kind": "effect_estimate",
+                            "severity": "mismatch",
+                            "section": sec_name,
+                            "line": line,
+                            "excerpt": excerpt,
+                            "stated": f"{eff['level']}% CI",
+                            "recorded": f"{rec_level:g}% CI",
+                            "field": "ci_level",
+                            "message": (
+                                f"Stated confidence level ({eff['level']}%) for {meas.upper()} {est_str} in "
+                                f"'{sec_name}' does not match the recorded level ({rec_level:g}%)."
+                            ),
+                        })
                     if not exact_ci_match:
                         best = matching_est_rows[0]
                         rec_ci = f"CI {best.get('ci_lower')} to {best.get('ci_upper')}"

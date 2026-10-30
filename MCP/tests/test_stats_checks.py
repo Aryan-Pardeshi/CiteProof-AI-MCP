@@ -566,3 +566,14 @@ async def test_reported_p_value_is_treated_as_rounded(p, ok) -> None:
     res = await call("stats_check_ratio_ci", measure="rr", estimate=2.0, ci_lower=1.01, ci_upper=3.96, p_value=p)
     check = next(c for c in res["checks"] if c["check"] == "p_value")
     assert check["passed"] is ok, check["detail"]
+
+
+@pytest.mark.asyncio
+async def test_p_decimals_keeps_the_written_precision() -> None:
+    # Back-calculated p is about 0.0467: "p = 0.05" may round from it, "p = 0.0500" may not.
+    args = {"measure": "rr", "estimate": 2.0, "ci_lower": 1.01, "ci_upper": 3.96, "p_value": 0.05}
+    loose = await call("stats_check_ratio_ci", **args)
+    strict = await call("stats_check_ratio_ci", **args, p_decimals=4)
+    assert next(c for c in loose["checks"] if c["check"] == "p_value")["passed"] is True
+    assert next(c for c in strict["checks"] if c["check"] == "p_value")["passed"] is False
+    assert (await call("stats_check_ratio_ci", **args, p_decimals=11))["ok"] is False
