@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CiteProof MCP Tool Reference for Claude Science | CiteProof</title>
-  <meta name="description" content="Reference for all 24 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
+  <meta name="description" content="Reference for all 40 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="https://citeproof.top/docs/mcp">
   <meta name="theme-color" content="#000000">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="CiteProof">
   <meta property="og:title" content="CiteProof MCP Tool Reference for Claude Science | CiteProof">
-  <meta property="og:description" content="Reference for all 24 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
+  <meta property="og:description" content="Reference for all 40 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
   <meta property="og:url" content="https://citeproof.top/docs/mcp">
   <meta property="og:image" content="https://citeproof.top/assets/og-image.png">
   <meta property="og:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
@@ -22,7 +22,7 @@
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="CiteProof MCP Tool Reference for Claude Science | CiteProof">
-  <meta name="twitter:description" content="Reference for all 24 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
+  <meta name="twitter:description" content="Reference for all 40 CiteProof MCP tools: arguments, limits and example results for Claude Science protocol, PRISMA, screening, evidence and risk of bias.">
   <meta name="twitter:image" content="https://citeproof.top/assets/og-image.png">
   <meta name="twitter:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
   <script type="application/ld+json">
@@ -35,7 +35,7 @@
         "headline": "CiteProof MCP tool reference for Claude Science",
         "name": "CiteProof MCP tool reference",
         "url": "https://citeproof.top/docs/mcp",
-        "description": "All 24 CiteProof MCP tools with arguments, limits, result shapes and realistic examples for Claude Science review workflows.",
+        "description": "All 40 CiteProof MCP tools with arguments, limits, result shapes and realistic examples for Claude Science review workflows.",
         "isPartOf": {"@id": "https://citeproof.top/docs#webpage"},
         "inLanguage": "en"
       },
@@ -145,7 +145,7 @@
       <article class="docs-article">
         <p class="docs-eyebrow">Claude Science + MCP</p>
         <h1>CiteProof MCP tool reference</h1>
-        <p class="docs-lede">This page documents all 24 tools in CiteProof MCP 0.1.0. Each entry lists the arguments, the limits the server enforces, and a realistic request and result. The tool names, fields and caps mirror the shipped schemas.</p>
+        <p class="docs-lede">This page documents all 40 tools in CiteProof MCP 0.3.0. Each entry lists the arguments, the limits the server enforces, and a realistic request and result. The tool names, fields and caps mirror the shipped schemas.</p>
 
         <div class="docs-callout">
           <p class="docs-callout-title">The division of labour</p>
@@ -195,7 +195,7 @@
         </ul>
 
         <h2 id="connect">Connect CiteProof MCP to Claude Science</h2>
-        <p>The recommended install is a Local command connector that runs <code>npx -y citeproof-mcp</code>. It was checked on Claude Science 0.1.70 on Windows 11 (native sandbox): the connector starts and lists all 24 tools. The connector runs inside a sandbox that can read only its own workspace folder and Claude Science's bundled runtime, and that cannot reach <code>astral.sh</code>. For that reason the launcher does not need to download <code>uv</code> there: it runs the server code it carries with the sandbox's own <code>python3</code>, which already provides <code>mcp</code>, <code>pydantic</code> and <code>httpx</code>.</p>
+        <p>The recommended install is a Local command connector that runs <code>npx -y citeproof-mcp</code>. It was checked on Claude Science 0.1.70 on Windows 11 (native sandbox): the connector starts and lists all 24 tools in version 0.2.1; version 0.3.0 exposes 40 tools (not yet tested in Claude Science). The connector runs inside a sandbox that can read only its own workspace folder and Claude Science's bundled runtime, and that cannot reach <code>astral.sh</code>. For that reason the launcher does not need to download <code>uv</code> there: it runs the server code it carries with the sandbox's own <code>python3</code>, which already provides <code>mcp</code>, <code>pydantic</code> and <code>httpx</code>.</p>
 
         <h3 id="prerequisites">Prerequisites</h3>
         <ul>
@@ -211,7 +211,7 @@
           <li><strong>Name it and enter the command.</strong> The name allows lowercase letters, digits and hyphens only, so use <code>citeproof</code>. The command line is <code>npx -y citeproof-mcp</code>.</li>
           <li><strong>Optional: set the data folder.</strong> Under Advanced settings, add the environment variable <code>CITEPROOF_MCP_HOME</code> to keep review files in a folder you choose. Without it, review files go to <code>~/.citeproof-mcp</code> inside the sandbox.</li>
           <li><strong>Wait for the first start.</strong> The first start downloads the package and can take about half a minute.</li>
-          <li><strong>Confirm 24 tools.</strong> The connector page should list every tool from <code>review_create</code> to <code>export_bundle</code>. Claude Science asks for approval before each tool run by default; set a tool to always allow only after you trust it.</li>
+          <li><strong>Confirm 40 tools.</strong> The connector page should list every tool from <code>review_create</code> to <code>review_history</code> (40 tools in 0.3.0; 24 in 0.2.1). Claude Science asks for approval before each tool run by default; set a tool to always allow only after you trust it.</li>
         </ol>
         <div class="docs-code"><pre><code>npx -y citeproof-mcp</code></pre></div>
         <p>After a new release, Claude Science keeps the previous npx copy in the connector workspace (<code>.../workspaces/_mcp-citeproof/.npm/_npx</code>). If the old version keeps loading, delete that folder and turn the connector off and on. Review data survives this.</p>
@@ -231,7 +231,7 @@
         <p>After a new release, run the build script again into the same bundle folder, then remove and re-add the connector with the same settings. The running process keeps old code in memory, and the Connectors page has no restart button when the connector is healthy. Review data in the <code>data</code> folder survives this.</p>
 
         <h3 id="confirm-tools">Confirm the tools are available</h3>
-        <p>Ask the client to list its tools, or open the connector details. A healthy install shows 24 tools with the names on this page. If fewer appear, an older server process is still running: remove the connector and add it again.</p>
+        <p>Ask the client to list its tools, or open the connector details. A healthy install shows 40 tools with the names on this page. If fewer appear, an older server process is still running: remove the connector and add it again.</p>
         <p>The first useful call is <code>review_create</code>. If it succeeds, the server is running and can write to <code>CITEPROOF_MCP_HOME</code>.</p>
 
         <h3 id="install-vs-use">Installing is not using</h3>
@@ -296,39 +296,49 @@
                 <td><code>prisma_record_search</code></td>
               </tr>
               <tr>
-                <td>4. Deduplication</td>
-                <td>Deduplicate the complete exported set and record the count. A partial batch is analysed but not recorded.</td>
-                <td><code>dedup_papers</code>, <code>prisma_record_dedup</code></td>
+                <td>4. Deduplication and validation</td>
+                <td>Deduplicate exported records and compare retrieval against benchmark recall seeds.</td>
+                <td><code>dedup_papers</code>, <code>prisma_record_dedup</code>, <code>recall_seed_record</code>, <code>recall_check</code></td>
               </tr>
               <tr>
-                <td>5. Screening</td>
-                <td>Screen titles and abstracts, then full text. Record each reviewer under their own name, compute agreement, then record consensus under <code>primary</code>.</td>
-                <td><code>screening_record</code>, <code>screening_record_many</code>, <code>screening_list</code>, <code>screening_agreement</code>, <code>prisma_status</code></td>
+                <td>5. Screening and agreement</td>
+                <td>Configure blind stages, record reviewer identities, screen records, close stages and compute Cohen's kappa.</td>
+                <td><code>reviewer_record</code>, <code>screening_stage_set</code>, <code>screening_record</code>, <code>screening_record_many</code>, <code>screening_list</code>, <code>screening_stage_close</code>, <code>screening_agreement</code>, <code>prisma_status</code></td>
               </tr>
               <tr>
-                <td>6. Evidence</td>
-                <td>Record one row per paper and outcome with the quote and the source text used to check it.</td>
-                <td><code>evidence_record</code>, <code>evidence_table</code></td>
+                <td>6. Paper and study identity</td>
+                <td>Resolve aliases and group reports into studies to prevent double-counting participants.</td>
+                <td><code>paper_resolve</code>, <code>paper_alias_record</code>, <code>study_link</code>, <code>study_unlink</code>, <code>study_overview</code></td>
               </tr>
               <tr>
-                <td>7. Risk of bias</td>
+                <td>7. Evidence and statistics</td>
+                <td>Record outcome rows with verified quotes and check statistical consistency of ratios, intervals and 2×2 data.</td>
+                <td><code>evidence_record</code>, <code>evidence_table</code>, <code>stats_check_ratio_ci</code>, <code>stats_recompute_2x2</code>, <code>stats_check_evidence</code></td>
+              </tr>
+              <tr>
+                <td>8. Risk of bias</td>
                 <td>Record each domain for the chosen tool, then compute the overall judgement by the published rule.</td>
                 <td><code>rob_record</code>, <code>rob_summary</code></td>
               </tr>
               <tr>
-                <td>8. Claims</td>
+                <td>9. Claims</td>
                 <td>Record each key claim with a label, reason and quote, then find weak claims in the draft.</td>
                 <td><code>claim_record</code>, <code>claim_report</code></td>
               </tr>
               <tr>
-                <td>9. Citations</td>
+                <td>10. Citations and prose</td>
                 <td>Check DOIs against Crossref and doi.org, and resolve author-year citations against the paper list.</td>
                 <td><code>verify_dois</code>, <code>resolve_citations</code>, <code>lint_prose</code></td>
               </tr>
               <tr>
-                <td>10. Report and export</td>
-                <td>Render the flow diagram, check the draft against the PRISMA checklist, then export the audit bundle.</td>
-                <td><code>prisma_flow_diagram</code>, <code>prisma_checklist</code>, <code>export_bundle</code>, <code>review_status</code></td>
+                <td>11. Excluded studies and manuscript</td>
+                <td>Reconcile full-text exclusion reasons and audit draft manuscript sections against recorded review data.</td>
+                <td><code>prisma_flow_diagram</code>, <code>prisma_checklist</code>, <code>prisma_excluded_studies</code>, <code>manuscript_check</code></td>
+              </tr>
+              <tr>
+                <td>12. History and export</td>
+                <td>Inspect append-only lifecycle event logs and export the full audit bundle with SHA-256 to disk.</td>
+                <td><code>review_history</code>, <code>export_bundle</code>, <code>review_status</code></td>
               </tr>
             </tbody>
           </table>
@@ -498,7 +508,7 @@
             </table>
           </div>
           <p><strong>Recording rule.</strong> A review has one deduplication count. It is saved only when <code>review_id</code> is given and the call covers every exported record, that is, <code>records_checked</code> equals the total hits from <code>prisma_record_search</code>. A partial or batched call is analysed but not saved: the result has <code>recorded: false</code> and a warning, and the review keeps its previous deduplication record. When a call is saved, it replaces any earlier record. For a set larger than 10,000 records, or one you deduplicated elsewhere, record the whole-review count with <code>prisma_record_dedup</code>.</p>
-          <p><strong>What is kept.</strong> The record with the most complete metadata is kept. Records are not merged, so copy any field you need from a removed record before discarding it. A same-title record with a different year or author is listed in <code>possible_duplicates</code> instead of merged.</p>
+          <p><strong>What is kept.</strong> The record with the most complete metadata is kept. Records are not merged, so copy any field you need from a removed record before discarding it. A same-title record with a different year or author is listed in <code>possible_duplicates</code> instead of merged. Dedup records canonical aliases and conflict proposals (<code>aliases_recorded</code>, <code>alias_conflicts</code>).</p>
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "papers": [{"id": "p1", "doi": "10.1000/example.2021", "title": "Teleradiology turnaround in rural hospitals", "year": 2021, "first_author": "Smith"}, {"id": "p2", "pmid": "12345678", "title": "Teleradiology turnaround in rural hospitals", "year": 2021, "first_author": "Smith"}, {"id": "p3", "doi": "10.1000/example.2023", "title": "Turnaround after overnight teleradiology", "year": 2023, "first_author": "Jones"}]}</code></pre></div>
           <p><strong>Example result.</strong> This example sends 3 of 412 recorded hits, so nothing is recorded.</p>
@@ -522,6 +532,68 @@
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "duplicates_removed": 87, "method": "Zotero duplicate merge, then manual title check"}</code></pre></div>
           <p><strong>Example result.</strong></p>
           <div class="docs-code"><pre><code>{"ok": true, "duplicates_removed": 87, "records_identified": 412, "records_after_dedup": 325, "method": "Zotero duplicate merge, then manual title check"}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-reviewer-record">reviewer_record</h3>
+          <p>Record reviewer type ('human', 'model', or 'unknown') and model identity.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>Yes</td><td>Reviewer name (1 to 40 chars, stored lowercase). Cannot be <code>primary</code>.</td></tr>
+                <tr><td><code>reviewer_type</code></td><td>string</td><td>Yes</td><td><code>human</code>, <code>model</code>, or <code>unknown</code>.</td></tr>
+                <tr><td><code>model_id</code></td><td>string</td><td>No</td><td>Model identifier (max 200 chars). Allowed only when <code>reviewer_type</code> is <code>model</code>.</td></tr>
+                <tr><td><code>run_ref</code></td><td>string</td><td>No</td><td>Optional run or configuration reference (max 200 chars).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Blinding and reviewer types are by convention, with an audit trail, not a guarantee. One agent can call tools under another reviewer's name, and two runs of the same model are not independent reviewers. Reviewer type is self-declared; no output may call a review verified or independent because of it. Reviewer <code>primary</code> is reserved for consensus decisions and cannot be given a type. Does not verify caller identity or authenticate models.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "screener_a", "reviewer_type": "model", "model_id": "claude-3-7-sonnet"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "name": "screener_a", "reviewer": "screener_a", "reviewer_type": "model", "model_id": "claude-3-7-sonnet", "run_ref": null, "updated_at": "2026-10-25T09:20:00Z", "warnings": []}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-screening-stage-set">screening_stage_set</h3>
+          <p>Configure a screening stage mode ('blind' or 'unblinded') and its expected reviewers.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>stage</code></td><td>string</td><td>Yes</td><td><code>title_abstract</code> or <code>full_text</code>.</td></tr>
+                <tr><td><code>mode</code></td><td>string</td><td>Yes</td><td><code>blind</code> or <code>unblinded</code>.</td></tr>
+                <tr><td><code>reviewers</code></td><td>array</td><td>Yes</td><td>Expected reviewer names (for <code>blind</code>, at least 2 distinct reviewers, none <code>primary</code>).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Blinding is by convention, with an audit trail, not a guarantee. At an open blind stage, peer decisions and agreement are hidden until closed with <code>screening_stage_close</code>. Changing a closed blind stage back to blind fails. Does not enforce physical isolation.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "mode": "blind", "reviewers": ["screener_a", "screener_b"]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "mode": "blind", "reviewers": ["screener_a", "screener_b"], "closed_at": null, "updated_at": "2026-10-25T09:22:00Z"}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-screening-stage-close">screening_stage_close</h3>
+          <p>Close an open blind screening stage and unblind peer decisions and agreement.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>stage</code></td><td>string</td><td>Yes</td><td>Stage to close: <code>title_abstract</code> or <code>full_text</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Requires at least one paper with decisions by expected reviewers, and every expected reviewer must have recorded a decision for every paper any expected reviewer recorded at this stage. Fails and lists missing pairs if incomplete. On success, consensus decisions may be recorded under <code>primary</code>. Does not resolve disagreements or verify consensus.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "closed_at": "2026-10-25T10:00:00Z", "papers_count": 325, "decisions_count": 650, "reviewer_counts": {"screener_a": 325, "screener_b": 325}}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -579,15 +651,17 @@
                 <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Filter by reviewer name.</td></tr>
                 <tr><td><code>decision</code></td><td>string</td><td>No</td><td><code>include</code>, <code>exclude</code> or <code>not_retrieved</code>.</td></tr>
                 <tr><td><code>paper_ref</code></td><td>string</td><td>No</td><td>Filter by one paper.</td></tr>
+                <tr><td><code>as_reviewer</code></td><td>string</td><td>No</td><td>Caller's own reviewer name. At an open blind stage, peer decisions are hidden and excluded from total.</td></tr>
                 <tr><td><code>limit</code></td><td>integer</td><td>No</td><td>Default 200, capped at 200.</td></tr>
                 <tr><td><code>offset</code></td><td>integer</td><td>No</td><td>Default 0.</td></tr>
               </tbody>
             </table>
           </div>
+          <p><strong>Blinding visibility.</strong> At an open blind stage, rows are returned only when <code>reviewer == as_reviewer</code>. Rows of other reviewers are hidden and excluded from total; without <code>as_reviewer</code>, every open-blind-stage row is hidden. Does not reveal peer decisions during an open blind stage.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "full_text", "reviewer": "primary", "limit": 50}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "full_text", "as_reviewer": "screener_a", "limit": 50}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "records": [{"paper_ref": "10.1000/example.2021", "stage": "full_text", "reviewer": "primary", "decision": "include", "reason": null, "title": "Teleradiology turnaround in rural hospitals", "updated_at": "2026-10-24T16:02:00Z"}], "count": 1, "total": 48, "truncated": false, "next_offset": 1}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "records": [{"paper_ref": "10.1000/example.2021", "stage": "full_text", "reviewer": "screener_a", "decision": "include", "reason": null, "title": "Teleradiology turnaround in rural hospitals", "updated_at": "2026-10-24T16:02:00Z", "reviewer_type": "model", "model_id": "claude-3-7-sonnet", "run_ref": null}], "count": 1, "total": 48, "truncated": false, "next_offset": 1, "hidden_blind_rows": 0, "blind_note": null}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -604,11 +678,11 @@
               </tbody>
             </table>
           </div>
-          <p><strong>Result notes.</strong> <code>kappa</code> is null and the interpretation is <code>undefined</code> when the reviewers share no decisions or expected agreement is 1. Interpretation uses the Landis and Koch bands.</p>
+          <p><strong>Blinding and warnings.</strong> Always pass warnings (such as human screening caution and same-model warnings) to the user. At an open blind stage, agreement figures (kappa, table, disagreements) are hidden until the stage is closed with <code>screening_stage_close</code>. Does not resolve disagreements.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "reviewer_a": "primary", "reviewer_b": "secondary"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "reviewer_a": "screener_a", "reviewer_b": "screener_b"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "reviewer_a": "primary", "reviewer_b": "secondary", "shared": 20, "agree": 17, "table": {"both_include": 6, "a_include_b_exclude": 1, "a_exclude_b_include": 2, "both_exclude": 11}, "po": 0.85, "pe": 0.53, "kappa": 0.681, "interpretation": "substantial", "disagreement_count": 3, "disagreements": [{"paper_ref": "10.1000/example.2023", "title": "Turnaround after overnight teleradiology", "a": "include", "b": "exclude", "reason_a": null, "reason_b": "No turnaround time outcome"}, {"paper_ref": "10.1000/example.2024", "title": "Diagnostic accuracy of remote reporting", "a": "exclude", "b": "include", "reason_a": "Wrong population", "reason_b": null}, {"paper_ref": "10.1000/example.2025", "title": "Cost of teleradiology in rural hospitals", "a": "exclude", "b": "include", "reason_a": "No turnaround time outcome", "reason_b": null}], "truncated": false, "only_a": 2, "only_b": 1, "not_judged": 4, "next_step": "Resolve the 3 disagreement(s) and record each consensus decision with reviewer='primary'."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "reviewer_a_type": "model", "reviewer_b_type": "model", "reviewer_a_model_id": "claude-3-7-sonnet", "reviewer_b_model_id": "claude-3-7-sonnet", "warnings": ["Caution: Two runs of the same model are not independent reviewers."], "shared": 20, "agree": 17, "table": {"both_include": 6, "a_include_b_exclude": 1, "a_exclude_b_include": 2, "both_exclude": 11}, "po": 0.85, "pe": 0.53, "kappa": 0.681, "interpretation": "substantial", "disagreement_count": 3, "disagreements": [{"paper_ref": "10.1000/example.2023", "title": "Turnaround after overnight teleradiology", "a": "include", "b": "exclude", "reason_a": null, "reason_b": "No turnaround time outcome"}], "truncated": false, "only_a": 2, "only_b": 1, "not_judged": 4, "next_step": "Resolve the 3 disagreement(s) and record each consensus decision with reviewer='primary'."}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -671,6 +745,149 @@
           <div class="docs-code"><pre><code>{"ok": true, "found_count": 2, "total": 27, "items": [{"item": 1, "section": "Title", "topic": "Title identifies the report as a systematic review", "found": true, "matched": "systematic review"}, {"item": 2, "section": "Abstract", "topic": "Abstract", "found": false, "matched": null}, {"item": 3, "section": "Introduction", "topic": "Rationale", "found": false, "matched": null}, {"item": 4, "section": "Introduction", "topic": "Objectives", "found": false, "matched": null}, {"item": 5, "section": "Methods", "topic": "Eligibility criteria", "found": false, "matched": null}, {"item": 6, "section": "Methods", "topic": "Information sources", "found": false, "matched": null}, {"item": 7, "section": "Methods", "topic": "Search strategy", "found": false, "matched": null}, {"item": 8, "section": "Methods", "topic": "Selection process", "found": false, "matched": null}, {"item": 9, "section": "Methods", "topic": "Data collection process", "found": false, "matched": null}, {"item": 10, "section": "Methods", "topic": "Data items", "found": false, "matched": null}, {"item": 11, "section": "Methods", "topic": "Study risk of bias assessment", "found": false, "matched": null}, {"item": 12, "section": "Methods", "topic": "Effect measures", "found": false, "matched": null}, {"item": 13, "section": "Methods", "topic": "Synthesis methods", "found": false, "matched": null}, {"item": 14, "section": "Methods", "topic": "Reporting bias assessment", "found": false, "matched": null}, {"item": 15, "section": "Methods", "topic": "Certainty assessment", "found": false, "matched": null}, {"item": 16, "section": "Results", "topic": "Study selection", "found": true, "matched": "records identified"}, {"item": 17, "section": "Results", "topic": "Study characteristics", "found": false, "matched": null}, {"item": 18, "section": "Results", "topic": "Risk of bias in studies", "found": false, "matched": null}, {"item": 19, "section": "Results", "topic": "Results of individual studies", "found": false, "matched": null}, {"item": 20, "section": "Results", "topic": "Results of syntheses", "found": false, "matched": null}, {"item": 21, "section": "Results", "topic": "Reporting biases", "found": false, "matched": null}, {"item": 22, "section": "Results", "topic": "Certainty of evidence", "found": false, "matched": null}, {"item": 23, "section": "Discussion", "topic": "Discussion (interpretation, limitations, implications)", "found": false, "matched": null}, {"item": 24, "section": "Other information", "topic": "Registration and protocol", "found": false, "matched": null}, {"item": 25, "section": "Other information", "topic": "Support", "found": false, "matched": null}, {"item": 26, "section": "Other information", "topic": "Competing interests", "found": false, "matched": null}, {"item": 27, "section": "Other information", "topic": "Availability of data, code and other materials", "found": false, "matched": null}], "missing": ["Abstract", "Rationale", "Objectives", "Eligibility criteria", "Information sources", "Search strategy", "Selection process", "Data collection process", "Data items", "Study risk of bias assessment", "Effect measures", "Synthesis methods", "Reporting bias assessment", "Certainty assessment", "Study characteristics", "Risk of bias in studies", "Results of individual studies", "Results of syntheses", "Reporting biases", "Certainty of evidence", "Discussion (interpretation, limitations, implications)", "Registration and protocol", "Support", "Competing interests", "Availability of data, code and other materials"], "numbers": [{"field": "records_identified", "reported": 412, "recorded": 412, "matches": true, "snippet": "ew examined teleradiology. Of 412 records identified, 12 studies were included."}, {"field": "studies_included", "reported": 12, "recorded": 12, "matches": true, "snippet": "y. Of 412 records identified, 12 studies were included."}], "number_mismatches": 0, "numbers_note": null, "note": "Keyword check of the report text. It shows which items are mentioned, not whether they are reported well."}</code></pre></div>
         </div>
 
+        <h2 id="tools-identity">Paper and study identity</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-paper-resolve">paper_resolve</h3>
+          <p>Resolve paper refs through the canonical alias map recorded by deduplication or manual aliases.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>paper_refs</code></td><td>array</td><td>Yes</td><td>1 to 200 paper keys: DOI, <code>pmid:&lt;digits&gt;</code>, or <code>title:&lt;title&gt;|&lt;year&gt;</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Status is <code>resolved</code> when an alias exists, <code>conflict</code> when <code>alias_conflicts</code> holds a disagreeing proposal, and <code>unknown</code> when no alias exists (ref returned unchanged). Exact stored mappings only; nothing is guessed. Does not merge conflicting mappings.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_refs": ["10.1101/2021.01.01.123456"]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "refs": [{"input": "10.1101/2021.01.01.123456", "canonical_ref": "10.1000/example.2021", "status": "resolved", "aliases": ["10.1101/2021.01.01.123456"], "study_id": "study-alpha", "conflicts": []}], "count": 1, "truncated": false, "note": "Resolved through stored alias map."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-paper-alias-record">paper_alias_record</h3>
+          <p>Record one manual alias, for example a preprint DOI that belongs to a published paper.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>alias</code></td><td>string</td><td>Yes</td><td>Paper key: DOI, PMID, or title|year.</td></tr>
+                <tr><td><code>canonical_ref</code></td><td>string</td><td>Yes</td><td>Target canonical paper key.</td></tr>
+                <tr><td><code>replace</code></td><td>boolean</td><td>No</td><td>Default false. Replace an existing mapping that points elsewhere (old mapping saved in <code>alias_conflicts</code>).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Canonicalises both refs. Mapping to another canonical ref is refused unless <code>replace=true</code>. Does not validate against external registries.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "alias": "10.1101/2021.01.01.123456", "canonical_ref": "10.1000/example.2021"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "alias": "10.1101/2021.01.01.123456", "canonical_ref": "10.1000/example.2021", "previous_canonical": null, "recorded": true, "replaced": false, "kind": "doi", "origin": "manual"}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-study-link">study_link</h3>
+          <p>Link one or more reports to a study so reports and studies can be counted separately.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>study_id</code></td><td>string</td><td>Yes</td><td>Stable study identifier (1 to 80 chars: A-Z, a-z, 0-9, <code>_</code>, <code>.</code>, <code>:</code>, <code>-</code>).</td></tr>
+                <tr><td><code>paper_refs</code></td><td>array</td><td>Yes</td><td>1 to 200 paper keys.</td></tr>
+                <tr><td><code>note</code></td><td>string</td><td>No</td><td>Why these reports belong to one study (max 1,000 chars).</td></tr>
+                <tr><td><code>replace</code></td><td>boolean</td><td>No</td><td>Default false. Move reports already linked to another study.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Refs are resolved through the alias map before linking. Linking to a different study is refused unless <code>replace=true</code>. Does not merge study records or combine sample sizes.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "study_id": "study-alpha", "paper_refs": ["10.1000/example.2021", "10.1000/example.2022"], "note": "Primary trial report and 2-year follow-up."}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "study_id": "study-alpha", "linked": ["10.1000/example.2021", "10.1000/example.2022"], "unchanged": [], "moved": [], "reports_in_study": ["10.1000/example.2021", "10.1000/example.2022"], "count": 2, "note": "Primary trial report and 2-year follow-up."}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-study-unlink">study_unlink</h3>
+          <p>Remove the study link from one or more reports, leaving the reports themselves intact.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>paper_refs</code></td><td>array</td><td>Yes</td><td>1 to 200 paper keys.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Refs are resolved through the alias map. Does not delete screening decisions or evidence rows.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_refs": ["10.1000/example.2022"]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "removed": ["10.1000/example.2022"], "not_linked": [], "count": 1}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-study-overview">study_overview</h3>
+          <p>Count included reports separately from studies and flag outcomes one study reports twice.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Whose full_text includes to count (default <code>primary</code>, else only reviewer).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Duplicate participant risk.</strong> Flags outcomes recorded from two or more reports of the same linked study. Does not prove reports share participants or decide if pooling is appropriate.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "primary"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "report_count": 14, "canonical_report_count": 14, "study_count": 12, "groups": [{"study_id": "study-alpha", "unlinked": false, "reports": ["10.1000/example.2021", "10.1000/example.2022"]}], "unlinked_reports": [], "duplicate_participant_risk": [{"study_id": "study-alpha", "outcome_key": "mortality", "outcome": "30-day mortality", "reports": ["10.1000/example.2021", "10.1000/example.2022"]}], "truncated": false, "note": "Included reports grouped by study."}</code></pre></div>
+        </div>
+
+        <h2 id="tools-validation">Search validation</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-recall-seed-record">recall_seed_record</h3>
+          <p>Record a small seed set of known eligible papers for a known-item recall check.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>paper_refs</code></td><td>array</td><td>Yes</td><td>1 to 200 paper keys.</td></tr>
+                <tr><td><code>labels</code></td><td>array</td><td>No</td><td>Optional labels per ref.</td></tr>
+                <tr><td><code>replace</code></td><td>boolean</td><td>No</td><td>Default false. Replace whole seed set instead of adding to it.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Seeds are stored as canonical refs. Does not search for seeds or decide eligibility; it records what you send.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_refs": ["10.1000/seed.2018"], "labels": ["cochrane_benchmark"]}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "added": 1, "updated": 0, "unchanged": 0, "removed": 0, "count": 1, "seeds": [{"paper_ref": "10.1000/seed.2018", "label": "cochrane_benchmark", "added_at": "2026-10-25T09:15:00Z"}], "truncated": false}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-recall-check">recall_check</h3>
+          <p>Compare the recorded seed set with the retrieved records of the last full dedup.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Recall check rule.</strong> Alias resolution runs first. Seeds are classified as <code>found</code>, <code>not_found</code>, or <code>unresolved</code>. Does NOT prove search was exhaustive: it only says whether this seed set was in the recorded export.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "seeds": [{"paper_ref": "10.1000/seed.2018", "label": "cochrane_benchmark", "status": "found", "sources": ["PubMed"], "matched_records": 1}], "counts": {"found": 1, "not_found": 0, "unresolved": 0}, "recall": 1.0, "per_source": [{"source": "PubMed", "records": 412, "found": 1, "missed": 0, "unresolved": 0}], "records_checked": 412, "retrieval_recorded_at": "2026-10-25T09:18:00Z", "check_id": "chk-01", "checked_at": "2026-10-25T09:25:00Z", "truncated": false, "note": "Known-item recall check completed."}</code></pre></div>
+        </div>
+
         <h2 id="tools-evidence">Evidence extraction</h2>
 
         <div class="docs-tool">
@@ -716,6 +933,85 @@
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown"}</code></pre></div>
           <p><strong>Example result.</strong></p>
           <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "row_count": 1, "table": "| Study | Design | N | Population | Intervention | Comparator | Outcome | Effect | Source quote | Checks |\n|---|---|---|---|---|---|---|---|---|---|\n| 10.1000/example.2021 | Retrospective cohort | 1204 | Adults referred for imaging | Teleradiology | On-site reporting | Report turnaround time | MD -24 (95% CI -31 to -17) | Median turnaround time fell by 24 minutes | quote verified |", "truncated": false, "included_without_rows": ["10.1000/example.2024"], "included_without_rows_count": 1, "rows_quote_not_verified": 0, "rows_numbers_not_in_quote": 0}</code></pre></div>
+        </div>
+
+        <h2 id="tools-stats">Statistical checks</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-stats-check-ratio-ci">stats_check_ratio_ci</h3>
+          <p>Check whether a ratio estimate is consistent with its confidence interval and optional p-value.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>measure</code></td><td>string</td><td>Yes</td><td>Ratio measure: <code>rr</code>, <code>or</code>, <code>hr</code>, <code>irr</code>, or <code>rom</code>.</td></tr>
+                <tr><td><code>estimate</code></td><td>number</td><td>Yes</td><td>Reported point estimate on ratio scale.</td></tr>
+                <tr><td><code>ci_lower</code></td><td>number</td><td>Yes</td><td>Reported lower confidence limit (&gt; 0).</td></tr>
+                <tr><td><code>ci_upper</code></td><td>number</td><td>Yes</td><td>Reported upper confidence limit.</td></tr>
+                <tr><td><code>ci_level</code></td><td>number</td><td>No</td><td>Confidence level percent (default 95).</td></tr>
+                <tr><td><code>p_value</code></td><td>number</td><td>No</td><td>Optional reported two-sided p-value.</td></tr>
+                <tr><td><code>decimals</code></td><td>integer</td><td>No</td><td>Reported decimals (0 to 6, default 2). Sets half-unit rounding tolerance.</td></tr>
+                <tr><td><code>rel_tol</code></td><td>number</td><td>No</td><td>Relative tolerance (default 0.01).</td></tr>
+                <tr><td><code>review_id</code></td><td>string</td><td>No</td><td>If given, saved to review for export_bundle.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>No</td><td>Paper key.</td></tr>
+                <tr><td><code>label</code></td><td>string</td><td>No</td><td>Short label (max 200 chars).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Tolerance and assumptions.</strong> Symmetrical on log scale: checks geometric midpoint and back-calculated SE. An 'inconsistent' status means numbers do not agree under stated rounding; it does not prove the paper is wrong. Does not read paper or infer analysis model.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95, "p_value": 0.05, "decimals": 2}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "status": "consistent", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "decimals": 2, "rel_tol": 0.01, "half_unit": 0.005, "checks": [{"check": "midpoint_log_scale", "passed": true, "detail": "Point estimate 0.80 within midpoint range [0.795, 0.805]."}], "geometric_midpoint": 0.8, "geometric_midpoint_range": [0.795, 0.805], "se_log": 0.114, "z": -1.957, "p_back_calculated": 0.0503, "p_reported": 0.05, "assumptions": ["Symmetric log-scale confidence interval."], "warnings": [], "saved": false, "check_id": null}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-stats-recompute-2x2">stats_recompute_2x2</h3>
+          <p>Recompute RR, OR and RD from arm-level events and totals, optionally comparing a reported result.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>events_a</code></td><td>integer</td><td>Yes</td><td>Events in arm A (intervention); whole number &gt;= 0.</td></tr>
+                <tr><td><code>total_a</code></td><td>integer</td><td>Yes</td><td>Participants in arm A; whole number &gt;= 1.</td></tr>
+                <tr><td><code>events_b</code></td><td>integer</td><td>Yes</td><td>Events in arm B (comparator); whole number &gt;= 0.</td></tr>
+                <tr><td><code>total_b</code></td><td>integer</td><td>Yes</td><td>Participants in arm B; whole number &gt;= 1.</td></tr>
+                <tr><td><code>continuity_correction</code></td><td>string</td><td>No</td><td><code>none</code> (default) or <code>add_0.5_if_zero</code>.</td></tr>
+                <tr><td><code>reported</code></td><td>object</td><td>No</td><td>Optional reported result: <code>{"measure": "rr"|"or"|"rd", "estimate": number, "ci_lower"?: number, "ci_upper"?: number}</code>.</td></tr>
+                <tr><td><code>ci_level</code></td><td>number</td><td>No</td><td>Confidence level percent (default 95).</td></tr>
+                <tr><td><code>decimals</code></td><td>integer</td><td>No</td><td>Reported decimals (0 to 6, default 2).</td></tr>
+                <tr><td><code>rel_tol</code></td><td>number</td><td>No</td><td>Relative tolerance (default 0.01).</td></tr>
+                <tr><td><code>review_id</code></td><td>string</td><td>No</td><td>If given, saved to review.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>No</td><td>Paper key.</td></tr>
+                <tr><td><code>label</code></td><td>string</td><td>No</td><td>Short label (max 200 chars).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> RR and OR use log-scale Wald intervals (Woolf for OR); RD uses Wald interval. A comparison match is arithmetic agreement under stated rounding, not proof that the paper is correct. Does not adjust for strata or clusters.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"events_a": 20, "total_a": 100, "events_b": 40, "total_b": 100, "reported": {"measure": "rr", "estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78}}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "events_a": 20, "total_a": 100, "events_b": 40, "total_b": 100, "arm_a": "intervention", "arm_b": "comparator", "continuity_correction": "none", "correction_applied": false, "cells_used_for_ratios": [20, 80, 40, 60], "rr": {"estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78, "se": 0.228, "estimable": true, "reason": null}, "or": {"estimate": 0.38, "ci_lower": 0.2, "ci_upper": 0.7, "se": 0.318, "estimable": true, "reason": null}, "rd": {"estimate": -0.2, "ci_lower": -0.32, "ci_upper": -0.08, "se": 0.063, "estimable": true, "reason": null}, "reported": {"measure": "rr", "estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78}, "comparison": {"measure": "rr", "estimable": true, "values": {"estimate_match": true, "ci_lower_match": true, "ci_upper_match": true}, "matches": true, "mismatches": [], "note": "Recomputed values agree with reported values under stated tolerance."}, "status": "consistent", "assumptions": ["Arm A=intervention, Arm B=comparator", "Log-scale Wald intervals"], "warnings": [], "saved": false, "check_id": null}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-stats-check-evidence">stats_check_evidence</h3>
+          <p>Run ratio-CI consistency check over every stored evidence row that has a ratio measure.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>decimals</code></td><td>integer</td><td>No</td><td>Reported decimals (0 to 6, default 2).</td></tr>
+                <tr><td><code>rel_tol</code></td><td>number</td><td>No</td><td>Relative tolerance (default 0.01).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Rows with non-ratio measures or missing estimates/limits are listed as <code>skipped</code>. Does not edit evidence rows or judge analysis.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "decimals": 2}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "rows": [{"paper_ref": "10.1000/example.2021", "outcome": "mortality", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "status": "consistent", "warnings": []}], "truncated": false, "checked": 1, "skipped": 1, "counts": {"consistent": 1, "inconsistent": 0, "invalid": 0, "skipped": 1}, "assumptions": ["Symmetric log-scale confidence interval."], "note": "Consistency check completed."}</code></pre></div>
         </div>
 
         <h2 id="tools-claims">Claims and risk of bias</h2>
@@ -807,7 +1103,72 @@
           <div class="docs-code"><pre><code>{"ok": true, "papers": [{"paper_ref": "10.1000/example.2021", "tool": "robins_i", "domains": {"D1": "low", "D2": "moderate", "D3": "low", "D4": "low", "D5": "low", "D6": "low", "D7": "low"}, "missing_domains": [], "overall": "moderate", "overall_by_rule": "moderate", "overall_recorded": null, "notes": []}], "table": [{"paper_ref": "10.1000/example.2021", "D1": "low", "D2": "moderate", "overall": "moderate"}], "counts_by_overall": {"moderate": 1}, "papers_with_unverified_quotes": [], "overall_rule": "ROBINS-I: critical > serious > no_information > moderate > low", "truncated": false}</code></pre></div>
         </div>
 
-        <h2 id="tools-review">Whole-review views and export</h2>
+        <h2 id="tools-reporting">Reporting and manuscript checks</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-prisma-excluded-studies">prisma_excluded_studies</h3>
+          <p>Table of full-text excluded studies, their citations and recorded exclusion reasons.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Whose decisions to count (default <code>primary</code>, else only reviewer).</td></tr>
+                <tr><td><code>format</code></td><td>string</td><td>No</td><td><code>markdown</code> (default) or <code>json</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Normalises reasons consistently with PRISMA flow and checks reconciliation against <code>excluded_full_text</code>. Does not verify scientific validity of exclusion decisions.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown"}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "papers": 33, "by_reason": {"Wrong population": 18, "No comparator": 15}, "reconciliation": {"rows": 33, "excluded_full_text": 33, "reconciles": true, "explanation": "Row count exactly matches PRISMA excluded_full_text."}, "truncated": false, "table": "| Study | Citation | Exclusion Reason |\n|---|---|---|\n| 10.1000/ex1 | Smith et al., 2020 | Wrong population |"}</code></pre></div>
+        </div>
+
+        <div class="docs-tool">
+          <h3 id="tool-manuscript-check">manuscript_check</h3>
+          <p>Check manuscript sections against recorded review audit data.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>sections</code></td><td>object</td><td>Yes</td><td>Mapping of section name to text (1 to 20 sections, each up to 400,000 characters).</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Whose decisions to count (default <code>primary</code>, else only reviewer).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Compares stated PRISMA counts, cross-section count consistency, effect estimates, CIs, search databases, search dates, reviewer counts, risk of bias tools, and synthesis methods. Inconsistencies reported as findings with severity <code>mismatch</code>, <code>not_in_record</code>, <code>unknown</code>, or <code>omitted</code>. Does not judge scientific truth or evaluate methodological quality; compares record-backed quantities and factual statements only.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "sections": {"results": "We included 12 studies comprising 1,500 patients."}}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "findings": [], "truncated": false, "quantity_map": {"included_studies": 12}, "counts_by_kind": {}, "counts_by_severity": {"mismatch": 0, "not_in_record": 0, "unknown": 0, "omitted": 0}, "checked": ["prisma_counts", "search_dates", "databases"], "not_checked": []}</code></pre></div>
+        </div>
+
+        <h2 id="tools-review">History, whole-review views and export</h2>
+
+        <div class="docs-tool">
+          <h3 id="tool-review-history">review_history</h3>
+          <p>Query the append-only event history for a review, oldest first.</p>
+          <div class="docs-table-wrap">
+            <table class="docs-table">
+              <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
+                <tr><td><code>table</code></td><td>string</td><td>No</td><td>Filter events to one tracked table name.</td></tr>
+                <tr><td><code>paper_ref</code></td><td>string</td><td>No</td><td>Filter events to one paper reference.</td></tr>
+                <tr><td><code>row_key</code></td><td>string</td><td>No</td><td>Filter events to an exact row_key.</td></tr>
+                <tr><td><code>limit</code></td><td>integer</td><td>No</td><td>Maximum events to return (1 to 200, default 100).</td></tr>
+                <tr><td><code>offset</code></td><td>integer</td><td>No</td><td>Number of events to skip for pagination (default 0).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Rules.</strong> Reads lifecycle events (baseline, insert, update, delete) captured by SQLite triggers across tracked tables. Screening events of an open blind stage are hidden until <code>screening_stage_close</code>. Does not provide cryptographic tamper-proofing: records are append-only by convention and SQLite triggers; direct file access can modify the database.</p>
+          <p><strong>Example request.</strong></p>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "table": "screening_decisions", "limit": 2}</code></pre></div>
+          <p><strong>Example result.</strong></p>
+          <div class="docs-code"><pre><code>{"ok": true, "events": [{"seq": 1, "at": "2026-10-25T09:20:00Z", "table_name": "screening_decisions", "op": "INSERT", "row_key": "10.1000/example.2021|title_abstract|screener_a", "old_row": null, "new_row": {"paper_ref": "10.1000/example.2021", "stage": "title_abstract", "decision": "include"}, "changed_fields": ["paper_ref", "stage", "decision"]}], "total": 1, "next_offset": null}</code></pre></div>
+        </div>
 
         <div class="docs-tool">
           <h3 id="tool-review-status">review_status</h3>
@@ -831,22 +1192,23 @@
 
         <div class="docs-tool">
           <h3 id="tool-export-bundle">export_bundle</h3>
-          <p>Returns one document with the review record: metadata, protocol and amendments, search log, dedup, PRISMA counts and invariants with a diagram, screening decisions, agreement, evidence, risk of bias, claims, DOI checks and source-text changes.</p>
+          <p>Export the whole audit trail as one text document: metadata, protocol and amendments, search log, dedup, PRISMA counts and invariants with a Mermaid diagram, screening decisions, agreement for each reviewer pair, evidence table, risk of bias with rules, claims, saved DOI checks, reports-to-studies grouping and aliases, latest known-item recall check, saved statistical checks, change-history summary, and open warnings/next steps.</p>
           <div class="docs-table-wrap">
             <table class="docs-table">
               <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>
               <tbody>
                 <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
                 <tr><td><code>format</code></td><td>string</td><td>No</td><td><code>markdown</code> (default) or <code>json</code>.</td></tr>
-                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Reviewer used for agreement and PRISMA coverage.</td></tr>
+                <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Whose screening decisions count for PRISMA. Default: <code>primary</code>, else only reviewer.</td></tr>
+                <tr><td><code>save</code></td><td>boolean</td><td>No</td><td>Default false. Also write the document to <code>&lt;CITEPROOF_MCP_HOME&gt;/exports/</code> and return its path and SHA-256.</td></tr>
               </tbody>
             </table>
           </div>
-          <p><strong>Limits.</strong> At most 5,000 screening decisions and 5,000 claims, and at most 50 listed disagreements per reviewer pair (<code>disagreement_count</code> is always the true total). Source texts are never included. Nothing is written to disk; the client receives the text and may save it.</p>
+          <p><strong>Limits and warnings.</strong> At most 5,000 screening decisions and 5,000 claims. Always pass warnings (such as human screening caution and same-model warnings) to the user. Source texts are not included. With <code>save=true</code>, writes <code>&lt;review_id&gt;-audit-bundle.md|json</code> to the exports directory.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown", "reviewer": "primary"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown", "reviewer": "primary", "save": true}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "content": "# Teleradiology turnaround times: a systematic review\n\n## Protocol\n...\n\n## PRISMA 2020 flow\n...", "chars": 28410, "suggested_filename": "rev-9f3c2a1b-audit-bundle.md", "truncated": false, "phase": "reporting"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "content": "# Teleradiology turnaround times: a systematic review\n\n## Protocol\n...\n\n## PRISMA 2020 flow\n...", "chars": 28410, "sha256": "3a7b9c1d2e3f...", "suggested_filename": "rev-9f3c2a1b-audit-bundle.md", "saved_path": "/home/user/.citeproof-mcp/exports/rev-9f3c2a1b-audit-bundle.md", "truncated": false, "phase": "reporting"}</code></pre></div>
         </div>
 
         <h2 id="limits">Limits and validation rules</h2>
@@ -870,6 +1232,9 @@
               <tr><td>Reviewer name</td><td>1 to 40 characters, stored lower-case.</td></tr>
               <tr><td><code>export_bundle</code></td><td>5,000 screening decisions and 5,000 claims.</td></tr>
               <tr><td>Tool text input</td><td>400,000 characters for a single text field.</td></tr>
+              <tr><td><code>paper_resolve</code> / <code>study_link</code> / <code>study_unlink</code> / <code>recall_seed_record</code></td><td>1 to 200 paper keys per call.</td></tr>
+              <tr><td><code>manuscript_check</code></td><td>1 to 20 sections, each up to 400,000 characters.</td></tr>
+              <tr><td><code>review_history</code></td><td>1 to 200 events per page (default 100).</td></tr>
             </tbody>
           </table>
         </div>
@@ -909,7 +1274,7 @@
           <table class="docs-table">
             <thead><tr><th scope="col">Client</th><th scope="col">Install path</th><th scope="col">Status</th></tr></thead>
             <tbody>
-              <tr><td>Claude Science</td><td>Local command connector with <code>npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.70, 24 tools listed</td></tr>
+              <tr><td>Claude Science</td><td>Local command connector with <code>npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.70 (24 tools listed for 0.2.1; 0.3.0 with 40 tools not yet tested)</td></tr>
               <tr><td>Claude Science</td><td>Local command connector with the built bundle</td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.67</td></tr>
               <tr><td>Claude Desktop</td><td><code>citeproof.mcpb</code> extension</td><td><span class="docs-status docs-status-new">New</span> Extension path, not yet broadly tested</td></tr>
               <tr><td>Claude Desktop</td><td>npx with a JSON <code>mcpServers</code> entry</td><td><span class="docs-status docs-status-new">New</span> Not yet tested for this release</td></tr>
@@ -927,7 +1292,7 @@
             <thead><tr><th scope="col">Symptom</th><th scope="col">What to check</th></tr></thead>
             <tbody>
               <tr><td><code>Connection closed</code> with <code>uv (uvx) was not found</code> in the error text</td><td>You are running launcher 0.2.0, which tried to download <code>uv</code> from <code>astral.sh</code>, and the sandbox cannot reach it. Use 0.2.1 or newer (<code>npx -y citeproof-mcp@latest</code>), and delete the cached copy under <code>.../_mcp-citeproof/.npm/_npx</code> if the old version keeps loading.</td></tr>
-              <tr><td>Only 18 tools appear instead of 24</td><td>An old server process is still running. Remove the connector and add it again with the same settings.</td></tr>
+              <tr><td>Fewer tools appear than expected (e.g. 18 or 24 instead of 40)</td><td>An old server process is still running. Remove the connector and add it again with the same settings. The current release exposes 40 tools.</td></tr>
               <tr><td><code>this kernel's Python interpreter ... is not readable inside the sandbox</code></td><td>The command points outside the connector workspace. Use <code>npx -y citeproof-mcp</code>, or the bundle path from the fallback steps.</td></tr>
               <tr><td><code>Set "command" to node, npx or python3 ...</code></td><td>You gave an absolute path to a Python that Claude Science does not provide. Use <code>python3</code>.</td></tr>
               <tr><td><code>can't open file ... Permission denied</code></td><td>The bundle is outside the connector workspace. Build it into <code>.../workspaces/_mcp-citeproof/bundle</code>.</td></tr>
@@ -943,7 +1308,7 @@
         <p>For connector-specific errors and the research-assistant failures, see <a href="/docs/troubleshooting">Troubleshooting</a>.</p>
 
         <h2 id="maintaining">Keeping these docs accurate</h2>
-        <p>This page describes CiteProof MCP 0.1.0. When the code and this page disagree, the code wins. The authoritative sources are:</p>
+        <p>This page describes CiteProof MCP 0.3.0. When the code and this page disagree, the code wins. The authoritative sources are:</p>
         <ul>
           <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/SPEC.md" target="_blank" rel="noopener noreferrer">MCP/docs/SPEC.md</a>: tool arguments, limits, result shapes, storage and security rules.</li>
           <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/CLAUDE_SCIENCE.md" target="_blank" rel="noopener noreferrer">MCP/docs/CLAUDE_SCIENCE.md</a>: the tested Claude Science install and connector troubleshooting.</li>
