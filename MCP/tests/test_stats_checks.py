@@ -576,4 +576,7 @@ async def test_p_decimals_keeps_the_written_precision() -> None:
     strict = await call("stats_check_ratio_ci", **args, p_decimals=4)
     assert next(c for c in loose["checks"] if c["check"] == "p_value")["passed"] is True
     assert next(c for c in strict["checks"] if c["check"] == "p_value")["passed"] is False
-    assert (await call("stats_check_ratio_ci", **args, p_decimals=11))["ok"] is False
+    assert strict["p_half_unit"] == 0.00005 and loose["p_half_unit"] == 0.005
+    tiny = await call("stats_check_ratio_ci", **args | {"p_value": 5e-11}, p_decimals=13)
+    assert tiny["ok"] is True and tiny["p_half_unit"] == 5e-14
+    assert (await call("stats_check_ratio_ci", **args, p_decimals=21))["ok"] is False

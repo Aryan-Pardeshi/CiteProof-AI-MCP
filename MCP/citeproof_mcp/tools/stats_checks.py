@@ -314,6 +314,7 @@ def _ratio_ci_result(
         "z": None,
         "p_back_calculated": None,
         "p_reported": _round6(p_value),
+        "p_half_unit": None,
         "assumptions": _ratio_assumptions(decimals, rel_tol, level),
         "warnings": warnings,
     }
@@ -367,6 +368,7 @@ def _ratio_ci_result(
             # trailing zeros (0.0500 -> 0.05), so p_decimals, when sent, gives the written precision.
             p_places = p_decimals if p_decimals is not None else max(0, -Decimal(repr(p_value)).as_tuple().exponent)
             p_h = 0.5 * 10.0 ** -p_places
+            result["p_half_unit"] = p_h
             p_ok = p_value - p_h <= p_high and p_value + p_h >= p_low
             checks.append(
                 {
@@ -410,7 +412,7 @@ def stats_check_ratio_ci(
     p_value: Annotated[float | None, Field(description="Optional reported two-sided p-value, e.g. 0.045.")] = None,
     p_decimals: Annotated[
         int | None,
-        Field(description="Decimals the paper wrote for p, e.g. 4 for 'p = 0.0500'. Default: read from p_value, which loses trailing zeros."),
+        Field(description="Decimals the paper wrote for p (0 to 20), e.g. 4 for 'p = 0.0500'. Default: read from p_value, which loses trailing zeros."),
     ] = None,
     decimals: Decimals = 2,
     rel_tol: RelTol = 0.01,
@@ -430,7 +432,8 @@ def stats_check_ratio_ci(
     Returns: status ('consistent', 'inconsistent' or 'invalid'), measure,
     estimate, ci_lower, ci_upper, ci_level, decimals, rel_tol, half_unit, checks
     (check, passed, detail), geometric_midpoint, geometric_midpoint_range (low,
-    high), se_log, z, p_back_calculated, p_reported, assumptions, warnings, saved,
+    high), se_log, z, p_back_calculated, p_reported, p_half_unit (the rounding allowance used for the
+    reported p), assumptions, warnings, saved,
     check_id.
 
     An 'inconsistent' status means the numbers do not agree under the stated
@@ -451,7 +454,7 @@ def stats_check_ratio_ci(
         fail("ci_upper is required; send the reported upper confidence limit")
     level = _level_arg(ci_level)
     p_reported = float_arg(p_value, "p_value")
-    p_places = int_arg(p_decimals, "p_decimals", min_value=0, max_value=10) if p_decimals is not None else None
+    p_places = int_arg(p_decimals, "p_decimals", min_value=0, max_value=20) if p_decimals is not None else None
     decimals_clean = _decimals_arg(decimals)
     rel_tol_clean = _rel_tol_arg(rel_tol)
     ref = _optional_ref(paper_ref)
