@@ -1,6 +1,6 @@
 # MCP server spec: review audit tools for Claude Science
 
-Status: version 0.1.0, 2026-10-20. A small first benchmark (two reviews) showed Claude Science far ahead of CiteProof Research on finding the known included studies, so this server does not try to search. It runs next to a research agent and audits its work.
+Status: version 0.3.0 (40 tools). Version 0.1.0 (2026-10-20) followed a small first benchmark (two reviews) that showed Claude Science far ahead of CiteProof Research on finding the known included studies, so this server does not try to search. It runs next to a research agent and audits its work.
 
 ## Goal
 
