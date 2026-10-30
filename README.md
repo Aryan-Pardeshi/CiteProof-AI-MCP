@@ -21,7 +21,7 @@
   - [What it checks](#what-it-checks)
   - [Quick start](#quick-start)
   - [Companion skill](#companion-skill)
-  - [The 24 tools](#the-24-tools)
+  - [The 40 tools](#the-40-tools)
   - [What it does not do](#what-it-does-not-do)
 - [CiteProof Research (the app)](#citeproof-research-the-app)
   - [Two modes](#two-modes)
@@ -45,7 +45,7 @@ AI research agents are now good at finding and reading papers. They are less goo
 
 | | **CiteProof MCP** | **CiteProof Research** |
 |---|---|---|
-| **What it is** | An MCP server with 24 audit tools | A web app with a 24-agent research pipeline |
+| **What it is** | An MCP server with 40 audit tools | A web app with a 24-agent research pipeline |
 | **Who does the research** | Your agent (Claude Science, or any MCP client) | The app's own agents |
 | **Language model inside** | None. It needs no API key | Yes, any OpenAI-compatible endpoint |
 | **Best for** | Systematic reviews that need an audit trail | Fast cited reports and full evidence-grounded papers |
@@ -88,7 +88,7 @@ The [`citeproof-mcp`](https://www.npmjs.com/package/citeproof-mcp) npm package i
 
 | Client | How to add CiteProof MCP | Status |
 |---|---|---|
-| **Claude Science** | Customize → Connectors → Add connector → **Local command**. Name `citeproof`, command `npx -y citeproof-mcp`. | npx install tested on Claude Science 0.1.70 (Windows 11, 24 tools listed); bundle install tested on 0.1.67 |
+| **Claude Science** | Customize → Connectors → Add connector → **Local command**. Name `citeproof`, command `npx -y citeproof-mcp`. | npx install tested on Claude Science 0.1.70 (Windows 11, 24 tools listed for 0.2.1; 0.3.0 with 40 tools not yet tested in Claude Science); bundle install tested on 0.1.67 |
 | **Claude Desktop** | Download [`citeproof.mcpb`](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest/download/citeproof.mcpb) and open it (Settings → Extensions), or add the JSON below to `claude_desktop_config.json`. | New in 0.2.0 |
 | **Claude Code** | `claude mcp add citeproof -- npx -y citeproof-mcp` | New in 0.2.0 |
 | **Cursor, VS Code, Windsurf, other clients** | Add the JSON below to the client's MCP settings (VS Code: the `servers` form further down). | Not yet tested |
@@ -137,17 +137,20 @@ Then point the client at the `citeproof-mcp` command (stdio), optionally with `"
 
 [`MCP/skills/citeproof-review`](MCP/skills/citeproof-review/SKILL.md) teaches an agent the review workflow and the tool order. Install steps for Claude Code, Claude Desktop and Claude Science are in [MCP/skills/README.md](MCP/skills/README.md). A reviewer-instructions snippet for Claude Science is in [MCP/docs/REVIEWER_SNIPPET.md](MCP/docs/REVIEWER_SNIPPET.md).
 
-### The 24 tools
+### The 40 tools
 
 | Group | Tools |
 |---|---|
 | Set up and status | `review_create`, `review_list`, `protocol_record`, `review_status` |
 | Searches and duplicates | `prisma_record_search`, `dedup_papers`, `prisma_record_dedup` |
-| Screening | `screening_record`, `screening_record_many`, `screening_list`, `screening_agreement` |
-| PRISMA | `prisma_status`, `prisma_flow_diagram`, `prisma_checklist` |
+| Search validation | `recall_seed_record`, `recall_check` |
+| Screening | `screening_record`, `screening_record_many`, `screening_list`, `screening_agreement`, `reviewer_record`, `screening_stage_set`, `screening_stage_close` |
+| Paper and study identity | `paper_resolve`, `paper_alias_record`, `study_link`, `study_unlink`, `study_overview` |
+| PRISMA | `prisma_status`, `prisma_flow_diagram`, `prisma_checklist`, `prisma_excluded_studies` |
 | Evidence and bias | `evidence_record`, `evidence_table`, `claim_record`, `claim_report`, `rob_record`, `rob_summary` |
-| Citations and prose | `verify_dois`, `resolve_citations`, `lint_prose` |
-| Export | `export_bundle` |
+| Statistics | `stats_check_ratio_ci`, `stats_recompute_2x2`, `stats_check_evidence` |
+| Citations, manuscript and prose | `verify_dois`, `resolve_citations`, `lint_prose`, `manuscript_check` |
+| History and export | `review_history`, `export_bundle` |
 
 ### What it does not do
 
@@ -155,6 +158,8 @@ Then point the client at the `citeproof-mcp` command (stdio), optionally with `"
 - It does not judge anything. A label such as "supported" is the agent's judgement. The server only checks that the quote is in the text.
 - It does not read PDFs. The agent supplies the text.
 - The PRISMA checklist and the report number check are keyword checks. They show what is mentioned, not whether it is reported well.
+- Blinding and reviewer types are by convention, with an audit trail, not a guarantee. The server cannot verify caller identity or authenticate models; AI screening is never called independent or verified. Two runs of the same model are not independent reviewers.
+- Statistical and manuscript checks report detected inconsistencies, never that a paper is wrong; seed recall is not proof that a search was exhaustive. The server contains no language model.
 
 ---
 

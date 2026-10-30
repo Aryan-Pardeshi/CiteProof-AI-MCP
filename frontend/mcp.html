@@ -186,9 +186,9 @@
       <section class="mcp-section scroll-reveal" aria-labelledby="capabilities">
         <p class="mcp-section-eyebrow">Review records with a clear trail</p>
         <h2 id="capabilities">What the MCP server does</h2>
-        <p>CiteProof MCP adds the record-keeping parts of a systematic review to a research agent. It has 24 tools in seven groups, every tool returns <code>ok</code>, and the server contains no language model: the agent makes each judgement, while the server validates its shape and computes the numbers.</p>
+        <p>CiteProof MCP adds the record-keeping parts of a systematic review to a research agent. It has 40 tools in 10 groups, every tool returns <code>ok</code>, and the server contains no language model: the agent makes each judgement, while the server validates its shape and computes the numbers.</p>
 
-        <div class="mcp-cap-grid">
+                <div class="mcp-cap-grid">
           <div class="mcp-cap-card mcp-feature--blue scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6M8.5 9h7M8.5 13h7M8.5 17h4"></path></svg>
             <h3>Review setup and status</h3>
@@ -201,11 +201,30 @@
           </div>
 
           <div class="mcp-cap-card mcp-feature--blue scroll-reveal">
+            <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 15"></polyline></svg>
+            <h3>Review history</h3>
+            <p>Inspect the append-only event log capturing every insert, update and deletion across review tables. Recorded automatically via SQLite triggers for complete auditability from inception to bundle export.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-review-history">review_history</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-cap-card mcp-feature--blue scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5a1.5 1.5 0 0 1 1-1.5Z"></path><path d="M14 3.5V8h4M9 12h6M9 16h6"></path></svg>
             <h3>Protocol record</h3>
             <p>Store PICO fields, study designs, inclusion and exclusion criteria, databases, search strategy, registration, risk-of-bias tool and synthesis method. Omitted fields keep their value, <code>''</code> or <code>[]</code> clears one, and every edit to an existing value is logged as an amendment. The result names required and recommended fields that are still missing.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-protocol-record">protocol_record</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
+            <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5M11 8v6M8 11h6"></path></svg>
+            <h3>Search validation and seed recall</h3>
+            <p>Record benchmark seed papers with the protocol to validate database search coverage. Check retrieval recall against deduplicated candidate records; reports retrieved seeds, missing seeds and recall fraction. Seed recall is not proof that a search was exhaustive.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-recall-seed-record">recall_seed_record</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-recall-check">recall_check</a></li>
             </ul>
           </div>
 
@@ -221,10 +240,23 @@
           <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="5"></circle><circle cx="15" cy="15" r="5"></circle><path d="m12.5 7.5 4 4"></path></svg>
             <h3>Deduplication</h3>
-            <p>Cluster up to 10,000 exported records by normalised DOI, PMID, or a 20+ character title with the same year and first-author surname; matching is transitive and the most complete record is kept. With a <code>review_id</code>, a count is saved only when the call covers every recorded hit; partial batches are analysed but not recorded. A title match with a different year or author stays a possible duplicate rather than being merged.</p>
+            <p>Cluster up to 10,000 exported records by normalised DOI, PMID, or a 20+ character title with the same year and first-author surname; matching is transitive and the most complete record is kept. With a <code>review_id</code>, deduplication records paper aliases and flags alias conflicts when papers were already linked to different identifiers.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-dedup-papers">dedup_papers</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-prisma-record-dedup">prisma_record_dedup</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
+            <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            <h3>Paper and study identity</h3>
+            <p>Resolve DOI, PMID or title to canonical paper identifiers. Record manual or deduplication aliases with conflict detection. Link multiple companion papers to a shared study identifier, inspect study groupings, or unlink papers when needed.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-paper-resolve">paper_resolve</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-paper-alias-record">paper_alias_record</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-study-link">study_link</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-study-unlink">study_unlink</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-study-overview">study_overview</a></li>
             </ul>
           </div>
 
@@ -248,9 +280,20 @@
           </div>
 
           <div class="mcp-cap-card mcp-feature--purple scroll-reveal">
+            <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <h3>Screening independence and stages</h3>
+            <p>Register reviewers with their role (human, model, unknown) and model id, open a blind or unblinded screening stage, and close it when done. Blind screening is by convention, with an audit trail, not enforced: peer decisions are hidden during an open blind stage. The server warns on human-caution and same-model pairing.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-reviewer-record">reviewer_record</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-stage-set">screening_stage_set</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-stage-close">screening_stage_close</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-cap-card mcp-feature--purple scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"></rect><path d="m7.5 9 1.5 1.5L12 7.5M13.5 9H17M7.5 15l1.5 1.5 3-3M13.5 15H17"></path></svg>
             <h3>Screening decisions</h3>
-            <p>Record include or exclude at title/abstract and full text, plus <code>not_retrieved</code> at full text; an exclusion needs a reason and every decision carries a reviewer name. Upserts are keyed by paper, stage and reviewer, and bulk writes of up to 500 decisions are all-or-nothing with the failing index. List and filter the log by stage, reviewer, decision or paper.</p>
+            <p>Record include or exclude at title/abstract and full text, plus <code>not_retrieved</code> at full text; an exclusion needs a reason and every decision carries a reviewer name. Upserts are keyed by paper, stage and reviewer, and bulk writes of up to 500 decisions are all-or-nothing with the failing index. In blind stages, call <code>screening_list</code> with <code>as_reviewer</code> to inspect only that reviewer's decisions.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-record">screening_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-record-many">screening_record_many</a></li>
@@ -261,7 +304,7 @@
           <div class="mcp-cap-card mcp-feature--purple scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="8" r="3"></circle><path d="M2.5 19a5.5 5.5 0 0 1 11 0M10.5 16.5a5.5 5.5 0 0 1 11 0M12 8h1"></path></svg>
             <h3>Reviewer agreement</h3>
-            <p>Compute Cohen's kappa for two reviewers at one stage over the papers they both judged include or exclude. The result includes the 2×2 table, observed and expected agreement, kappa, the Landis–Koch band, disagreements and each reviewer's unique decisions. <code>not_retrieved</code> pairs are counted as not judged; kappa is null when nothing is shared or expected agreement is 1.</p>
+            <p>Compute Cohen's kappa for two reviewers at one stage over the papers they both judged include or exclude. The result includes the 2×2 table, observed and expected agreement, kappa, the Landis–Koch band, disagreements and each reviewer's unique decisions. In blind stages, agreement statistics and 2×2 tables remain masked until the stage is closed.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-agreement">screening_agreement</a></li>
             </ul>
@@ -274,6 +317,17 @@
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-evidence-record">evidence_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-evidence-table">evidence_table</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
+            <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <h3>Statistical verification</h3>
+            <p>Verify extracted ratios and 95% confidence intervals against standard log-normal formulas. Recompute 2×2 contingency tables from raw cell counts for odds ratios, risk ratios or risk differences. Automatically scan all evidence rows in a review for discrepancies. Inconsistencies report detected discrepancies, never that a paper is wrong.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-check-ratio-ci">stats_check_ratio_ci</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-recompute-2x2">stats_recompute_2x2</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-check-evidence">stats_check_evidence</a></li>
             </ul>
           </div>
 
@@ -294,6 +348,16 @@
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-rob-record">rob_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-rob-summary">rob_summary</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-cap-card mcp-feature--amber scroll-reveal">
+            <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <h3>Excluded studies and manuscript check</h3>
+            <p>Generate PRISMA-compliant tables of excluded full-text studies grouped by reason with study and paper citations. Compare a manuscript draft against the review database to detect mismatched numbers, unverified quotes and unsupported claims. Inconsistencies report detected discrepancies, never that a paper is wrong.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-prisma-excluded-studies">prisma_excluded_studies</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-manuscript-check">manuscript_check</a></li>
             </ul>
           </div>
 
@@ -327,7 +391,7 @@
           <div class="mcp-cap-card mcp-feature--pink scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"></path><path d="M4.5 8 12 12l7.5-4M12 12v8.5M8 5.5l8 4.5"></path></svg>
             <h3>Audit bundle export</h3>
-            <p>Export the whole trail as one Markdown document: metadata, protocol and amendments, searches, dedup, PRISMA counts with a Mermaid diagram, up to 5,000 screening decisions, agreement, evidence, risk of bias, up to 5,000 claims, saved DOI checks and source-text changes. Source texts are never included and nothing is written to disk.</p>
+            <p>Export the whole trail as one Markdown or JSON document, or write directly to disk with <code>save: true</code> (saving to <code>&lt;CITEPROOF_MCP_HOME&gt;/exports/</code>). Returns SHA-256 and saved path alongside all protocol records, searches, screening stages, study groupings, evidence, stats checks and event logs.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-export-bundle">export_bundle</a></li>
             </ul>
@@ -340,16 +404,16 @@
         <h2 id="review-flow">How a review flows</h2>
         <p>Start a new review or resume one in progress. The agent records each decision as work moves from the protocol to the final report; people resolve screening differences by consensus.</p>
         <ol class="mcp-flow-strip">
-          <li><span class="mcp-flow-num">01</span><strong>Create or resume</strong><code>review_create</code> <code>review_list</code> <code>review_status</code></li>
-          <li><span class="mcp-flow-num">02</span><strong>Write the protocol</strong><code>protocol_record</code></li>
-          <li><span class="mcp-flow-num">03</span><strong>Log every search</strong><code>prisma_record_search</code></li>
-          <li><span class="mcp-flow-num">04</span><strong>Deduplicate the set</strong><code>dedup_papers</code> <code>prisma_record_dedup</code></li>
-          <li><span class="mcp-flow-num">05</span><strong>Screen title/abstract and full text</strong><code>screening_record</code> <code>screening_agreement</code></li>
-          <li><span class="mcp-flow-num">06</span><strong>Extract evidence</strong><code>evidence_record</code></li>
+          <li><span class="mcp-flow-num">01</span><strong>Create or resume</strong><code>review_create</code> <code>review_list</code> <code>review_status</code> <code>review_history</code></li>
+          <li><span class="mcp-flow-num">02</span><strong>Protocol &amp; validation</strong><code>protocol_record</code> <code>recall_seed_record</code></li>
+          <li><span class="mcp-flow-num">03</span><strong>Log searches &amp; dedup</strong><code>prisma_record_search</code> <code>dedup_papers</code> <code>prisma_record_dedup</code> <code>recall_check</code></li>
+          <li><span class="mcp-flow-num">04</span><strong>Independent screening</strong><code>reviewer_record</code> <code>screening_stage_set</code> <code>screening_record</code> <code>screening_stage_close</code> <code>screening_agreement</code></li>
+          <li><span class="mcp-flow-num">05</span><strong>Group companion studies</strong><code>paper_resolve</code> <code>study_link</code> <code>study_overview</code></li>
+          <li><span class="mcp-flow-num">06</span><strong>Evidence &amp; statistical checks</strong><code>evidence_record</code> <code>evidence_table</code> <code>stats_check_evidence</code> <code>stats_check_ratio_ci</code></li>
           <li><span class="mcp-flow-num">07</span><strong>Assess risk of bias</strong><code>rob_record</code> <code>rob_summary</code></li>
           <li><span class="mcp-flow-num">08</span><strong>Record and check claims</strong><code>claim_record</code> <code>claim_report</code></li>
-          <li><span class="mcp-flow-num">09</span><strong>Resolve citations and DOIs</strong><code>resolve_citations</code> <code>verify_dois</code></li>
-          <li><span class="mcp-flow-num">10</span><strong>Check the report and export</strong><code>prisma_status</code> <code>prisma_flow_diagram</code> <code>prisma_checklist</code> <code>lint_prose</code> <code>export_bundle</code></li>
+          <li><span class="mcp-flow-num">09</span><strong>Resolve citations &amp; DOIs</strong><code>resolve_citations</code> <code>verify_dois</code></li>
+          <li><span class="mcp-flow-num">10</span><strong>Check manuscript &amp; export</strong><code>prisma_status</code> <code>prisma_excluded_studies</code> <code>manuscript_check</code> <code>export_bundle</code></li>
         </ol>
       </section>
 
@@ -402,7 +466,7 @@
           <li><strong>Add a Local command connector.</strong> In Claude Science, open Customize, then Connectors, then Add connector, then Local command.</li>
           <li><strong>Name it and enter the command.</strong> Use the name <code>citeproof</code> (lowercase letters, digits and hyphens only) and the command <code>npx -y citeproof-mcp</code>.</li>
           <li><strong>Optional: set <code>CITEPROOF_MCP_HOME</code>.</strong> Keep review data in a folder you choose. The default is <code>~/.citeproof-mcp</code> when the variable is unset.</li>
-          <li><strong>Wait for the first start and confirm 24 tools.</strong> The first start downloads the package and can take about half a minute. The connector page should then list every tool from <code>review_create</code> to <code>export_bundle</code>. Ask for one small tool call before a real review.</li>
+          <li><strong>Wait for the first start and confirm 40 tools.</strong> The first start downloads the package and can take about half a minute. The connector page should then list every tool from <code>review_create</code> to <code>review_history</code>. Ask for one small tool call before a real review.</li>
         </ol>
         <div class="docs-code"><pre><code>npx -y citeproof-mcp</code></pre></div>
         <p>Claude Science's sandbox cannot reach <code>astral.sh</code>, so inside it the launcher runs the server it carries with the sandbox's own <code>python3</code> instead of downloading <code>uv</code>. If your Claude Science cannot start the npx command, build the bundle instead: <code>MCP/scripts/build_claude_science_bundle.py</code> copies the server into the connector workspace.</p>
@@ -459,7 +523,7 @@
               <tr><th scope="col">Client</th><th scope="col">Install path</th><th scope="col">Status</th></tr>
             </thead>
             <tbody>
-              <tr><td>Claude Science</td><td>Local command connector with <code>npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.70, 24 tools listed</td></tr>
+              <tr><td>Claude Science</td><td>Local command connector with <code>npx -y citeproof-mcp</code></td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.70, 24 tools listed for 0.2.1; 40 tools in 0.3.0 not yet tested</td></tr>
               <tr><td>Claude Science</td><td>Local command connector with the built bundle</td><td><span class="docs-status docs-status-tested">Tested</span> Windows 11, Claude Science 0.1.67</td></tr>
               <tr><td>Claude Desktop</td><td><code>citeproof.mcpb</code> extension</td><td><span class="docs-status docs-status-new">New</span> Extension path, not yet broadly tested</td></tr>
               <tr><td>Claude Desktop</td><td>npx with a JSON <code>mcpServers</code> entry</td><td><span class="docs-status docs-status-new">New</span> Not yet tested for this release</td></tr>
@@ -475,9 +539,9 @@
       <section class="mcp-section scroll-reveal" aria-labelledby="next-steps">
         <p class="mcp-section-eyebrow">Go deeper</p>
         <h2 id="next-steps">Next steps and troubleshooting</h2>
-        <p>If Claude Science does not list all 24 tools, read the connector's error text first. For the npx install, check that the command is exactly <code>npx -y citeproof-mcp</code> and that you run launcher 0.2.1 or newer. If you use the bundle fallback, backslashes are stripped by the connector form and a bundle built into the wrong folder will start but expose nothing. Then check that <code>CITEPROOF_MCP_HOME</code> points at a writable folder inside the workspace.</p>
+        <p>If Claude Science does not list all 40 tools, read the connector's error text first. For the npx install, check that the command is exactly <code>npx -y citeproof-mcp</code> and that you run launcher 0.2.1 or newer. If you use the bundle fallback, backslashes are stripped by the connector form and a bundle built into the wrong folder will start but expose nothing. Then check that <code>CITEPROOF_MCP_HOME</code> points at a writable folder inside the workspace.</p>
         <ul>
-          <li><a href="/docs/mcp">MCP tool reference</a>: all 24 tools, arguments, limits, result shapes and error handling.</li>
+          <li><a href="/docs/mcp">MCP tool reference</a>: all 40 tools, arguments, limits, result shapes and error handling.</li>
           <li><a href="/docs/troubleshooting">Troubleshooting</a>: connector, bundle, storage and tool-call problems.</li>
           <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/CLAUDE_SCIENCE.md" target="_blank" rel="noopener noreferrer">Claude Science setup notes</a>: the repository's authoritative install walkthrough.</li>
           <li><a href="https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/blob/main/MCP/docs/SPEC.md" target="_blank" rel="noopener noreferrer">MCP specification</a>: schemas, limits and data-handling details.</li>
