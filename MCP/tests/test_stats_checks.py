@@ -557,3 +557,12 @@ async def test_p_value_tolerance_covers_rounding_of_estimate_and_limits(p, ok) -
     res = await call("stats_check_ratio_ci", measure="rr", estimate=0.82, ci_lower=0.70, ci_upper=0.96, p_value=p)
     check = next(c for c in res["checks"] if c["check"] == "p_value")
     assert check["passed"] is ok, check["detail"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("p", "ok"), [(0.05, True), (0.047, True), (0.06, False), (0.03, False)])
+async def test_reported_p_value_is_treated_as_rounded(p, ok) -> None:
+    # Back-calculated p is about 0.047: "p=0.05" may be that value rounded to two decimals.
+    res = await call("stats_check_ratio_ci", measure="rr", estimate=2.0, ci_lower=1.01, ci_upper=3.96, p_value=p)
+    check = next(c for c in res["checks"] if c["check"] == "p_value")
+    assert check["passed"] is ok, check["detail"]

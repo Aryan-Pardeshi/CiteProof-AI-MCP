@@ -77,3 +77,7 @@ async def test_export_marks_capped_aliases_and_stats_as_truncated(monkeypatch) -
     bundle = json.loads((await call("export_bundle", review_id=rid, format="json"))["content"])
     assert len(bundle["paper_aliases"]) == 1
     assert bundle["truncated"] is True
+    md = await call("export_bundle", review_id=rid)
+    assert md["truncated"] is True and "this bundle is incomplete" in md["content"]
+    monkeypatch.setattr(review, "MAX_EXPORT_ROWS", 5000)
+    assert "this bundle is incomplete" not in (await call("export_bundle", review_id=rid))["content"]

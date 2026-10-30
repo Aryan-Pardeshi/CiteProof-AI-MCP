@@ -428,7 +428,7 @@
             <p>Each review uses its own local SQLite database under <code>CITEPROOF_MCP_HOME</code> (default <code>~/.citeproof-mcp</code>). The server stores review records and checks the source text supplied for quote verification.</p>
             <ul class="mcp-privacy-facts">
               <li><strong>Local SQLite.</strong> Review databases stay on your computer; source text is stored as a length and SHA-256 hash, not verbatim.</li>
-              <li><strong>Never uploaded.</strong> Review data is never uploaded to CiteProof. <code>export_bundle</code> returns its content without writing a file.</li>
+              <li><strong>Never uploaded.</strong> Review data is never uploaded to CiteProof. <code>export_bundle</code> returns its content as text, and writes a file only with <code>save: true</code>, under <code>&lt;CITEPROOF_MCP_HOME&gt;/exports/</code>.</li>
               <li><strong>Only DOI checks use the network.</strong> <code>verify_dois</code> checks Crossref at <code>api.crossref.org</code> and <code>doi.org</code>; other tools do not make network requests.</li>
             </ul>
           </div>

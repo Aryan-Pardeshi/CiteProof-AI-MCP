@@ -353,6 +353,18 @@ def _markdown(b: dict[str, Any]) -> str:
         ("All judgements in this bundle were made by the reviewing agent. The server stored them, checked quotes "
         "against the source text supplied with them, and computed the counts."),
         "",
+        *(
+            [
+                (
+                    f"**Warning: this bundle is incomplete.** Screening decisions, claims, paper aliases and "
+                    f"statistical checks are each capped at {MAX_EXPORT_ROWS} rows, and at least one list was cut. "
+                    "Keep the review database file with this bundle."
+                ),
+                "",
+            ]
+            if b["truncated"]
+            else []
+        ),
         "## Protocol",
         "",
     ]

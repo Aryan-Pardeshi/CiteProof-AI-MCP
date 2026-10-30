@@ -13,6 +13,7 @@ Table owned here: ``stats_checks``.
 import json
 import math
 import sqlite3
+from decimal import Decimal
 from statistics import NormalDist
 from typing import Annotated, Any
 
@@ -190,8 +191,9 @@ def _ratio_assumptions(decimals: int, rel_tol: float, level: float | None) -> li
         level_text,
         (
             "The back-calculated p-value is two-sided and assumes a normal log-scale estimate: "
-            "p = erfc(|ln estimate| / (SE * sqrt(2))). A reported p passes when it lies in the range of p over "
-            "every estimate and limit within half a unit of the reported values, widened by rel_tol."
+            "p = erfc(|ln estimate| / (SE * sqrt(2))). A reported p passes when the values it could have been "
+            "rounded from (half a unit of its last written decimal) overlap the range of p over every estimate "
+            "and limit within half a unit of the reported values, widened by rel_tol."
         ),
         (
             f"Reported values are rounded to {decimals} decimals. A value is consistent when it differs from the "
@@ -360,7 +362,9 @@ def _ratio_ci_result(
         else:
             p_low, p_high = _p_range(estimate, lower, upper, h, z)
             p_low, p_high = p_low * (1 - rel_tol), min(1.0, p_high * (1 + rel_tol))
-            p_ok = p_low <= p_value <= p_high
+            # The reported p is rounded too: 0.05 stands for anything in [0.045, 0.055).
+            p_h = 0.5 * 10.0 ** min(0, Decimal(repr(p_value)).as_tuple().exponent)
+            p_ok = p_value - p_h <= p_high and p_value + p_h >= p_low
             checks.append(
                 {
                     "check": "p_value",

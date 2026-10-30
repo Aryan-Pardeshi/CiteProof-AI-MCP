@@ -75,21 +75,21 @@ recall_check (compare seed set against deduplicated retrieval)
 reviewer_record & screening_stage_set (register reviewer types/models; configure blind/unblinded stage)
   │
   ▼
-screening_record / screening_record_many
-  ├─ Phase 1: stage="title_abstract" (include / exclude)
-  └─ Phase 2: stage="full_text" (include / exclude / not_retrieved; reason required for exclude)
+screening_record / screening_record_many, then screening_stage_close (blind stages only) and screening_agreement, once per stage:
+  ├─ Phase 1: stage="title_abstract" (include / exclude). Close the stage if blind, check agreement, then record consensus
+  │          as reviewer="primary" before any primary full_text decision (a full_text decision without a title_abstract
+  │          include by the same reviewer is warned about and breaks the PRISMA invariants).
+  └─ Phase 2: stage="full_text" (include / exclude / not_retrieved; reason required for exclude), same steps.
+  Pass human-caution and same-model warnings from screening_agreement to the user.
   │
   ▼
-screening_stage_close (close blind stage when all expected decisions are recorded)
-  │
-  ▼
-screening_agreement (compute Cohen's kappa; pass human-caution and same-model warnings to the user; record consensus as reviewer="primary")
-  │
-  ▼
-study_link & study_overview (group included reports into distinct studies and check duplicate participant risk)
+study_link (group included reports into distinct studies)
   │
   ▼
 evidence_record (per included study and outcome; supply quote and source_text)
+  │
+  ▼
+study_overview (after evidence_record: duplicate_participant_risk is computed from stored evidence rows)
   │
   ▼
 stats_check_ratio_ci, stats_recompute_2x2 & stats_check_evidence (check ratio/CI consistency and 2x2 data)
@@ -215,7 +215,7 @@ You can call `review_status` at any time to inspect the current review phase, id
 - `review_status(review_id, reviewer=None)`:
   Audits overall review progress across all stages, surfaces invariant warnings, and lists next action items.
 - `export_bundle(review_id, format="markdown", reviewer=None, save=False)`:
-  Exports the entire audit trail into a single reproducible markdown or JSON document. Always pass warnings (such as human screening caution and same-model warnings) to the user. When `save=True`, writes the document to `<CITEPROOF_MCP_HOME>/exports/<review_id>-audit-bundle.md|json` and returns `saved_path` and `sha256`.
+  Exports the review record into a single markdown or JSON document. It includes a summary of the change history, not every event; keep the review database file (or page through `review_history`) for the full history. Always pass warnings (such as human screening caution and same-model warnings) to the user. When `save=True`, writes the document to `<CITEPROOF_MCP_HOME>/exports/<review_id>-audit-bundle.md|json` and returns `saved_path` and `sha256`.
 
 ## Limitations
 

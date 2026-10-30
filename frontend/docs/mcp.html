@@ -190,7 +190,7 @@
           <li>It does not contain an LLM and does not make inclusion, extraction, claim or risk-of-bias judgements.</li>
           <li>It does not prove that a study is valid, that a claim is scientifically true or that a review is complete.</li>
           <li>It does not turn a resolved DOI into evidence. A registered DOI only proves that the identifier exists; citation matching is called <em>resolved</em>, never <em>verified</em>.</li>
-          <li>It does not write exports to disk and does not upload review data. Exports are returned as text for the client to save.</li>
+          <li>It does not upload review data. Exports are returned as text; only <code>export_bundle</code> with <code>save=true</code> also writes the document under <code>&lt;CITEPROOF_MCP_HOME&gt;/exports/</code>.</li>
           <li>claude.ai web custom connectors cannot start a local stdio process, so they are not supported.</li>
         </ul>
 
@@ -1194,7 +1194,7 @@
 
         <div class="docs-tool">
           <h3 id="tool-export-bundle">export_bundle</h3>
-          <p>Export the whole audit trail as one text document: metadata, protocol and amendments, search log, dedup, PRISMA counts and invariants with a Mermaid diagram, screening decisions, agreement for each reviewer pair, evidence table, risk of bias with rules, claims, saved DOI checks, reports-to-studies grouping and aliases, latest known-item recall check, saved statistical checks, change-history summary, and open warnings/next steps.</p>
+          <p>Export the review record as one text document: metadata, protocol and amendments, search log, dedup, PRISMA counts and invariants with a Mermaid diagram, screening decisions, agreement for each reviewer pair, evidence table, risk of bias with rules, claims, saved DOI checks, reports-to-studies grouping and aliases, latest known-item recall check, saved statistical checks, a change-history summary, and open warnings/next steps. The summary is not every event: keep the review database file, or page through <code>review_history</code>, for the full history.</p>
           <div class="docs-table-wrap">
             <table class="docs-table">
               <thead><tr><th scope="col">Argument</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">Notes</th></tr></thead>

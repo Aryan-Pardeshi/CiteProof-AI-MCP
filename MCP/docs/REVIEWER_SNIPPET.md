@@ -30,9 +30,9 @@ Before accepting or finalizing any review report, run the following verification
      * `full_text_pending` is 0.
 
 3. Screening Independence and Blinding:
-   - Verify reviewer identities with `reviewer_record` and stage configuration with `screening_stage_set` before screening.
+   - Inspect reviewer types, model ids and stage settings in the read-only `review_status` output (`reviewers`, `screening_stages`). Do not call `reviewer_record` or `screening_stage_set` during an audit: they overwrite the recorded metadata.
    - Note: Blinding is by convention, with an audit trail, not enforced: the server cannot verify caller identity or authenticate models. Two runs of the same model are not independent reviewers. Reviewer type is self-declared; never call AI screening independent or verified.
-   - Ensure `screening_stage_close` was executed to unblind the stage before checking agreement.
+   - If a stage was set to blind, confirm it is closed (`closed_at` in `screening_stages`) before checking agreement. Unblinded stages have nothing to close.
    - Check dual-reviewer agreement using `screening_agreement` and ensure consensus decisions were recorded under reviewer "primary".
    - Always pass warnings (such as human screening caution and same-model warnings) to the user.
    - Verify that every study included in the final synthesis has an explicit `full_text` stage `include` decision recorded in `screening_list`.
