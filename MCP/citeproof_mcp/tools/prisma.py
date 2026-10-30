@@ -728,6 +728,11 @@ def prisma_record_search(
         dedup_cleared = False
         if search_log_changed:
             dedup_cleared = conn.execute("DELETE FROM prisma_dedup").rowcount > 0
+            from citeproof_mcp.tools import identity
+
+            # The retrieved-record snapshot belongs to the old search set too; a later manual
+            # dedup count must not make recall_check treat it as current.
+            identity.clear_retrieval_snapshot(conn)
         if dedup_cleared:
             warnings.append(
                 "The search log changed, so the earlier deduplication record was cleared. "
@@ -1045,12 +1050,14 @@ def screening_list(
     if reviewer is not None and str(reviewer).strip():
         base_clauses.append("screening.reviewer = ?")
         base_params.append(reviewer_arg(reviewer))
-    if decision is not None and str(decision).strip():
-        base_clauses.append("screening.decision = ?")
-        base_params.append(choice_arg(decision, "decision", DECISIONS, DECISION_ALIASES))
     if paper_ref is not None and str(paper_ref).strip():
         base_clauses.append("screening.paper_ref = ?")
         base_params.append(paper_ref_arg(paper_ref))
+    # The hidden-row count ignores the decision filter: a filtered count would reveal peers' decision totals.
+    hid_base_clauses, hid_base_params = list(base_clauses), list(base_params)
+    if decision is not None and str(decision).strip():
+        base_clauses.append("screening.decision = ?")
+        base_params.append(choice_arg(decision, "decision", DECISIONS, DECISION_ALIASES))
     as_rev_clean = (
         reviewer_arg(as_reviewer, "as_reviewer", default=None)
         if as_reviewer is not None and str(as_reviewer).strip()
@@ -1077,8 +1084,8 @@ def screening_list(
 
             vis_clauses = base_clauses + [vis_cond]
             vis_params = base_params + vis_extra
-            hid_clauses = base_clauses + [hid_cond]
-            hid_params = base_params + hid_extra
+            hid_clauses = hid_base_clauses + [hid_cond]
+            hid_params = hid_base_params + hid_extra
 
             where_hid = "WHERE " + " AND ".join(hid_clauses)
             hidden_count = int(conn.execute(f"SELECT COUNT(*) FROM screening {where_hid}", hid_params).fetchone()[0])
@@ -1283,7 +1290,8 @@ def screening_stage_set(
     screening_stage_close.
 
     Setting a stage to 'blind' requires at least 2 distinct reviewer names, none
-    'primary'. Changing an already closed blind stage back to blind fails.
+    'primary'. Changing an already closed blind stage back to blind fails, and so does
+    making a stage blind after decisions are recorded at it.
 
     Returns: stage, mode, reviewers, closed_at, updated_at.
 
@@ -1313,6 +1321,11 @@ def screening_stage_set(
             fail(f"stage '{stage_clean}' was already closed; a closed blind stage cannot be set back to blind")
         if existing and existing["mode"] == "blind" and existing["closed_at"] is None and mode_clean == "unblinded":
             fail(f"stage '{stage_clean}' is open blind; unblind it with screening_stage_close once every reviewer has decided")
+        already_open_blind = existing and existing["mode"] == "blind" and existing["closed_at"] is None
+        if mode_clean == "blind" and not already_open_blind and conn.execute(
+            "SELECT 1 FROM screening WHERE stage = ? LIMIT 1", (stage_clean,)
+        ).fetchone():
+            fail(f"stage '{stage_clean}' already has screening decisions; set blind mode before anyone records a decision")
 
         closed_at = None
         conn.execute(

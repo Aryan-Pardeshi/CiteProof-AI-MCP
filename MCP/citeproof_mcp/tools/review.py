@@ -298,6 +298,8 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
     source_changes = source_tracking.source_changes_rows(conn)
     distinct_texts = source_tracking.distinct_source_texts_by_paper(conn)
     screening_warns = prisma.screening_warnings(conn, stage=None)
+    aliases = identity.alias_rows(conn)
+    stats_rows = stats_checks.stats_check_rows(conn)
     return {
         "bundle_version": 1,
         "server_version": __version__,
@@ -324,11 +326,11 @@ def _collect(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, Any]:
         "source_changes": source_changes,
         "distinct_source_texts": distinct_texts,
         "studies": identity.identity_summary(conn, prisma.included_refs(conn, reviewer)),
-        "paper_aliases": identity.alias_rows(conn)[:MAX_EXPORT_ROWS],
+        "paper_aliases": aliases[:MAX_EXPORT_ROWS],
         "recall_check": identity.latest_recall_check(conn),
-        "stats_checks": stats_checks.stats_check_rows(conn)[:MAX_EXPORT_ROWS],
+        "stats_checks": stats_rows[:MAX_EXPORT_ROWS],
         "events": events.event_summary(conn),
-        "truncated": len(visible_screening) > MAX_EXPORT_ROWS or len(claims) > MAX_EXPORT_ROWS,
+        "truncated": any(len(rows) > MAX_EXPORT_ROWS for rows in (visible_screening, claims, aliases, stats_rows)),
     }
 
 
@@ -572,8 +574,8 @@ def export_bundle(
 
     Returns: format, content (the document), chars, sha256 (of the UTF-8 content),
     suggested_filename, saved_path (with save=true, else null; an existing file of
-    the same name is replaced), truncated (more than 5000 screening decisions or
-    claims), phase.
+    the same name is replaced), truncated (more than 5000 screening decisions,
+    claims, paper aliases or stats checks), phase.
     """
     fmt = choice_arg(format, "format", ("markdown", "json"))
     with store.review_db(review_id) as conn:

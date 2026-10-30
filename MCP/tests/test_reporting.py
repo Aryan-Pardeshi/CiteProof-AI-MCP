@@ -690,3 +690,11 @@ def test_review_fixes_rob1_and_synthesis_classes() -> None:
     assert reporting.synthesis_classes("random-effects model") == reporting.synthesis_classes(
         "random-effects meta-analysis"
     ) == {"random"}
+
+
+def test_pubmed_central_is_not_pubmed() -> None:
+    assert [d["name"] for d in reporting.find_named_databases("We searched PubMed Central.")] == ["PubMed Central"]
+    both = {d["name"] for d in reporting.find_named_databases("We searched PubMed Central and PubMed.")}
+    assert both == {"PubMed Central", "PubMed"}
+    assert reporting.normalize_db_name("PMC") == "PubMed Central"
+    assert reporting.normalize_db_name("PubMed") == "PubMed"

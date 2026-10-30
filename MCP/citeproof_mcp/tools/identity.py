@@ -415,6 +415,12 @@ def record_dedup(conn: sqlite3.Connection, papers: list[dict[str, Any]], result:
     return {"aliases_recorded": aliases_recorded, "alias_conflicts": len(seen)}
 
 
+def clear_retrieval_snapshot(conn: sqlite3.Connection) -> None:
+    """Drop the retrieved-record snapshot when the search log it was taken from changes."""
+    conn.execute("DELETE FROM retrieved_records")
+    conn.execute("DELETE FROM retrieval_runs")
+
+
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
@@ -709,9 +715,15 @@ def study_overview(
     """
     reviewer_clean = reviewer_arg(reviewer) if reviewer is not None and str(reviewer).strip() else None
     with store.review_db(review_id) as conn:
-        summary = identity_summary(conn, prisma.included_refs(conn, reviewer_clean))
+        included = prisma.included_refs(conn, reviewer_clean)
+        summary = identity_summary(conn, included)
+        included_canonical = {resolve_ref(conn, ref) for ref in included}
         by_outcome: dict[tuple[str, str], dict[str, Any]] = {}
         for row in extraction.evidence_rows(conn):
+            # One report recorded under its DOI and its PMID is still one report.
+            report = resolve_ref(conn, row["paper_ref"])
+            if report not in included_canonical:
+                continue
             study_id = study_of(conn, row["paper_ref"])
             if study_id is None:
                 continue
@@ -721,7 +733,7 @@ def study_overview(
                 (study_id, outcome_key),
                 {"study_id": study_id, "outcome_key": outcome_key, "outcome": row["outcome"], "reports": set()},
             )
-            entry["reports"].add(row["paper_ref"])
+            entry["reports"].add(report)
     risk = [
         {**entry, "reports": sorted(entry["reports"])}
         for key, entry in sorted(by_outcome.items())

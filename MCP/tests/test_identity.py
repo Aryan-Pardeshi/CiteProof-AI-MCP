@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from tests.conftest import call
@@ -442,3 +444,41 @@ async def test_review_fixes_conflict_resolution_labels_late_alias_and_stale_snap
     await call("prisma_record_dedup", review_id=rid, duplicates_removed=0, method="manual count in EndNote")
     stale = await call("recall_check", review_id=rid)
     assert stale["counts"]["unresolved"] == 2
+
+
+@pytest.mark.asyncio
+async def test_duplicate_risk_counts_only_included_reports_once_each() -> None:
+    rid = await _review()
+    refs = ["10.1000/r1", "10.1000/r2"]
+    await call("study_link", review_id=rid, study_id="S1", paper_refs=refs)
+    await _include(rid, refs[0])
+    await call(
+        "screening_record", review_id=rid, paper_ref=refs[1], stage="full_text", decision="exclude",
+        reason="wrong outcome", reviewer="primary",
+    )
+    await call("paper_alias_record", review_id=rid, alias="pmid:123", canonical_ref=refs[0])
+    for ref in (refs[0], "pmid:123", refs[1]):
+        rec = await call(
+            "evidence_record", review_id=rid, paper_ref=ref, outcome="mortality", study_design="RCT",
+            quote="240 participants were analysed", source_text="Report states 240 participants were analysed.",
+        )
+        assert rec["ok"] is True, rec
+    overview = await call("study_overview", review_id=rid)
+    assert overview["duplicate_participant_risk"] == []
+
+
+@pytest.mark.asyncio
+async def test_search_log_change_drops_the_retrieval_snapshot() -> None:
+    rid = await _review()
+    papers = [{"id": "a", "doi": "10.1000/a", "title": "Only trial report", "year": 2020, "source": "PubMed"}]
+    await _search(rid, hits=1)
+    assert (await call("dedup_papers", papers=papers, review_id=rid))["recorded"] is True
+    await call("recall_seed_record", review_id=rid, paper_refs=["10.1000/a"])
+    assert (await call("recall_check", review_id=rid))["counts"]["found"] == 1
+
+    old = json.loads((await call("export_bundle", review_id=rid, format="json"))["content"])["dedup"]
+    await _search(rid, hits=5, source="Embase")
+    # Even a manual count identical to the old record must not revive the old snapshot.
+    await call("prisma_record_dedup", review_id=rid, duplicates_removed=old["duplicates_removed"], method=old["method"])
+    stale = await call("recall_check", review_id=rid)
+    assert stale["counts"] == {"found": 0, "not_found": 0, "unresolved": 1}

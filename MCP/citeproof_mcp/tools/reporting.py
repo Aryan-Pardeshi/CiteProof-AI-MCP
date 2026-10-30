@@ -193,7 +193,9 @@ def find_effect_estimates(text: str) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 DB_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("PubMed", re.compile(r"\bpubmed\b", re.IGNORECASE)),
+    # PubMed Central is a separate full-text archive, not PubMed.
+    ("PubMed Central", re.compile(r"(?i:\bpubmed\s+central\b)|\bPMC\b")),
+    ("PubMed", re.compile(r"\bpubmed\b(?!\s+central\b)", re.IGNORECASE)),
     ("MEDLINE", re.compile(r"\bmedline\b", re.IGNORECASE)),
     ("Embase", re.compile(r"\bembase\b", re.IGNORECASE)),
     ("CENTRAL / Cochrane Library", re.compile(r"(?i:\bcochrane\s+library\b|\bcochrane\s+central\b)|\bCENTRAL\b")),
@@ -218,6 +220,8 @@ def normalize_db_name(raw: str) -> str:
         return "ClinicalTrials.gov"
     if "ictrp" in low:
         return "WHO ICTRP"
+    if "pubmed central" in low or low == "pmc":
+        return "PubMed Central"
     if "pubmed" in low:
         return "PubMed"
     if "medline" in low:

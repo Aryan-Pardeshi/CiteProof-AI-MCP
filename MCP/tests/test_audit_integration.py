@@ -64,3 +64,16 @@ async def test_dedup_snapshot_is_not_logged_as_events() -> None:
     assert {e["table_name"] for e in history["events"]}.isdisjoint({"retrieved_records", "retrieval_runs"})
     bad = await call("review_history", review_id=rid, table="retrieved_records")
     assert bad["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_export_marks_capped_aliases_and_stats_as_truncated(monkeypatch) -> None:
+    from citeproof_mcp.tools import review
+
+    monkeypatch.setattr(review, "MAX_EXPORT_ROWS", 1)
+    rid = await _review()
+    for alias in ("pmid:1", "pmid:2"):
+        await call("paper_alias_record", review_id=rid, alias=alias, canonical_ref="10.1000/a")
+    bundle = json.loads((await call("export_bundle", review_id=rid, format="json"))["content"])
+    assert len(bundle["paper_aliases"]) == 1
+    assert bundle["truncated"] is True

@@ -622,3 +622,42 @@ async def test_open_blind_stage_cannot_leak_through_counts_or_mode_switch() -> N
         assert res["ok"] is False or "hidden while stage" in text
     switched = await call("screening_stage_set", review_id=rid, stage="title_abstract", mode="unblinded", reviewers=["alice", "bob"])
     assert switched["ok"] is False and "screening_stage_close" in switched["error"]
+
+
+@pytest.mark.asyncio
+async def test_hidden_count_ignores_the_decision_filter() -> None:
+    rid = (await call("review_create", title="Blind filter", question="Test"))["review_id"]
+    await call(
+        "screening_stage_set", review_id=rid, stage="title_abstract", mode="blind", reviewers=["alice", "bob", "carol"]
+    )
+    for name, decision in (("bob", "include"), ("carol", "exclude")):
+        await call(
+            "screening_record", review_id=rid, paper_ref="10.1000/a", stage="title_abstract", decision=decision,
+            reason="r", reviewer=name,
+        )
+    counts = [
+        (await call("screening_list", review_id=rid, as_reviewer="alice", decision=d))["hidden_blind_rows"]
+        for d in ("include", "exclude")
+    ]
+    assert counts == [2, 2]
+
+
+@pytest.mark.asyncio
+async def test_blind_mode_is_refused_once_a_stage_has_decisions() -> None:
+    rid = (await call("review_create", title="Late blind", question="Test"))["review_id"]
+    await call(
+        "screening_record", review_id=rid, paper_ref="10.1000/a", stage="title_abstract", decision="include",
+        reviewer="primary",
+    )
+    res = await call("screening_stage_set", review_id=rid, stage="title_abstract", mode="blind", reviewers=["alice", "bob"])
+    assert res["ok"] is False and "already has screening decisions" in res["error"]
+    other = await call("screening_stage_set", review_id=rid, stage="full_text", mode="blind", reviewers=["alice", "bob"])
+    assert other["ok"] is True
+    # Re-setting an open blind stage (for example to change reviewers) still works.
+    await call(
+        "screening_record", review_id=rid, paper_ref="10.1000/a", stage="full_text", decision="include", reviewer="alice",
+    )
+    again = await call(
+        "screening_stage_set", review_id=rid, stage="full_text", mode="blind", reviewers=["alice", "bob", "carol"]
+    )
+    assert again["ok"] is True
