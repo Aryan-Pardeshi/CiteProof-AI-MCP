@@ -455,6 +455,8 @@ def stats_check_ratio_ci(
     level = _level_arg(ci_level)
     p_reported = float_arg(p_value, "p_value")
     p_places = int_arg(p_decimals, "p_decimals", min_value=0, max_value=20) if p_decimals is not None else None
+    if p_places is not None and p_reported is not None and -Decimal(repr(p_reported)).as_tuple().exponent > p_places:
+        fail(f"p_decimals={p_places} cannot represent p_value={p_reported:g}; send the decimals the paper wrote")
     decimals_clean = _decimals_arg(decimals)
     rel_tol_clean = _rel_tol_arg(rel_tol)
     ref = _optional_ref(paper_ref)
