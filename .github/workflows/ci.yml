@@ -40,3 +40,19 @@ jobs:
           cache-dependency-path: MCP/pyproject.toml
       - run: pip install -e ".[test]"
       - run: python -m pytest -q
+  mcp-claude-science:
+    # Claude Science bundles Python 3.13 with mcp 1.x (SPEC acceptance 1).
+    name: mcp (python 3.13, mcp 1.x)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MCP
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: MCP/pyproject.toml
+      - run: pip install -e ".[test]" "mcp>=1.27,<2"
+      - run: python -m pytest -q

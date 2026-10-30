@@ -498,6 +498,13 @@ async def test_prisma_flow_counts_linked_studies_and_reports() -> None:
     check = await call("prisma_checklist", review_id=rid, report_text="Two studies were included. 2 studies were included.")
     assert all(n["matches"] for n in check["numbers"] if n["field"] == "studies_included")
 
+    # PRISMA 2020 wording "N studies (M reports)" is not flagged, and both counts are in the quantity map.
+    ms = await call("manuscript_check", review_id=rid, sections={"Results": "We included 2 studies (3 reports)."})
+    assert ms["ok"] is True
+    assert not [f for f in ms["findings"] if f["kind"] == "prisma_count"], ms["findings"]
+    assert (ms["quantity_map"]["study_count"], ms["quantity_map"]["reports_included"]) == (2, 3)
+    assert ms["method"] == "pattern"
+
 
 @pytest.mark.asyncio
 async def test_recall_counts_a_record_without_source_as_unknown() -> None:

@@ -8,7 +8,6 @@ compute_status, resolve_reviewer), extraction (evidence_rows), evidence_checks
 """
 
 import re
-import sqlite3
 from collections import defaultdict
 from typing import Annotated, Any
 
@@ -61,7 +60,7 @@ def format_citation(paper_ref: str, title: str | None) -> str:
 
 
 def parse_reasons(raw_reason: str | None) -> tuple[list[str], bool]:
-    """Split exclusion reasons on ';' and normalize identically to prisma._reason_counts.
+    """Split exclusion reasons on ';' and normalize identically to prisma.reason_counts.
 
     Returns (reasons_list, reason_missing_bool).
     """
@@ -467,17 +466,9 @@ def prisma_excluded_studies(
 
     with store.review_db(review_id) as conn:
         used_reviewer = prisma.resolve_reviewer(conn, reviewer)
-        if used_reviewer is None:
-            raw_rows: list[sqlite3.Row] = []
-        else:
-            raw_rows = conn.execute(
-                "SELECT paper_ref, reason, title FROM screening "
-                "WHERE stage = 'full_text' AND decision = 'exclude' AND reviewer = ? "
-                "ORDER BY paper_ref",
-                (used_reviewer,),
-            ).fetchall()
+        raw_rows = prisma.exclusion_rows(conn, used_reviewer, "full_text") if used_reviewer else []
         # Counted exactly as the PRISMA flow counts them: one reason string per report.
-        by_reason = prisma._reason_counts(conn, used_reviewer, "full_text") if used_reviewer else {}
+        by_reason = prisma.reason_counts(conn, used_reviewer, "full_text") if used_reviewer else {}
 
         status: dict[str, Any] | None = None
         status_excluded: int | None = None
@@ -570,10 +561,14 @@ def manuscript_check(
     and confidence intervals, search databases, search dates, reviewer counts, risk of
     bias tools, and synthesis methods against the audit trail.
 
-    Returns: ok, findings (each: kind, severity 'mismatch'|'not_in_record'|'unknown'|'omitted',
+    The manuscript side is read with text patterns (database names, dates, tools,
+    methods, counts), so every finding is a lead to check by hand: a 'mismatch' means
+    the pattern read a value that differs from the record, not proof of an error.
+
+    Returns: ok, method ('pattern'), findings (each: kind, severity 'mismatch'|'not_in_record'|'unknown'|'omitted',
     section, line, excerpt, stated, recorded, field, message; capped at 200), truncated,
-    quantity_map, counts_by_kind,
-    counts_by_severity, checked, not_checked.
+    quantity_map (includes reports_included and study_count), counts_by_kind,
+    counts_by_severity, checked, not_checked, note.
 
     Does NOT judge the truth of scientific claims, check semantic entailment, or evaluate
     methodological quality; compares record-backed quantities and factual statements only.
@@ -619,13 +614,15 @@ def manuscript_check(
             "records_identified", "duplicates_removed", "records_after_dedup",
             "records_screened", "excluded_title_abstract", "full_text_requested",
             "full_text_unavailable", "full_text_assessed", "excluded_full_text",
-            "studies_included",
+            "studies_included", "reports_included", "study_count",
         ):
             prisma_map[k] = status.get(k)
 
     quantity_map: dict[str, Any] = {
         "prisma": prisma_map,
         "studies_included": status.get("studies_included", 0) if status else 0,
+        "reports_included": status.get("reports_included", 0) if status else 0,
+        "study_count": status.get("study_count", 0) if status else 0,
         "evidence": [
             {
                 "paper_ref": r.get("paper_ref"),
@@ -1089,6 +1086,7 @@ def manuscript_check(
     listed, truncated = cap(findings)
     return {
         "ok": True,
+        "method": "pattern",
         "findings": listed,
         "truncated": truncated,
         "quantity_map": quantity_map,
@@ -1096,6 +1094,10 @@ def manuscript_check(
         "counts_by_severity": dict(counts_by_severity),
         "checked": checked,
         "not_checked": not_checked,
+        "note": (
+            "Manuscript values were read with text patterns. Treat each finding as a lead to check against the "
+            "text, not as proof of an error; wording the patterns do not recognise is not checked."
+        ),
     }
 
 

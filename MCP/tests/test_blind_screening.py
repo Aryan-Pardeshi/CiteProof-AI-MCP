@@ -29,10 +29,9 @@ async def test_reviewer_record_validation() -> None:
     assert human_with_model["ok"] is False
     assert "model_id is only allowed when reviewer_type is 'model'" in human_with_model["error"]
 
-    # 3. Reviewer 'primary' rejected
+    # 3. Reviewer 'primary' (consensus) can be typed, e.g. a human adjudicator
     primary_res = await call("reviewer_record", review_id=rid, reviewer="primary", reviewer_type="human")
-    assert primary_res["ok"] is False
-    assert "reserved for consensus" in primary_res["error"]
+    assert primary_res["ok"] is True, primary_res
 
     # 4. Long model_id (> 200 chars)
     long_mid = await call(
@@ -676,3 +675,23 @@ async def test_status_does_not_ask_for_consensus_while_the_stage_is_blind() -> N
     steps = (await call("review_status", review_id=rid))["next_steps"]
     assert not any("consensus" in s for s in steps), steps
     assert any("screening_stage_close" in s for s in steps)
+
+
+@pytest.mark.asyncio
+async def test_a_human_primary_clears_the_ai_only_warning() -> None:
+    rid = (await call("review_create", title="Human sign-off", question="Q?"))["review_id"]
+    for name, model in (("alice", "model-a"), ("bob", "model-b")):
+        await call("reviewer_record", review_id=rid, reviewer=name, reviewer_type="model", model_id=model)
+    for reviewer in ("alice", "bob", "primary"):
+        rec = await call(
+            "screening_record", review_id=rid, paper_ref="10.1000/a", stage="title_abstract", decision="include",
+            reviewer=reviewer,
+        )
+        assert rec["ok"] is True, rec
+
+    before = (await call("review_status", review_id=rid))["warnings"]
+    assert any("AI reviewers only" in w for w in before)
+
+    await call("reviewer_record", review_id=rid, reviewer="primary", reviewer_type="human")
+    after = (await call("review_status", review_id=rid))["warnings"]
+    assert not any("AI reviewers only" in w for w in after), after

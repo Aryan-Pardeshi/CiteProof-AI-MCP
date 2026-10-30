@@ -240,7 +240,7 @@ def screening_warnings(conn: sqlite3.Connection, stage: str | None = None) -> li
         distinct_revs = [
             r[0]
             for r in conn.execute(
-                "SELECT DISTINCT reviewer FROM screening WHERE stage = ? AND reviewer != 'primary' ORDER BY reviewer",
+                "SELECT DISTINCT reviewer FROM screening WHERE stage = ? ORDER BY reviewer",
                 (stage,),
             ).fetchall()
         ]
@@ -249,7 +249,7 @@ def screening_warnings(conn: sqlite3.Connection, stage: str | None = None) -> li
         distinct_revs = [
             r[0]
             for r in conn.execute(
-                "SELECT DISTINCT reviewer FROM screening WHERE reviewer != 'primary' ORDER BY reviewer"
+                "SELECT DISTINCT reviewer FROM screening ORDER BY reviewer"
             ).fetchall()
         ]
 
@@ -361,7 +361,17 @@ def included_refs(conn: sqlite3.Connection, reviewer: str | None = None) -> list
     return [r[0] for r in rows]
 
 
-def _reason_counts(conn: sqlite3.Connection, reviewer: str, stage: str) -> dict[str, int]:
+def exclusion_rows(conn: sqlite3.Connection, reviewer: str, stage: str) -> list[dict[str, Any]]:
+    """Exclude decisions (paper_ref, reason, title) of one reviewer at one stage, by paper_ref."""
+    rows = conn.execute(
+        "SELECT paper_ref, reason, title FROM screening "
+        "WHERE reviewer = ? AND stage = ? AND decision = 'exclude' ORDER BY paper_ref",
+        (reviewer, stage),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def reason_counts(conn: sqlite3.Connection, reviewer: str, stage: str) -> dict[str, int]:
     counts: dict[str, int] = {}
     for r in conn.execute(
         "SELECT reason FROM screening WHERE reviewer = ? AND stage = ? AND decision = 'exclude'", (reviewer, stage)
@@ -412,8 +422,8 @@ def compute_status(conn: sqlite3.Connection, reviewer: str | None = None) -> dic
                 (used,),
             )
         ]
-        reasons_ft = _reason_counts(conn, used, "full_text")
-        reasons_ta = _reason_counts(conn, used, "title_abstract")
+        reasons_ft = reason_counts(conn, used, "full_text")
+        reasons_ta = reason_counts(conn, used, "title_abstract")
 
     def c(stage: str, decision: str | None = None) -> int:
         return sum(v for (s, d), v in counts.items() if s == stage and (decision is None or d == decision))
@@ -1222,7 +1232,7 @@ def screening_agreement(
 @safe_tool
 def reviewer_record(
     review_id: ReviewId,
-    reviewer: Annotated[str, Field(description="Reviewer name (1-40 chars, stored lower-case). Cannot be 'primary'.")],
+    reviewer: Annotated[str, Field(description="Reviewer name (1-40 chars, stored lower-case). 'primary' types whoever records consensus decisions.")],
     reviewer_type: Annotated[str, Field(description="Reviewer type: 'human', 'model', or 'unknown'.")],
     model_id: Annotated[str | None, Field(description="Model identifier (max 200 chars), allowed only when reviewer_type is 'model'.")] = None,
     run_ref: Annotated[str | None, Field(description="Optional run or configuration reference (max 200 chars).")] = None,
@@ -1237,16 +1247,14 @@ def reviewer_record(
 
     model_id is only allowed when reviewer_type is 'model'. For model reviewers
     without a model_id, the record is saved with a warning that same-model checks
-    cannot run. Reviewer 'primary' is reserved for consensus decisions and cannot
-    be given a type.
+    cannot run. Reviewer 'primary' holds consensus decisions; typing it 'human'
+    records a human adjudicator, which clears the AI-only screening warning.
 
     Returns: name, reviewer, reviewer_type, model_id, run_ref, updated_at, warnings.
 
     Does NOT verify caller identity or authenticate models.
     """
     rev = reviewer_arg(reviewer, "reviewer", default=None)
-    if rev == "primary":
-        fail("reviewer 'primary' is reserved for consensus decisions and cannot be given a reviewer type")
     rev_type = choice_arg(reviewer_type, "reviewer_type", ("human", "model", "unknown"))
     model_clean = text_arg(model_id, "model_id", required=False, max_len=200)
     run_clean = text_arg(run_ref, "run_ref", required=False, max_len=200)
