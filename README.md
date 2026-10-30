@@ -8,9 +8,9 @@
 [![CI](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml/badge.svg)](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**🔗 Research Web → [CiteProof.top](https://citeproof.top/)**
+**Research Web → [CiteProof.top](https://citeproof.top/)**
 
-**🧪 Claude Science MCP** → Customize → Connectors → Add connector → Local command:
+**Claude Science MCP** → Customize → Connectors → Add connector → Local command:
 
 ```bash
 npx -y citeproof-mcp
