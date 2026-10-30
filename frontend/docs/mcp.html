@@ -297,12 +297,12 @@
               </tr>
               <tr>
                 <td>4. Deduplication and validation</td>
-                <td>Deduplicate exported records and compare retrieval against benchmark recall seeds.</td>
+                <td>Deduplicate the complete exported set and record the count (a partial batch is analysed but not recorded), then check known seed papers against the retrieved records.</td>
                 <td><code>dedup_papers</code>, <code>prisma_record_dedup</code>, <code>recall_seed_record</code>, <code>recall_check</code></td>
               </tr>
               <tr>
                 <td>5. Screening and agreement</td>
-                <td>Configure blind stages, record reviewer identities, screen records, close stages and compute Cohen's kappa.</td>
+                <td>Record reviewer types, set blind stages before anyone screens, screen titles and abstracts then full text under each reviewer's own name, close the stage, compute agreement, then record consensus under <code>primary</code>.</td>
                 <td><code>reviewer_record</code>, <code>screening_stage_set</code>, <code>screening_record</code>, <code>screening_record_many</code>, <code>screening_list</code>, <code>screening_stage_close</code>, <code>screening_agreement</code>, <code>prisma_status</code></td>
               </tr>
               <tr>
@@ -337,7 +337,7 @@
               </tr>
               <tr>
                 <td>12. History and export</td>
-                <td>Inspect append-only lifecycle event logs and export the full audit bundle with SHA-256 to disk.</td>
+                <td>Inspect the event history and export the audit bundle, optionally saved to disk with its SHA-256.</td>
                 <td><code>review_history</code>, <code>export_bundle</code>, <code>review_status</code></td>
               </tr>
             </tbody>
@@ -551,9 +551,9 @@
           </div>
           <p><strong>Rules.</strong> Blinding and reviewer types are by convention, with an audit trail, not a guarantee. One agent can call tools under another reviewer's name, and two runs of the same model are not independent reviewers. Reviewer type is self-declared; no output may call a review verified or independent because of it. Reviewer <code>primary</code> is reserved for consensus decisions and cannot be given a type. Does not verify caller identity or authenticate models.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "screener_a", "reviewer_type": "model", "model_id": "claude-3-7-sonnet"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "screener_a", "reviewer_type": "model", "model_id": "example-model-1"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "name": "screener_a", "reviewer": "screener_a", "reviewer_type": "model", "model_id": "claude-3-7-sonnet", "run_ref": null, "updated_at": "2026-10-25T09:20:00Z", "warnings": []}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "name": "screener_a", "reviewer": "screener_a", "reviewer_type": "model", "model_id": "example-model-1", "run_ref": null, "updated_at": "2026-10-30T08:23:23+00:00", "warnings": []}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -570,11 +570,11 @@
               </tbody>
             </table>
           </div>
-          <p><strong>Rules.</strong> Blinding is by convention, with an audit trail, not a guarantee. At an open blind stage, peer decisions and agreement are hidden until closed with <code>screening_stage_close</code>. Changing a closed blind stage back to blind fails. Does not enforce physical isolation.</p>
+          <p><strong>Rules.</strong> Blinding is by convention, with an audit trail, not a guarantee. At an open blind stage, peer decisions and agreement are hidden until closed with <code>screening_stage_close</code>. Changing a closed blind stage back to blind fails, and so does making a stage blind after decisions are recorded at it. Does not enforce physical isolation.</p>
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "mode": "blind", "reviewers": ["screener_a", "screener_b"]}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "mode": "blind", "reviewers": ["screener_a", "screener_b"], "closed_at": null, "updated_at": "2026-10-25T09:22:00Z"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "mode": "blind", "reviewers": ["screener_a", "screener_b"], "closed_at": null, "updated_at": "2026-10-30T08:23:23+00:00"}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -593,7 +593,7 @@
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "closed_at": "2026-10-25T10:00:00Z", "papers_count": 325, "decisions_count": 650, "reviewer_counts": {"screener_a": 325, "screener_b": 325}}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "closed_at": "2026-10-30T08:23:25+00:00", "papers_count": 3, "decisions_count": 6, "reviewer_counts": {"screener_a": 3, "screener_b": 3}}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -657,11 +657,11 @@
               </tbody>
             </table>
           </div>
-          <p><strong>Blinding visibility.</strong> At an open blind stage, rows are returned only when <code>reviewer == as_reviewer</code>. Rows of other reviewers are hidden and excluded from total; without <code>as_reviewer</code>, every open-blind-stage row is hidden. Does not reveal peer decisions during an open blind stage.</p>
+          <p><strong>Blinding visibility.</strong> At an open blind stage, rows are returned only when <code>reviewer == as_reviewer</code>. Rows of other reviewers are hidden and excluded from total; without <code>as_reviewer</code>, every open-blind-stage row is hidden. <code>hidden_blind_rows</code> counts hidden peer rows without the <code>decision</code> filter, so it cannot reveal peers' decision totals. Does not reveal peer decisions during an open blind stage.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "full_text", "as_reviewer": "screener_a", "limit": 50}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "as_reviewer": "screener_a", "limit": 1}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "records": [{"paper_ref": "10.1000/example.2021", "stage": "full_text", "reviewer": "screener_a", "decision": "include", "reason": null, "title": "Teleradiology turnaround in rural hospitals", "updated_at": "2026-10-24T16:02:00Z", "reviewer_type": "model", "model_id": "claude-3-7-sonnet", "run_ref": null}], "count": 1, "total": 48, "truncated": false, "next_offset": 1, "hidden_blind_rows": 0, "blind_note": null}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "records": [{"paper_ref": "10.1000/example.2023", "stage": "title_abstract", "reviewer": "screener_a", "decision": "include", "reason": null, "title": null, "updated_at": "2026-10-30T08:23:24+00:00", "reviewer_type": "model", "model_id": "example-model-1", "run_ref": null}], "count": 1, "total": 3, "truncated": true, "next_offset": 1, "hidden_blind_rows": 3, "blind_note": "3 decision(s) at open blind stage(s) are hidden to maintain blinding."}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -679,10 +679,11 @@
             </table>
           </div>
           <p><strong>Blinding and warnings.</strong> Always pass warnings (such as human screening caution and same-model warnings) to the user. At an open blind stage, agreement figures (kappa, table, disagreements) are hidden until the stage is closed with <code>screening_stage_close</code>. Does not resolve disagreements.</p>
+          <p><strong>Result notes.</strong> <code>kappa</code> is null and the interpretation is <code>undefined</code> when the reviewers share no decisions or expected agreement is 1. Interpretation uses the Landis and Koch bands.</p>
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "stage": "title_abstract", "reviewer_a": "screener_a", "reviewer_b": "screener_b"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "reviewer_a_type": "model", "reviewer_b_type": "model", "reviewer_a_model_id": "claude-3-7-sonnet", "reviewer_b_model_id": "claude-3-7-sonnet", "warnings": ["Caution: Two runs of the same model are not independent reviewers."], "shared": 20, "agree": 17, "table": {"both_include": 6, "a_include_b_exclude": 1, "a_exclude_b_include": 2, "both_exclude": 11}, "po": 0.85, "pe": 0.53, "kappa": 0.681, "interpretation": "substantial", "disagreement_count": 3, "disagreements": [{"paper_ref": "10.1000/example.2023", "title": "Turnaround after overnight teleradiology", "a": "include", "b": "exclude", "reason_a": null, "reason_b": "No turnaround time outcome"}], "truncated": false, "only_a": 2, "only_b": 1, "not_judged": 4, "next_step": "Resolve the 3 disagreement(s) and record each consensus decision with reviewer='primary'."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "stage": "title_abstract", "reviewer_a": "screener_a", "reviewer_b": "screener_b", "shared": 3, "agree": 2, "table": {"both_include": 2, "a_include_b_exclude": 1, "a_exclude_b_include": 0, "both_exclude": 0}, "po": 0.6667, "pe": 0.6667, "kappa": 0.0, "interpretation": "slight", "disagreement_count": 1, "disagreements": [{"paper_ref": "10.1000/example.2023", "title": "", "a": "include", "b": "exclude", "reason_a": null, "reason_b": "No turnaround time outcome"}], "truncated": false, "only_a": 0, "only_b": 0, "not_judged": 0, "blinded": false, "reviewer_a_type": "model", "reviewer_b_type": "model", "reviewer_a_model_id": "example-model-1", "reviewer_b_model_id": "example-model-1", "warnings": ["Blind screening was done by AI reviewers only. A human reviewer has not been recorded for these papers. Human screening and sign-off are still required.", "Reviewers screener_a and screener_b are runs of the same model (example-model-1); their agreement is not independent validation."], "next_step": "Resolve the 1 disagreement(s) and record each consensus decision with reviewer='primary'."}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -763,7 +764,7 @@
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_refs": ["10.1101/2021.01.01.123456"]}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "refs": [{"input": "10.1101/2021.01.01.123456", "canonical_ref": "10.1000/example.2021", "status": "resolved", "aliases": ["10.1101/2021.01.01.123456"], "study_id": "study-alpha", "conflicts": []}], "count": 1, "truncated": false, "note": "Resolved through stored alias map."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "refs": [{"input": "10.1101/2021.01.01.123456", "canonical_ref": "10.1000/example.2021", "status": "resolved", "aliases": ["10.1000/example.2021", "10.1101/2021.01.01.123456", "title:teleradiology turnaround in rural hospitals|2021"], "study_id": null, "conflicts": []}], "count": 1, "truncated": false, "note": "Exact alias lookup only. 'unknown' means no alias is recorded, not that the paper does not exist; 'conflict' means a disagreeing mapping is on record and the existing mapping was kept."}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -806,7 +807,7 @@
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "study_id": "study-alpha", "paper_refs": ["10.1000/example.2021", "10.1000/example.2022"], "note": "Primary trial report and 2-year follow-up."}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "study_id": "study-alpha", "linked": ["10.1000/example.2021", "10.1000/example.2022"], "unchanged": [], "moved": [], "reports_in_study": ["10.1000/example.2021", "10.1000/example.2022"], "count": 2, "note": "Primary trial report and 2-year follow-up."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "study_id": "study-alpha", "linked": ["10.1000/example.2021", "10.1000/example.2022"], "unchanged": [], "moved": [], "reports_in_study": 2, "count": 2, "note": "Primary trial report and 2-year follow-up."}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -842,9 +843,9 @@
           </div>
           <p><strong>Duplicate participant risk.</strong> Flags outcomes recorded from two or more reports of the same linked study. Does not prove reports share participants or decide if pooling is appropriate.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "reviewer": "primary"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "report_count": 14, "canonical_report_count": 14, "study_count": 12, "groups": [{"study_id": "study-alpha", "unlinked": false, "reports": ["10.1000/example.2021", "10.1000/example.2022"]}], "unlinked_reports": [], "duplicate_participant_risk": [{"study_id": "study-alpha", "outcome_key": "mortality", "outcome": "30-day mortality", "reports": ["10.1000/example.2021", "10.1000/example.2022"]}], "truncated": false, "note": "Included reports grouped by study."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "report_count": 2, "canonical_report_count": 2, "study_count": 1, "groups": [{"study_id": "study-alpha", "unlinked": false, "reports": ["10.1000/example.2021", "10.1000/example.2022"]}], "unlinked_reports": [], "duplicate_participant_risk": [{"study_id": "study-alpha", "outcome_key": "30-day mortality", "outcome": "30-day mortality", "reports": ["10.1000/example.2021", "10.1000/example.2022"]}], "truncated": false, "note": "Counts come from exact alias and study links, not from any judgement about whether reports share participants. An unlinked report is counted as its own study."}</code></pre></div>
         </div>
 
         <h2 id="tools-validation">Search validation</h2>
@@ -865,9 +866,9 @@
           </div>
           <p><strong>Rules.</strong> Seeds are stored as canonical refs. Does not search for seeds or decide eligibility; it records what you send.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_refs": ["10.1000/seed.2018"], "labels": ["cochrane_benchmark"]}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "paper_refs": ["10.1000/example.2021"], "labels": ["PubMed"]}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "added": 1, "updated": 0, "unchanged": 0, "removed": 0, "count": 1, "seeds": [{"paper_ref": "10.1000/seed.2018", "label": "cochrane_benchmark", "added_at": "2026-10-25T09:15:00Z"}], "truncated": false}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "added": 1, "updated": 0, "unchanged": 0, "removed": 0, "count": 1, "seeds": [{"paper_ref": "10.1000/example.2021", "label": "PubMed", "added_at": "2026-10-30T08:23:22+00:00"}], "truncated": false}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -885,7 +886,7 @@
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "seeds": [{"paper_ref": "10.1000/seed.2018", "label": "cochrane_benchmark", "status": "found", "sources": ["PubMed"], "matched_records": 1}], "counts": {"found": 1, "not_found": 0, "unresolved": 0}, "recall": 1.0, "per_source": [{"source": "PubMed", "records": 412, "found": 1, "missed": 0, "unresolved": 0}], "records_checked": 412, "retrieval_recorded_at": "2026-10-25T09:18:00Z", "check_id": "chk-01", "checked_at": "2026-10-25T09:25:00Z", "truncated": false, "note": "Known-item recall check completed."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "checked_at": "2026-10-30T08:23:23+00:00", "records_checked": 3, "retrieval_recorded_at": "2026-10-30T08:23:22+00:00", "counts": {"found": 1, "not_found": 0, "unresolved": 0}, "recall": 1.0, "per_source": [{"source": "PubMed", "records": 3, "found": 1, "missed": 0, "unresolved": 0}], "seeds": [{"paper_ref": "10.1000/example.2021", "label": "PubMed", "added_at": "2026-10-30T08:23:22+00:00", "canonical_ref": "10.1000/example.2021", "status": "found", "sources": ["PubMed"], "matched_records": [{"idx": 0, "source": "PubMed", "record_id": "p1"}], "truncated": false, "reason": null}], "check_id": 1, "truncated": false, "note": "Seed recall measures whether these known eligible papers were in the recorded export. It is not proof that the search was exhaustive."}</code></pre></div>
         </div>
 
         <h2 id="tools-evidence">Evidence extraction</h2>
@@ -962,7 +963,7 @@
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95, "p_value": 0.05, "decimals": 2}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "status": "consistent", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "decimals": 2, "rel_tol": 0.01, "half_unit": 0.005, "checks": [{"check": "midpoint_log_scale", "passed": true, "detail": "Point estimate 0.80 within midpoint range [0.795, 0.805]."}], "geometric_midpoint": 0.8, "geometric_midpoint_range": [0.795, 0.805], "se_log": 0.114, "z": -1.957, "p_back_calculated": 0.0503, "p_reported": 0.05, "assumptions": ["Symmetric log-scale confidence interval."], "warnings": [], "saved": false, "check_id": null}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "decimals": 2, "rel_tol": 0.01, "half_unit": 0.005, "status": "consistent", "checks": [{"check": "positive_values", "passed": true, "detail": "estimate=0.8, ci_lower=0.64, ci_upper=1; a ratio measure requires all three to be greater than 0"}, {"check": "ordered_limits", "passed": true, "detail": "ci_lower=0.64 must be less than ci_upper=1"}, {"check": "estimate_within_interval", "passed": true, "detail": "estimate=0.8 must lie between ci_lower=0.64 and ci_upper=1"}, {"check": "p_value_range", "passed": true, "detail": "p_value=0.05 must be between 0 and 1"}, {"check": "geometric_midpoint", "passed": true, "detail": "estimate 0.8 with half-unit 0.005 compared with the geometric-midpoint range 0.794874 to 0.805124 widened by 0.01 to 0.786925 to 0.813175"}, {"check": "p_value", "passed": true, "detail": "reported p=0.05, back-calculated p=0.05, range over the rounding of estimate and limits=0.0376519 to 0.064667"}], "geometric_midpoint": 0.8, "geometric_midpoint_range": {"low": 0.794874, "high": 0.805124}, "se_log": 0.113851, "z": 1.95996, "p_back_calculated": 0.05, "p_reported": 0.05, "assumptions": ["The interval is treated as a two-sided Wald interval on the log scale, so SE = (ln upper - ln lower) / (2 z) with z from the normal distribution.", "z is the two-sided 95% normal deviate.", "The back-calculated p-value is two-sided and assumes a normal log-scale estimate: p = erfc(|ln estimate| / (SE * sqrt(2))). A reported p passes when it lies in the range of p over every estimate and limit within half a unit of the reported values, widened by rel_tol.", "Reported values are rounded to 2 decimals. A value is consistent when it differs from the computed value by at most h + rel_tol * |computed|, with h = 0.5 * 10^-2 and rel_tol = 0.01.", "The midpoint check compares the estimate with the geometric-midpoint range sqrt((lower-h)(upper-h)) to sqrt((lower+h)(upper+h)), widened by rel_tol.", "This checks internal arithmetic consistency only, not whether the paper's analysis, data or model are correct."], "warnings": [], "saved": false, "check_id": null}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -991,7 +992,7 @@
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"events_a": 20, "total_a": 100, "events_b": 40, "total_b": 100, "reported": {"measure": "rr", "estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78}}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "events_a": 20, "total_a": 100, "events_b": 40, "total_b": 100, "arm_a": "intervention", "arm_b": "comparator", "continuity_correction": "none", "correction_applied": false, "cells_used_for_ratios": [20, 80, 40, 60], "rr": {"estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78, "se": 0.228, "estimable": true, "reason": null}, "or": {"estimate": 0.38, "ci_lower": 0.2, "ci_upper": 0.7, "se": 0.318, "estimable": true, "reason": null}, "rd": {"estimate": -0.2, "ci_lower": -0.32, "ci_upper": -0.08, "se": 0.063, "estimable": true, "reason": null}, "reported": {"measure": "rr", "estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78}, "comparison": {"measure": "rr", "estimable": true, "values": {"estimate_match": true, "ci_lower_match": true, "ci_upper_match": true}, "matches": true, "mismatches": [], "note": "Recomputed values agree with reported values under stated tolerance."}, "status": "consistent", "assumptions": ["Arm A=intervention, Arm B=comparator", "Log-scale Wald intervals"], "warnings": [], "saved": false, "check_id": null}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "events_a": 20, "total_a": 100, "events_b": 40, "total_b": 100, "arm_a": {"events": 20, "total": 100, "risk": 0.2}, "arm_b": {"events": 40, "total": 100, "risk": 0.4}, "continuity_correction": "none", "correction_applied": false, "cells_used_for_ratios": {"events_a": 20.0, "non_events_a": 80.0, "total_a": 100.0, "events_b": 40.0, "non_events_b": 60.0, "total_b": 100.0}, "rr": {"estimate": 0.5, "ci_lower": 0.315752, "ci_upper": 0.791762, "se": 0.234521, "estimable": true, "reason": null}, "or": {"estimate": 0.375, "ci_lower": 0.199208, "ci_upper": 0.70592, "se": 0.322749, "estimable": true, "reason": null}, "rd": {"estimate": -0.2, "ci_lower": -0.323959, "ci_upper": -0.076041, "se": 0.0632456, "estimable": true, "reason": null}, "reported": {"measure": "rr", "estimate": 0.5, "ci_lower": 0.32, "ci_upper": 0.78}, "comparison": {"measure": "rr", "estimable": true, "values": [{"value": "estimate", "reported": 0.5, "recomputed": 0.5, "difference": 0.0, "tolerance": 0.01, "matches": true}, {"value": "ci_lower", "reported": 0.32, "recomputed": 0.315752, "difference": 0.004248, "tolerance": 0.00815752, "matches": true}, {"value": "ci_upper", "reported": 0.78, "recomputed": 0.791762, "difference": -0.011762, "tolerance": 0.0129176, "matches": true}], "matches": true, "mismatches": [], "note": "All reported value(s) agree with the recomputed value(s) within the stated rounding."}, "status": "consistent", "assumptions": ["Arm A is the intervention (a events in n1) and arm B the comparator (c events in n2); ratios are A vs B.", "RR = (a/n1) / (c/n2) with a log-scale Wald interval, SE = sqrt(1/a - 1/n1 + 1/c - 1/n2).", "OR = (a/(n1-a)) / (c/(n2-c)) with the Woolf log-scale Wald interval, SE = sqrt(1/a + 1/(n1-a) + 1/c + 1/(n2-c)).", "RD = a/n1 - c/n2 with the Wald interval, SE = sqrt(p1(1-p1)/n1 + p2(1-p2)/n2).", "Continuity policy 'none' selected; applied to this input: False. No continuity correction is used: a zero cell makes the affected ratio not estimable.", "Intervals use the two-sided 95% normal deviate z.", "Reported values are rounded to 2 decimals. A value is consistent when it differs from the recomputed value by at most h + rel_tol * |recomputed|, with h = 0.5 * 10^-2 and rel_tol = 0.01.", "The counts are treated as two independent simple-randomised arms; no strata, clusters or adjustment are modelled."], "warnings": [], "saved": false, "check_id": null}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -1009,9 +1010,9 @@
           </div>
           <p><strong>Rules.</strong> Rows with non-ratio measures or missing estimates/limits are listed as <code>skipped</code>. Does not edit evidence rows or judge analysis.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "decimals": 2}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "rows": [{"paper_ref": "10.1000/example.2021", "outcome": "mortality", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "status": "consistent", "warnings": []}], "truncated": false, "checked": 1, "skipped": 1, "counts": {"consistent": 1, "inconsistent": 0, "invalid": 0, "skipped": 1}, "assumptions": ["Symmetric log-scale confidence interval."], "note": "Consistency check completed."}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "rows": [{"paper_ref": "10.1000/example.2021", "outcome": "30-day mortality", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "status": "consistent", "warnings": []}, {"paper_ref": "10.1000/example.2022", "outcome": "30-day mortality", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0, "ci_level": 95.0, "status": "consistent", "warnings": []}], "truncated": false, "checked": 2, "skipped": 0, "counts": {"consistent": 2, "inconsistent": 0, "invalid": 0, "skipped": 0}, "assumptions": ["The interval is treated as a two-sided Wald interval on the log scale, so SE = (ln upper - ln lower) / (2 z) with z from the normal distribution.", "z is the two-sided normal deviate for each row's stored confidence level.", "The back-calculated p-value is two-sided and assumes a normal log-scale estimate: p = erfc(|ln estimate| / (SE * sqrt(2))). A reported p passes when it lies in the range of p over every estimate and limit within half a unit of the reported values, widened by rel_tol.", "Reported values are rounded to 2 decimals. A value is consistent when it differs from the computed value by at most h + rel_tol * |computed|, with h = 0.5 * 10^-2 and rel_tol = 0.01.", "The midpoint check compares the estimate with the geometric-midpoint range sqrt((lower-h)(upper-h)) to sqrt((lower+h)(upper+h)), widened by rel_tol.", "This checks internal arithmetic consistency only, not whether the paper's analysis, data or model are correct."], "note": "Arithmetic consistency check only. An 'inconsistent' row means the stored estimate and limits do not agree under the stated rounding, not that the paper's result is wrong."}</code></pre></div>
         </div>
 
         <h2 id="tools-claims">Claims and risk of bias</h2>
@@ -1115,14 +1116,15 @@
                 <tr><td><code>review_id</code></td><td>string</td><td>Yes</td><td>Existing review id.</td></tr>
                 <tr><td><code>reviewer</code></td><td>string</td><td>No</td><td>Whose decisions to count (default <code>primary</code>, else only reviewer).</td></tr>
                 <tr><td><code>format</code></td><td>string</td><td>No</td><td><code>markdown</code> (default) or <code>json</code>.</td></tr>
+                <tr><td><code>offset</code></td><td>integer</td><td>No</td><td>Rows to skip (default 0). Each call returns up to 200 rows; continue with <code>next_offset</code>.</td></tr>
               </tbody>
             </table>
           </div>
-          <p><strong>Rules.</strong> Normalises reasons consistently with PRISMA flow and checks reconciliation against <code>excluded_full_text</code>. Does not verify scientific validity of exclusion decisions.</p>
+          <p><strong>Rules.</strong> Normalises reasons the same way as the PRISMA flow and checks the full row count against <code>excluded_full_text</code>, on every page. Does not verify the scientific validity of exclusion decisions.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "json"}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "papers": 33, "by_reason": {"Wrong population": 18, "No comparator": 15}, "reconciliation": {"rows": 33, "excluded_full_text": 33, "reconciles": true, "explanation": "Row count exactly matches PRISMA excluded_full_text."}, "truncated": false, "table": "| Study | Citation | Exclusion Reason |\n|---|---|---|\n| 10.1000/ex1 | Smith et al., 2020 | Wrong population |"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "json", "papers": 1, "by_reason": {"wrong population": 1}, "reconciliation": {"rows": 1, "excluded_full_text": 1, "reconciles": true, "explanation": null}, "truncated": false, "next_offset": null, "rows": [{"paper_ref": "10.1000/example.2023", "citation": "https://doi.org/10.1000/example.2023", "reasons": ["wrong population"], "reason_missing": false}]}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -1140,9 +1142,9 @@
           </div>
           <p><strong>Rules.</strong> Compares stated PRISMA counts, cross-section count consistency, effect estimates, CIs, search databases, search dates, reviewer counts, risk of bias tools, and synthesis methods. Inconsistencies reported as findings with severity <code>mismatch</code>, <code>not_in_record</code>, <code>unknown</code>, or <code>omitted</code>. Does not judge scientific truth or evaluate methodological quality; compares record-backed quantities and factual statements only.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "sections": {"results": "We included 12 studies comprising 1,500 patients."}}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "sections": {"Results": "We included 3 studies.", "Methods": "We searched PubMed and Embase on 20 October 2026."}}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "findings": [], "truncated": false, "quantity_map": {"included_studies": 12}, "counts_by_kind": {}, "counts_by_severity": {"mismatch": 0, "not_in_record": 0, "unknown": 0, "omitted": 0}, "checked": ["prisma_counts", "search_dates", "databases"], "not_checked": []}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "findings": [{"kind": "rob_tool", "severity": "unknown", "section": null, "line": null, "excerpt": "", "stated": null, "recorded": null, "field": "rob_rows", "message": "No risk-of-bias assessments are recorded in the audit trail to check RoB tools against."}, {"kind": "prisma_count", "severity": "mismatch", "section": "Results", "line": 1, "excerpt": "We included 3 studies.", "stated": 3, "recorded": 2, "field": "studies_included", "message": "Stated studies_included count (3) in 'Results' does not match recorded count (2)."}, {"kind": "database", "severity": "not_in_record", "section": "Methods", "line": 1, "excerpt": "We searched PubMed and Embase on 20 October 2026.", "stated": "Embase", "recorded": null, "field": "databases", "message": "Database 'Embase' stated in the manuscript but not found in the audit record."}], "truncated": false, "quantity_map": {"prisma": {"records_identified": 3, "duplicates_removed": 0, "records_after_dedup": 3, "records_screened": 3, "excluded_title_abstract": 0, "full_text_requested": 3, "full_text_unavailable": 0, "full_text_assessed": 3, "excluded_full_text": 1, "studies_included": 2}, "studies_included": 2, "evidence": [{"paper_ref": "10.1000/example.2021", "outcome": "30-day mortality", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0}, {"paper_ref": "10.1000/example.2022", "outcome": "30-day mortality", "measure": "rr", "estimate": 0.8, "ci_lower": 0.64, "ci_upper": 1.0}]}, "counts_by_kind": {"rob_tool": 1, "prisma_count": 1, "database": 1}, "counts_by_severity": {"unknown": 1, "mismatch": 1, "not_in_record": 1}, "checked": ["PRISMA study counts per section against compute_status", "Cross-section consistency of PRISMA study counts", "Effect estimates and 95% confidence intervals against evidence_rows", "Cross-section consistency of effect estimates and confidence limits", "Search databases in methods against search_log", "Search dates in methods against search_log date_run", "Reviewer count in methods against screening reviewers", "Risk of bias tools in methods against rob_rows", "Synthesis method in methods against protocol"], "not_checked": ["Truth or scientific validity of medical and factual claims", "Entailment or semantic reasoning about study conclusions", "Methodological quality of search strategies or risk-of-bias judgements", "Mathematical correctness of meta-analytic pooling"]}</code></pre></div>
         </div>
 
         <h2 id="tools-review">History, whole-review views and export</h2>
@@ -1165,9 +1167,9 @@
           </div>
           <p><strong>Rules.</strong> Reads lifecycle events (baseline, insert, update, delete) captured by SQLite triggers across tracked tables. Screening events of an open blind stage are hidden until <code>screening_stage_close</code>. Does not provide cryptographic tamper-proofing: records are append-only by convention and SQLite triggers; direct file access can modify the database.</p>
           <p><strong>Example request.</strong></p>
-          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "table": "screening_decisions", "limit": 2}</code></pre></div>
+          <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "table": "screening", "limit": 1}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "events": [{"seq": 1, "at": "2026-10-25T09:20:00Z", "table_name": "screening_decisions", "op": "INSERT", "row_key": "10.1000/example.2021|title_abstract|screener_a", "old_row": null, "new_row": {"paper_ref": "10.1000/example.2021", "stage": "title_abstract", "decision": "include"}, "changed_fields": ["paper_ref", "stage", "decision"]}], "total": 1, "next_offset": null}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "events": [{"seq": 14, "at": "2026-10-30T08:23:24+00:00", "table_name": "screening", "op": "insert", "row_key": "10.1000/example.2021|title_abstract|screener_a", "old_row": null, "new_row": {"paper_ref": "10.1000/example.2021", "stage": "title_abstract", "reviewer": "screener_a", "decision": "include", "reason": null, "title": null, "updated_at": "2026-10-30T08:23:24+00:00"}, "changed_fields": null}], "total": 12, "next_offset": 1}</code></pre></div>
         </div>
 
         <div class="docs-tool">
@@ -1204,11 +1206,11 @@
               </tbody>
             </table>
           </div>
-          <p><strong>Limits and warnings.</strong> At most 5,000 screening decisions and 5,000 claims. Always pass warnings (such as human screening caution and same-model warnings) to the user. Source texts are not included. With <code>save=true</code>, writes <code>&lt;review_id&gt;-audit-bundle.md|json</code> to the exports directory.</p>
+          <p><strong>Limits and warnings.</strong> At most 5,000 screening decisions, claims, paper aliases and statistical checks each (<code>truncated</code> is true when any was cut), and at most 50 listed disagreements per reviewer pair. Always pass warnings (such as human screening caution and same-model warnings) to the user. Source texts are not included. With <code>save=true</code>, writes <code>&lt;review_id&gt;-audit-bundle.md|json</code> to the exports directory.</p>
           <p><strong>Example request.</strong></p>
           <div class="docs-code"><pre><code>{"review_id": "rev-9f3c2a1b", "format": "markdown", "reviewer": "primary", "save": true}</code></pre></div>
           <p><strong>Example result.</strong></p>
-          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "content": "# Teleradiology turnaround times: a systematic review\n\n## Protocol\n...\n\n## PRISMA 2020 flow\n...", "chars": 28410, "sha256": "3a7b9c1d2e3f...", "suggested_filename": "rev-9f3c2a1b-audit-bundle.md", "saved_path": "/home/user/.citeproof-mcp/exports/rev-9f3c2a1b-audit-bundle.md", "truncated": false, "phase": "reporting"}</code></pre></div>
+          <div class="docs-code"><pre><code>{"ok": true, "format": "markdown", "content": "# Review audit bundle: Teleradiology turnaround times\n\n- Rev...", "chars": 6882, "sha256": "cc5378ca60038502bf095f6fa2ff2b17d2b8497dc85821e00513466ea2350a83", "suggested_filename": "rev-9f3c2a1b-audit-bundle.md", "saved_path": "/home/user/.citeproof-mcp/exports/rev-9f3c2a1b-audit-bundle.md", "truncated": false, "phase": "protocol"}</code></pre></div>
         </div>
 
         <h2 id="limits">Limits and validation rules</h2>

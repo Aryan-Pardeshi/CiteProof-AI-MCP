@@ -27,9 +27,7 @@
     "entry_point": "server/bin/citeproof-mcp.js",
     "mcp_config": {
       "command": "node",
-      "args": [
-        "${__dirname}/server/bin/citeproof-mcp.js"
-      ],
+      "args": ["${__dirname}/server/bin/citeproof-mcp.js"],
       "env": {
         "CITEPROOF_MCP_HOME": "${user_config.data_dir}"
       }
@@ -207,11 +205,7 @@
     }
   },
   "compatibility": {
-    "platforms": [
-      "win32",
-      "darwin",
-      "linux"
-    ],
+    "platforms": ["win32", "darwin", "linux"],
     "runtimes": {
       "node": ">=18.0.0"
     }

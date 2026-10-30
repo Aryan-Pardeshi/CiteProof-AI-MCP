@@ -186,9 +186,9 @@
       <section class="mcp-section scroll-reveal" aria-labelledby="capabilities">
         <p class="mcp-section-eyebrow">Review records with a clear trail</p>
         <h2 id="capabilities">What the MCP server does</h2>
-        <p>CiteProof MCP adds the record-keeping parts of a systematic review to a research agent. It has 40 tools in 10 groups, every tool returns <code>ok</code>, and the server contains no language model: the agent makes each judgement, while the server validates its shape and computes the numbers.</p>
+        <p>CiteProof MCP adds the record-keeping parts of a systematic review to a research agent. It has 40 tools, every tool returns <code>ok</code>, and the server contains no language model: the agent makes each judgement, while the server validates its shape and computes the numbers.</p>
 
-                <div class="mcp-cap-grid">
+        <div class="mcp-cap-grid">
           <div class="mcp-cap-card mcp-feature--blue scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6M8.5 9h7M8.5 13h7M8.5 17h4"></path></svg>
             <h3>Review setup and status</h3>
@@ -203,7 +203,7 @@
           <div class="mcp-cap-card mcp-feature--blue scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 15"></polyline></svg>
             <h3>Review history</h3>
-            <p>Inspect the append-only event log capturing every insert, update and deletion across review tables. Recorded automatically via SQLite triggers for complete auditability from inception to bundle export.</p>
+            <p>Query the event log that SQLite triggers write for each insert, update and delete in the tracked review tables, with a baseline row for data that existed before the log began. It is append-only by convention, not tamper-proof: anyone with the file can change it.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-review-history">review_history</a></li>
             </ul>
@@ -221,7 +221,7 @@
           <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5M11 8v6M8 11h6"></path></svg>
             <h3>Search validation and seed recall</h3>
-            <p>Record benchmark seed papers with the protocol to validate database search coverage. Check retrieval recall against deduplicated candidate records; reports retrieved seeds, missing seeds and recall fraction. Seed recall is not proof that a search was exhaustive.</p>
+            <p>Record known eligible papers as seeds, then check whether each one is among the records of the last full dedup, per source. Reports found, missing and unresolved seeds and the recall fraction. Seed recall is not proof that a search was exhaustive.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-recall-seed-record">recall_seed_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-recall-check">recall_check</a></li>
@@ -240,7 +240,7 @@
           <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="5"></circle><circle cx="15" cy="15" r="5"></circle><path d="m12.5 7.5 4 4"></path></svg>
             <h3>Deduplication</h3>
-            <p>Cluster up to 10,000 exported records by normalised DOI, PMID, or a 20+ character title with the same year and first-author surname; matching is transitive and the most complete record is kept. With a <code>review_id</code>, deduplication records paper aliases and flags alias conflicts when papers were already linked to different identifiers.</p>
+            <p>Cluster up to 10,000 exported records by normalised DOI, PMID, or a 20+ character title with the same year and first-author surname; matching is transitive and the most complete record is kept. With a <code>review_id</code>, a count is saved only when the call covers every recorded hit; partial batches are analysed but not recorded. A title match with a different year or author stays a possible duplicate rather than being merged. A full dedup also records each record's identifiers as aliases and keeps conflicting DOIs apart.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-dedup-papers">dedup_papers</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-prisma-record-dedup">prisma_record_dedup</a></li>
@@ -250,7 +250,7 @@
           <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             <h3>Paper and study identity</h3>
-            <p>Resolve DOI, PMID or title to canonical paper identifiers. Record manual or deduplication aliases with conflict detection. Link multiple companion papers to a shared study identifier, inspect study groupings, or unlink papers when needed.</p>
+            <p>Look up a DOI, PMID or title key in the stored alias map; nothing is guessed. Record a manual alias, such as a preprint DOI for a published paper. Link several reports of one study so reports and studies are counted separately, and see where one study's outcome was recorded from two reports.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-paper-resolve">paper_resolve</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-paper-alias-record">paper_alias_record</a></li>
@@ -282,7 +282,7 @@
           <div class="mcp-cap-card mcp-feature--purple scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             <h3>Screening independence and stages</h3>
-            <p>Register reviewers with their role (human, model, unknown) and model id, open a blind or unblinded screening stage, and close it when done. Blind screening is by convention, with an audit trail, not enforced: peer decisions are hidden during an open blind stage. The server warns on human-caution and same-model pairing.</p>
+            <p>Register reviewers with their role (human, model, unknown) and model id, open a blind or unblinded screening stage, and close it when done. Blinding is by convention, with an audit trail, not enforced: peer decisions are hidden during an open blind stage, but the server cannot verify who is calling. It warns when only AI reviewers screened and when two reviewers are runs of the same model.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-reviewer-record">reviewer_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-stage-set">screening_stage_set</a></li>
@@ -293,7 +293,7 @@
           <div class="mcp-cap-card mcp-feature--purple scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"></rect><path d="m7.5 9 1.5 1.5L12 7.5M13.5 9H17M7.5 15l1.5 1.5 3-3M13.5 15H17"></path></svg>
             <h3>Screening decisions</h3>
-            <p>Record include or exclude at title/abstract and full text, plus <code>not_retrieved</code> at full text; an exclusion needs a reason and every decision carries a reviewer name. Upserts are keyed by paper, stage and reviewer, and bulk writes of up to 500 decisions are all-or-nothing with the failing index. In blind stages, call <code>screening_list</code> with <code>as_reviewer</code> to inspect only that reviewer's decisions.</p>
+            <p>Record include or exclude at title/abstract and full text, plus <code>not_retrieved</code> at full text; an exclusion needs a reason and every decision carries a reviewer name. Upserts are keyed by paper, stage and reviewer, and bulk writes of up to 500 decisions are all-or-nothing with the failing index. List and filter the log by stage, reviewer, decision or paper; at an open blind stage, pass <code>as_reviewer</code> to see only that reviewer's own decisions.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-record">screening_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-record-many">screening_record_many</a></li>
@@ -304,7 +304,7 @@
           <div class="mcp-cap-card mcp-feature--purple scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="8" r="3"></circle><path d="M2.5 19a5.5 5.5 0 0 1 11 0M10.5 16.5a5.5 5.5 0 0 1 11 0M12 8h1"></path></svg>
             <h3>Reviewer agreement</h3>
-            <p>Compute Cohen's kappa for two reviewers at one stage over the papers they both judged include or exclude. The result includes the 2×2 table, observed and expected agreement, kappa, the Landis–Koch band, disagreements and each reviewer's unique decisions. In blind stages, agreement statistics and 2×2 tables remain masked until the stage is closed.</p>
+            <p>Compute Cohen's kappa for two reviewers at one stage over the papers they both judged include or exclude. The result includes the 2×2 table, observed and expected agreement, kappa, the Landis–Koch band, disagreements and each reviewer's unique decisions. <code>not_retrieved</code> pairs are counted as not judged; kappa is null when nothing is shared or expected agreement is 1. At an open blind stage the figures stay hidden until the stage is closed.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-screening-agreement">screening_agreement</a></li>
             </ul>
@@ -323,7 +323,7 @@
           <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             <h3>Statistical verification</h3>
-            <p>Verify extracted ratios and 95% confidence intervals against standard log-normal formulas. Recompute 2×2 contingency tables from raw cell counts for odds ratios, risk ratios or risk differences. Automatically scan all evidence rows in a review for discrepancies. Inconsistencies report detected discrepancies, never that a paper is wrong.</p>
+            <p>Check that a ratio estimate, its confidence interval and an optional p-value agree on the log scale under the stated rounding. Recompute risk ratios, odds ratios and risk differences from arm counts and compare them with reported values. Run the ratio check over every stored evidence row. A finding means the numbers do not agree, never that a paper is wrong.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-check-ratio-ci">stats_check_ratio_ci</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-recompute-2x2">stats_recompute_2x2</a></li>
@@ -354,7 +354,7 @@
           <div class="mcp-cap-card mcp-feature--amber scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             <h3>Excluded studies and manuscript check</h3>
-            <p>Generate PRISMA-compliant tables of excluded full-text studies grouped by reason with study and paper citations. Compare a manuscript draft against the review database to detect mismatched numbers, unverified quotes and unsupported claims. Inconsistencies report detected discrepancies, never that a paper is wrong.</p>
+            <p>List every full-text exclusion with its citation and recorded reasons, reconciled with the PRISMA count. Compare manuscript sections with the record: PRISMA counts, effect estimates and intervals, databases, search dates, reviewer count, risk-of-bias tool and synthesis method. A finding is a mismatch with the record, not a judgement of the science.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-prisma-excluded-studies">prisma_excluded_studies</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-manuscript-check">manuscript_check</a></li>
@@ -391,7 +391,7 @@
           <div class="mcp-cap-card mcp-feature--pink scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"></path><path d="M4.5 8 12 12l7.5-4M12 12v8.5M8 5.5l8 4.5"></path></svg>
             <h3>Audit bundle export</h3>
-            <p>Export the whole trail as one Markdown or JSON document, or write directly to disk with <code>save: true</code> (saving to <code>&lt;CITEPROOF_MCP_HOME&gt;/exports/</code>). Returns SHA-256 and saved path alongside all protocol records, searches, screening stages, study groupings, evidence, stats checks and event logs.</p>
+            <p>Export the whole trail as one Markdown or JSON document, or write directly to disk with <code>save: true</code> (saving to <code>&lt;CITEPROOF_MCP_HOME&gt;/exports/</code>). Returns the SHA-256 and the saved path. The bundle adds study groupings, aliases, the latest recall check, statistical checks and a change-history summary to the earlier sections. Source texts are never included.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-export-bundle">export_bundle</a></li>
             </ul>

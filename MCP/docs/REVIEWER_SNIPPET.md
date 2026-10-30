@@ -35,7 +35,9 @@ Before accepting or finalizing any review report, run the following verification
    - Ensure `screening_stage_close` was executed to unblind the stage before checking agreement.
    - Check dual-reviewer agreement using `screening_agreement` and ensure consensus decisions were recorded under reviewer "primary".
    - Always pass warnings (such as human screening caution and same-model warnings) to the user.
-   - Check `screening_list` across all pages (paging with `next_offset`) using `as_reviewer` to confirm decision completeness.
+   - Verify that every study included in the final synthesis has an explicit `full_text` stage `include` decision recorded in `screening_list`.
+   - `screening_list` returns at most 200 records per call. Keep calling it with `offset` set to `next_offset` until `truncated` is false, and check every page.
+   - Verify that all full-text exclusions have documented exclusion reasons.
 
 4. Study and Report Grouping:
    - Verify that multiple reports of the same study are linked using `study_link`.
@@ -74,7 +76,6 @@ Before accepting or finalizing any review report, run the following verification
     - Query `review_history` if an event-level audit of database operations is required.
     - Export the final audit bundle with `export_bundle(review_id, save=true)`.
     - Record `saved_path` and `sha256` for the supplementary material.
-    - Always pass warnings (such as human screening caution and same-model warnings) to the user.
 
 WHAT CITEPROOF CANNOT GUARANTEE:
 - Scientific Truth: CiteProof verifies structural consistency and verbatim string matches; it cannot evaluate whether experimental hypotheses or biological conclusions are objectively true.
