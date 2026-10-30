@@ -583,3 +583,32 @@ async def test_study_link_moves_every_stored_link_of_an_aliased_report() -> None
     assert {m["from_study"] for m in moved["moved"]} == {"S1", "S2"}
     again = await call("study_link", review_id=rid, study_id="S3", paper_refs=["pmid:9"])
     assert again["ok"] is True and again["unchanged"] == ["10.1000/d"], again
+
+
+@pytest.mark.asyncio
+async def test_dedup_does_not_reverse_a_manual_alias_into_a_cycle() -> None:
+    rid = await _review()
+    await call("paper_alias_record", review_id=rid, alias="10.1000/cyc", canonical_ref="pmid:55")
+    await _search(rid, hits=1)
+    papers = [{"id": "a", "doi": "10.1000/cyc", "pmid": "55", "title": "Cycle trial of drug X", "year": 2020}]
+    dedup = await call("dedup_papers", papers=papers, review_id=rid)
+    assert dedup["recorded"] is True
+    assert dedup["alias_conflicts"] == 0
+
+    resolved = await call("paper_resolve", review_id=rid, paper_refs=["10.1000/cyc", "pmid:55"])
+    assert {r["canonical_ref"] for r in resolved["refs"]} == {"pmid:55"}
+
+
+@pytest.mark.asyncio
+async def test_study_overview_refuses_an_ambiguous_reviewer() -> None:
+    rid = await _review()
+    for reviewer in ("alice", "bob"):
+        for stage in ("title_abstract", "full_text"):
+            await call(
+                "screening_record", review_id=rid, paper_ref="10.1000/a", stage=stage, decision="include",
+                reviewer=reviewer,
+            )
+    res = await call("study_overview", review_id=rid)
+    assert res["ok"] is False
+    assert "Multiple reviewers" in res["error"]
+    assert (await call("study_overview", review_id=rid, reviewer="alice"))["report_count"] == 1

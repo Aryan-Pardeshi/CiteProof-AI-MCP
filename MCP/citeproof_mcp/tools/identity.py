@@ -215,6 +215,8 @@ def _register_alias(
     An existing mapping is never overwritten; a disagreeing proposal becomes a
     conflict row instead, so two records are never silently merged.
     """
+    # Point at the end of any recorded chain, so an earlier manual DOI -> PMID never gains a PMID -> DOI cycle.
+    canonical_ref = resolve_ref(conn, canonical_ref)
     row = conn.execute("SELECT canonical_ref FROM paper_aliases WHERE alias = ?", (alias,)).fetchone()
     if row is None:
         conn.execute(
@@ -222,7 +224,7 @@ def _register_alias(
             (alias, canonical_ref, _kind(alias), origin, now),
         )
         return 1
-    if row[0] != canonical_ref:
+    if resolve_ref(conn, row[0]) != canonical_ref:
         _record_conflict(conn, alias, row[0], canonical_ref, origin, now, seen)
     return 0
 
@@ -722,7 +724,9 @@ def study_overview(
     """
     reviewer_clean = reviewer_arg(reviewer) if reviewer is not None and str(reviewer).strip() else None
     with store.review_db(review_id) as conn:
-        included = prisma.included_refs(conn, reviewer_clean)
+        # Fails on several reviewers without consensus, instead of reporting zero inclusions.
+        used = prisma.resolve_reviewer(conn, reviewer_clean)
+        included = prisma.included_refs(conn, used) if used else []
         summary = identity_summary(conn, included)
         included_canonical = {resolve_ref(conn, ref) for ref in included}
         by_outcome: dict[tuple[str, str], dict[str, Any]] = {}
