@@ -218,14 +218,15 @@ DB_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 def normalize_db_name(raw: str) -> str:
     """Normalize a database name to its canonical name."""
     low = raw.strip().lower()
+    # Before the generic "central" check, which would take "PubMed Central".
+    if "pubmed central" in low or low == "pmc":
+        return "PubMed Central"
     if "cochrane" in low or "central" in low:
         return "CENTRAL / Cochrane Library"
     if "clinicaltrials" in low:
         return "ClinicalTrials.gov"
     if "ictrp" in low:
         return "WHO ICTRP"
-    if "pubmed central" in low or low == "pmc":
-        return "PubMed Central"
     if "pubmed" in low:
         return "PubMed"
     if "medline" in low:

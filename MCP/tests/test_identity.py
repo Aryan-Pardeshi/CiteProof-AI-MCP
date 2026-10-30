@@ -497,3 +497,43 @@ async def test_prisma_flow_counts_linked_studies_and_reports() -> None:
     assert "Studies included in review: 2" in flow["diagram"] and "Reports of included studies: 3" in flow["diagram"]
     check = await call("prisma_checklist", review_id=rid, report_text="Two studies were included. 2 studies were included.")
     assert all(n["matches"] for n in check["numbers"] if n["field"] == "studies_included")
+
+
+@pytest.mark.asyncio
+async def test_recall_counts_a_record_without_source_as_unknown() -> None:
+    rid = await _review()
+    await _search(rid, hits=1)
+    papers = [{"id": "r1", "doi": "10.1000/nosource", "title": "Record with no source", "year": 2020}]
+    assert (await call("dedup_papers", papers=papers, review_id=rid))["recorded"] is True
+    await call("recall_seed_record", review_id=rid, paper_refs=["10.1000/nosource"])
+
+    res = await call("recall_check", review_id=rid)
+    assert res["seeds"][0]["status"] == "found"
+    assert res["seeds"][0]["sources"] == ["unknown"]
+    unknown = {s["source"]: s for s in res["per_source"]}["unknown"]
+    assert (unknown["found"], unknown["missed"]) == (1, 0)
+
+
+@pytest.mark.asyncio
+async def test_study_link_is_found_through_a_chain_of_aliases() -> None:
+    rid = await _review()
+    await call("study_link", review_id=rid, study_id="S1", paper_refs=["10.1000/pre"])
+    await call("paper_alias_record", review_id=rid, alias="10.1000/pre", canonical_ref="10.1000/mid")
+    await call("paper_alias_record", review_id=rid, alias="10.1000/mid", canonical_ref="10.1000/pub")
+
+    resolved = await call("paper_resolve", review_id=rid, paper_refs=["10.1000/pub"])
+    assert resolved["refs"][0]["study_id"] == "S1"
+    again = await call("study_link", review_id=rid, study_id="S1", paper_refs=["10.1000/pub"])
+    assert again["unchanged"] == ["10.1000/pub"]
+
+
+@pytest.mark.asyncio
+async def test_unlinked_report_never_shares_a_group_with_a_study_id() -> None:
+    rid = await _review()
+    await call("study_link", review_id=rid, study_id="unlinked:pmid:123", paper_refs=["10.1000/linked"])
+    for ref in ("pmid:123", "10.1000/linked"):
+        await _include(rid, ref)
+
+    overview = await call("study_overview", review_id=rid)
+    assert overview["study_count"] == 2
+    assert [g["reports"] for g in overview["groups"] if g["unlinked"]] == [["pmid:123"]]

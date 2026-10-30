@@ -263,9 +263,13 @@ def _link_rows(conn: sqlite3.Connection, paper_ref: str) -> list[dict[str, Any]]
     raw = store.canonical_paper_ref(paper_ref)
     if raw not in candidates:
         candidates.append(raw)
-    for alias in _aliases_for(conn, canonical):
-        if alias not in candidates:
-            candidates.append(alias)
+    # Every alias that resolves here, including chains such as pre -> mid -> canonical.
+    frontier = [canonical]
+    while frontier:
+        for alias in _aliases_for(conn, frontier.pop()):
+            if alias not in candidates:
+                candidates.append(alias)
+                frontier.append(alias)
     rows: list[dict[str, Any]] = []
     for candidate in candidates:
         row = conn.execute(
@@ -317,7 +321,8 @@ def identity_summary(conn: sqlite3.Connection, included_refs: list[str]) -> dict
     for ref in included_refs:
         canonical = resolve_ref(conn, ref)
         study_id = study_of(conn, canonical)
-        key = study_id if study_id is not None else f"unlinked:{canonical}"
+        # Tuple keys, so an unlinked report never shares a group with a study_id like 'unlinked:x'.
+        key = ("study", study_id) if study_id is not None else ("unlinked", canonical)
         group = groups.setdefault(
             key,
             {"study_id": study_id if study_id is not None else canonical, "unlinked": study_id is None, "reports": []},
@@ -926,7 +931,7 @@ def recall_check(review_id: ReviewId) -> dict[str, Any]:
                 else:
                     status = "not_found"
             counts[status] += 1
-            sources = sorted({r["source"] for r in matched if r["source"]})
+            sources = sorted({r["source"] or "unknown" for r in matched})
             matched_rows, cut_m = cap(matched, 50)
             outcomes.append(
                 {

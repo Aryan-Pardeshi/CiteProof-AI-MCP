@@ -121,7 +121,9 @@ def build_overview(conn: sqlite3.Connection, reviewer: str | None) -> dict[str, 
         steps["protocol"].append(f"Complete the protocol with protocol_record: {', '.join(proto['missing_required'])}.")
     if status_error:
         warnings.append(status_error)
-        steps["title_abstract_screening"].append("Record consensus screening decisions under reviewer 'primary'.")
+        # Consensus is refused at an open blind stage; the close step below comes first.
+        if not open_stages:
+            steps["title_abstract_screening"].append("Record consensus screening decisions under reviewer 'primary'.")
     if status is not None:
         warnings.extend(status["warnings"])
         warnings.extend(status["invariant_errors"])

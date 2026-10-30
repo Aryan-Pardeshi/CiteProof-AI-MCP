@@ -661,3 +661,18 @@ async def test_blind_mode_is_refused_once_a_stage_has_decisions() -> None:
         "screening_stage_set", review_id=rid, stage="full_text", mode="blind", reviewers=["alice", "bob", "carol"]
     )
     assert again["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_status_does_not_ask_for_consensus_while_the_stage_is_blind() -> None:
+    rid = (await call("review_create", title="Blind order", question="Q?"))["review_id"]
+    await call("screening_stage_set", review_id=rid, stage="title_abstract", mode="blind", reviewers=["alice", "bob"])
+    rec = await call(
+        "screening_record", review_id=rid, paper_ref="10.1000/a", stage="title_abstract", decision="include",
+        reviewer="alice",
+    )
+    assert rec["ok"] is True, rec
+
+    steps = (await call("review_status", review_id=rid))["next_steps"]
+    assert not any("consensus" in s for s in steps), steps
+    assert any("screening_stage_close" in s for s in steps)

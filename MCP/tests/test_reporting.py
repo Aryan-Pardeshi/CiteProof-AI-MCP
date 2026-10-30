@@ -700,6 +700,8 @@ def test_pubmed_central_is_not_pubmed() -> None:
     both = {d["name"] for d in reporting.find_named_databases("We searched PubMed Central and PubMed.")}
     assert both == {"PubMed Central", "PubMed"}
     assert reporting.normalize_db_name("PMC") == "PubMed Central"
+    assert reporting.normalize_db_name("PubMed Central") == "PubMed Central"
+    assert reporting.normalize_db_name("Cochrane CENTRAL") == "CENTRAL / Cochrane Library"
     assert reporting.normalize_db_name("PubMed") == "PubMed"
 
 
