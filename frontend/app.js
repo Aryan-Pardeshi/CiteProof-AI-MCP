@@ -301,7 +301,8 @@ function rmDedupeSections(md) {
         if (/^##\s/.test(part)) {
             inFramework = /^##\s*(?:\d+\.\s*)?conceptual\s+framework/i.test(part);
         }
-        if (inFramework && (/integration of (?:identified )?methodological gaps/i.test(part) || /^###\s*(?:\d+\.\s*)?methodological gaps/i.test(part))) {
+        // Match only a repeated subsection heading, so framework prose that mentions gaps stays.
+        if (inFramework && /^###\s*(?:[\d.]+\s*)?(?:integration of (?:identified )?)?methodological gaps/i.test(part)) {
             return false;
         }
         const key = part.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -2674,27 +2675,9 @@ async function openRMEventStream(message, onConnected = null) {
                             });
                             isTerminal = true;
                             break;
-                        } else if (statusData.completed) {
-                            // Backend finished while we were disconnected — sync final state
-                            try {
-                                const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
-                                if (syncRes.ok) {
-                                    const syncData = await syncRes.json();
-                                    if (syncData.values) applyRMStatePayload(syncData.values);
-                                    if (syncData.report_rejected) {
-                                        processRMSEEvent({ event: 'error', message: syncData.message });
-                                    } else if (syncData.is_checkpoint) {
-                                        const cp = (syncData.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
-                                        renderRMHitlPanel(cp);
-                                    } else if (!syncData.next || syncData.next.length === 0) {
-                                        renderRMPaperFinal();
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn('RM result sync failed:', e);
-                            }
-                            break;
                         }
+                        // completed: the backend finished while we were disconnected; the
+                        // result sync below renders it and retries if that sync fails.
                     }
                 } catch (e) {
                     console.warn('Pipeline status check failed:', e);

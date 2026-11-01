@@ -628,13 +628,16 @@ _REVIEW_DESIGN_RE = re.compile(
     r"umbrella review|literature review|narrative review)\b",
     re.IGNORECASE,
 )
-_PRIOR_WORDS = r"(?!(?:prior|previous|recent|earlier|published|existing|latest|other)\b)"
-# "Methods: A systematic review of 18 trials was performed" declares the design too.
+_REVIEW_KIND = r"(?:systematic review|meta-?analysis|scoping review|umbrella review)"
+# Only design adjectives, so "A recent review..." or "Following a meta-analysis protocol" do not match.
+_REVIEW_ADJ = r"(?:(?:updated|living|comprehensive|rapid|network|bayesian|cumulative|dose-response)\s+){0,2}"
+# "Methods: A systematic review of 18 trials was performed" declares the design too. An opening
+# sentence counts only when it says the review was done, since RCT abstracts often open by citing one.
 _DECLARED_REVIEW_RE = re.compile(
-    r"\b(?:methods?|design|study design|type of study)\s*:\s*(?:a|an)?\s*(?:\w+\s+){0,2}?"
-    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b"
-    r"|^\s*(?:a|an)\s+" + _PRIOR_WORDS + r"(?:\w+\s+){0,2}?"
-    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\s+(?:of|was|were)\b",
+    r"\b(?:methods?|design|study design|type of study)\s*:\s*"
+    r"(?:we\s+(?:conducted|performed|undertook|carried out)\s+)?(?:(?:a|an)\s+)?" + _REVIEW_ADJ + _REVIEW_KIND + r"\b"
+    r"|^\s*(?:a|an)\s+" + _REVIEW_ADJ + _REVIEW_KIND
+    + r"\b[^.]{0,160}?\b(?:was|were)\s+(?:performed|conducted|undertaken|carried out)\b",
     re.IGNORECASE,
 )
 _SELF_REVIEW_RE = re.compile(
