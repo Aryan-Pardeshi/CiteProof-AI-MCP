@@ -573,9 +573,11 @@ async def get_pipeline_status(thread_id: str):
     elif outcome is None:
         values = state.values if has_state else {}
         finished = not bool(getattr(state, "next", None)) and values.get("status") == "completed"
+        # A finished graph whose paper fails the report guard is a failure, as on the stream.
+        rejected = finished and not research_paper_is_valid(values)
         outcome = (
             "checkpoint" if is_checkpoint
-            else "completed" if finished
+            else "completed" if finished and not rejected
             else "failed"
         )
 

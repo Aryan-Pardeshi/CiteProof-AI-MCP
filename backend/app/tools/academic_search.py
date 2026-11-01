@@ -628,6 +628,15 @@ _REVIEW_DESIGN_RE = re.compile(
     r"umbrella review|literature review|narrative review)\b",
     re.IGNORECASE,
 )
+_PRIOR_WORDS = r"(?!(?:prior|previous|recent|earlier|published|existing|latest|other)\b)"
+# "Methods: A systematic review of 18 trials was performed" declares the design too.
+_DECLARED_REVIEW_RE = re.compile(
+    r"\b(?:methods?|design|study design|type of study)\s*:\s*(?:a|an)?\s*(?:\w+\s+){0,2}?"
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b"
+    r"|^\s*(?:a|an)\s+" + _PRIOR_WORDS + r"(?:\w+\s+){0,2}?"
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\s+(?:of|was|were)\b",
+    re.IGNORECASE,
+)
 _SELF_REVIEW_RE = re.compile(
     r"\b(?:this|the present|the current|our)\s+(?:\w+\s+){0,2}"
     r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b"
@@ -640,7 +649,8 @@ _SELF_REVIEW_RE = re.compile(
 # Wording that widens the design scope beyond randomised trials.
 _NON_RCT_ALLOWED_RE = re.compile(
     r"quasi|non-?randomi[sz]ed|observational|cohort|case[- ]control|cross-sectional|"
-    r"open-label|real-world|and/or|\bor other\b|\bincluding\b|\bsuch as\b|\bany (?:study|design)\b",
+    r"open-label|real-world|and/or|\bor other (?:study |trial )?(?:designs?|studies|trials)\b|"
+    r"\bany (?:study |trial )?designs?\b",
     re.IGNORECASE,
 )
 
@@ -674,6 +684,7 @@ def _excluded_by_study_design(paper: PaperRecord, requires_rcts: bool) -> bool:
     return bool(
         _REVIEW_DESIGN_RE.search(str(paper.title or ""))
         or _SELF_REVIEW_RE.search(str(paper.abstract or "")[:400])
+        or _DECLARED_REVIEW_RE.search(str(paper.abstract or "")[:400])
     )
 
 

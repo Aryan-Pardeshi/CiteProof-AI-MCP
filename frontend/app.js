@@ -2703,10 +2703,12 @@ async function openRMEventStream(message, onConnected = null) {
 
             // Fallback sync if stream ended cleanly without a terminal event
             // (regardless of whether we received some events before the disconnect)
+            let resultSynced = false;
             if (!isTerminal && state.rm.threadId) {
                 try {
                     const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
                     if (syncRes.ok) {
+                        resultSynced = true;
                         const syncData = await syncRes.json();
                         if (syncData.values) applyRMStatePayload(syncData.values);
                         if (syncData.report_rejected) {
@@ -2726,7 +2728,7 @@ async function openRMEventStream(message, onConnected = null) {
                 }
             }
 
-            if (!isTerminal && !statusConfirmed && attempt < maxRetries) {
+            if (!isTerminal && (!statusConfirmed || !resultSynced) && attempt < maxRetries) {
                 // The server never confirmed the run's state (status call failed), so
                 // the run may still be executing. Keep reconnecting instead of
                 // reporting a failure the server has not reported.

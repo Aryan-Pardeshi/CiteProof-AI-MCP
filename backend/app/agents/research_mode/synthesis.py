@@ -176,6 +176,7 @@ async def hypotheses_agent(state: dict[str, Any]) -> dict[str, Any]:
     numeric_claims_count = sum(
         1 for r in evidence_records
         if num_pattern.search(str(r.get("claim_summary", "")) + " " + str(r.get("exact_quote", "")))
+        or (r.get("baseline_value") is not None and r.get("reported_value") is not None)
     )
 
     evidence_constraints = f"""

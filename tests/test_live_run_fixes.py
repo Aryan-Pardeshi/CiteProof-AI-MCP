@@ -238,3 +238,21 @@ def test_fulltext_count_ignores_excluded_papers(monkeypatch):
     result = asyncio.run(screening.fulltext_eligibility_agent({"paper_records": papers}))
     assert result["corpus_stats"]["fulltext_fetched"] == 1
     assert "fulltext_excerpt" not in result["paper_records"][1]
+
+
+def test_rct_gate_wording_and_declared_reviews():
+    from backend.app.tools.academic_search import (
+        _excluded_by_study_design,
+        _protocol_requires_rcts,
+    )
+
+    assert _protocol_requires_rcts(
+        {"inclusion_criteria": ["Randomized controlled trials including adults with insomnia"]}
+    )
+    assert not _protocol_requires_rcts(
+        {"inclusion_criteria": ["Randomized trials or other study designs"]}
+    )
+    declared = _paper("Insomnia treatment outcomes", "Methods: A systematic review of 18 trials was performed.")
+    cites_prior = _paper("CBT-I trial", "A recent systematic review of 20 trials found mixed results. We randomized 90 adults.")
+    assert _excluded_by_study_design(declared, True)
+    assert not _excluded_by_study_design(cites_prior, True)
