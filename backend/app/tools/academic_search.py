@@ -595,6 +595,37 @@ def _is_protocol_without_results(paper: PaperRecord) -> bool:
     return not _PROTOCOL_RESULTS_RE.search(abstract)
 
 
+_RCT_ONLY_RE = re.compile(r"\brandomi[sz]ed\b|\brandomi[sz]ation\b|\brcts?\b", re.IGNORECASE)
+_REVIEW_DESIGN_RE = re.compile(
+    r"\b(?:systematic review|meta-?analysis|network meta-?analysis|scoping review|"
+    r"umbrella review|literature review|narrative review)\b",
+    re.IGNORECASE,
+)
+
+
+def _protocol_requires_rcts(protocol: Any | None) -> bool:
+    """True when the approved protocol restricts inclusion to randomised trials."""
+    return bool(_RCT_ONLY_RE.search(" ".join(_protocol_list(protocol, "inclusion_criteria"))))
+
+
+def _excluded_by_study_design(paper: PaperRecord, requires_rcts: bool) -> bool:
+    """Deterministic design gate: a review is not an RCT, however relevant.
+
+    Relevance screening alone admitted a network meta-analysis and a systematic
+    review into an RCT-only corpus. Title/abstract design labels are reliable
+    for reviews, and ``study_type`` is set by retrieval when known.
+    """
+    if not requires_rcts:
+        return False
+    study_type = str(getattr(paper, "study_type", "") or "").lower()
+    if "review" in study_type or "meta-analysis" in study_type or "meta analysis" in study_type:
+        return True
+    return bool(
+        _REVIEW_DESIGN_RE.search(str(paper.title or ""))
+        or _REVIEW_DESIGN_RE.search(str(paper.abstract or "")[:400])
+    )
+
+
 def _screen_batch_timeout_seconds() -> float:
     """Per-batch LLM timeout, overridable by SCREEN_BATCH_TIMEOUT_SECONDS."""
     raw = os.getenv("SCREEN_BATCH_TIMEOUT_SECONDS", "").strip()
@@ -806,7 +837,9 @@ async def screen_papers_structured(
         logger.info(f"Excluding {retracted_count} retracted papers before title/abstract screening.")
 
     protocol_excluded_papers: list[PaperRecord] = []
+    design_excluded_papers: list[PaperRecord] = []
     screenable: list[PaperRecord] = []
+    requires_rcts = _protocol_requires_rcts(protocol)
     for p in papers:
         if getattr(p, "is_retracted", False) is True:
             continue
@@ -815,18 +848,30 @@ async def screen_papers_structured(
             p.exclusion_reason = "Protocol without reported results"
             protocol_excluded_papers.append(p)
             continue
+        if _excluded_by_study_design(p, requires_rcts):
+            p.screening_status = "excluded"
+            p.exclusion_reason = "Study design does not match protocol (RCTs only)"
+            design_excluded_papers.append(p)
+            continue
         screenable.append(p)
 
     protocol_excluded_count = len(protocol_excluded_papers)
+    design_excluded_count = len(design_excluded_papers)
     if protocol_excluded_count:
         logger.info(
             f"Excluding {protocol_excluded_count} study protocols without reported results "
             "before relevance screening."
         )
+    if design_excluded_count:
+        logger.info(
+            f"Excluding {design_excluded_count} reviews/meta-analyses: the protocol is RCT-only."
+        )
 
     if len(papers) <= SCREEN_THRESHOLD:
         tr.records_screened = len(papers)
-        tr.excluded_title_abstract = retracted_count + protocol_excluded_count
+        tr.excluded_title_abstract = (
+            retracted_count + protocol_excluded_count + design_excluded_count
+        )
         tr.full_text_requested = len(screenable)
         tr.full_text_assessed = len(screenable)
         tr.studies_included = len(screenable)
@@ -837,9 +882,14 @@ async def screen_papers_structured(
             copied_papers.append(p_copy)
         if protocol_excluded_count:
             tr.exclusion_reasons["Protocol without reported results"] = protocol_excluded_count
+        if design_excluded_count:
+            tr.exclusion_reasons["Study design does not match protocol (RCTs only)"] = design_excluded_count
         if retracted_count:
             tr.exclusion_reasons["Retracted publication"] = retracted_count
-        return copied_papers + protocol_excluded_papers + retracted_papers, tr
+        return (
+            copied_papers + protocol_excluded_papers + design_excluded_papers + retracted_papers,
+            tr,
+        )
 
     candidates = _select_candidates(
         screenable,
@@ -999,6 +1049,7 @@ async def screen_papers_structured(
         + unscreened_surplus
         + retracted_count
         + protocol_excluded_count
+        + design_excluded_count
     )
     tr.full_text_requested = len(included)
     tr.full_text_assessed = len(included)
@@ -1010,6 +1061,8 @@ async def screen_papers_structured(
         tr.exclusion_reasons["Not screened: candidate pool limit"] = unscreened_surplus
     if protocol_excluded_count:
         tr.exclusion_reasons["Protocol without reported results"] = protocol_excluded_count
+    if design_excluded_count:
+        tr.exclusion_reasons["Study design does not match protocol (RCTs only)"] = design_excluded_count
     if retracted_count:
         tr.exclusion_reasons["Retracted publication"] = retracted_count
 
@@ -1017,11 +1070,13 @@ async def screen_papers_structured(
         f"Screening complete: {len(included)} included ({len(top_up)} via top-up, "
         f"{len(guaranteed)} via source-guarantee), {len(excluded_scored)} scored exclusions, "
         f"{len(unscored_papers)} unscored, {unscreened_surplus} not screened (candidate pool limit), "
-        f"{protocol_excluded_count} protocols, {retracted_count} retracted."
+        f"{protocol_excluded_count} protocols, {design_excluded_count} non-RCT designs, "
+        f"{retracted_count} retracted."
     )
     return (
         included
         + protocol_excluded_papers
+        + design_excluded_papers
         + retracted_papers
     ), tr
 

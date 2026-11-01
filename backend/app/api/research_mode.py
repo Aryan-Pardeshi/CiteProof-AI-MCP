@@ -15,6 +15,7 @@ from langgraph.types import Command
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
+from backend.app.agents.research_mode.planning import clean_scope_items
 from backend.app.agents.research_mode.writing import EV_MARKER_RE
 
 # Resolved lazily rather than importing the compiled graph: lifespan recompiles it
@@ -180,12 +181,15 @@ def _resolve_checkpoint_state(state) -> tuple[bool, str | None]:
     return False, None
 
 
-async def _execute_research_graph(thread_id: str, message: str):
+async def _execute_research_graph(thread_id: str, message: str | None):
     config = {"configurable": {"thread_id": thread_id}}
     graph = get_research_mode_graph()
     buf = thread_buffers.get(thread_id)
     if buf:
         buf["completed"] = False
+        buf["outcome"] = "running"
+        buf["error"] = None
+        buf["updated_at"] = time.time()
 
     try:
         resume_payload = {
@@ -194,8 +198,11 @@ async def _execute_research_graph(thread_id: str, message: str):
         }
         await _broadcast_event(thread_id, resume_payload, is_node_event=True)
 
+        # message=None retries from the last durable checkpoint instead of
+        # resuming an interrupt; used by the failed-run Retry action.
+        graph_input = Command(resume={"message": message}) if message is not None else None
         async for event in graph.astream_events(
-            Command(resume={"message": message}),
+            graph_input,
             config=config,
             version="v2",
         ):
@@ -326,6 +333,13 @@ async def _execute_research_graph(thread_id: str, message: str):
         if buf:
             buf["completed"] = is_completed
             buf["report_rejected"] = report_rejected
+            buf["hitl_checkpoint"] = hitl_checkpoint or values.get("hitl_checkpoint")
+            buf["outcome"] = (
+                "failed" if report_rejected
+                else "completed" if is_completed
+                else "checkpoint" if is_checkpoint
+                else "running"
+            )
 
     except Exception:
         logger.exception("SSE Error in Research Mode approve")
@@ -336,6 +350,8 @@ async def _execute_research_graph(thread_id: str, message: str):
         await _broadcast_event(thread_id, error_payload, is_node_event=True)
         if buf:
             buf["completed"] = True
+            buf["outcome"] = "failed"
+            buf["error"] = "Research Mode run failed. Check the server logs for details."
     finally:
         current_task = asyncio.current_task()
         if active_research_tasks.get(thread_id) == current_task:
@@ -360,8 +376,8 @@ async def start_research_mode(request: ResearchModeStartRequest):
         "thread_id": thread_id,
         "mode": "research",
         "problem_statement": request.problem_statement,
-        "research_objectives": request.research_objectives or [],
-        "research_questions": request.research_questions or [],
+        "research_objectives": clean_scope_items(request.research_objectives, []),
+        "research_questions": clean_scope_items(request.research_questions, []),
         "keywords": [],
         "raw_papers": [],
         "screened_papers": [],
@@ -388,8 +404,8 @@ async def start_research_mode(request: ResearchModeStartRequest):
         return {
             "thread_id": thread_id,
             "problem_statement": values.get("problem_statement"),
-            "research_objectives": values.get("research_objectives"),
-            "research_questions": values.get("research_questions"),
+            "research_objectives": clean_scope_items(values.get("research_objectives"), []),
+            "research_questions": clean_scope_items(values.get("research_questions"), []),
             "keywords": values.get("keywords"),
             "hitl_checkpoint": values.get("hitl_checkpoint", "checkpoint_1"),
             "status": values.get("status", "awaiting_approval"),
@@ -443,13 +459,33 @@ async def approve_research_mode(
     buf = thread_buffers[thread_id]
 
     task = buf.get("task")
-    need_new_task = False
-    if task is None or task.done():
-        events_count = len(buf.get("events", []))
-        if not buf.get("completed") or from_seq is None or from_seq >= events_count:
-            need_new_task = True
+    running = task is not None and not task.done()
+    already_finished = (
+        buf.get("completed")
+        and from_seq is not None
+        and from_seq < len(buf.get("events", []))
+    )
+    if buf.get("outcome") == "failed" and not running:
+        # Resuming a dead graph would silently do nothing (or replay the
+        # failure); the run needs the explicit retry path instead.
+        raise HTTPException(
+            status_code=409,
+            detail="This run failed. Use Retry from last checkpoint.",
+        )
+
+    need_new_task = not running and not already_finished
 
     if need_new_task:
+        graph = get_research_mode_graph()
+        state = await graph.aget_state({"configurable": {"thread_id": thread_id}})
+        if not state or not state.values:
+            # A different worker (or a restarted process) has no state for this
+            # thread. Starting a task here would fail silently after the UI had
+            # already hidden the gate. Tell the client so it can recover.
+            raise HTTPException(
+                status_code=404,
+                detail="This research run is no longer available on the server.",
+            )
         new_task = asyncio.create_task(_execute_research_graph(thread_id, request.message))
         buf["task"] = new_task
         active_research_tasks[thread_id] = new_task
@@ -500,23 +536,106 @@ async def approve_research_mode(
 @router.get("/research-mode/pipeline-status/{thread_id}")
 @router.get("/research/mode/pipeline-status/{thread_id}")
 async def get_pipeline_status(thread_id: str):
-    """PROXY ERROR HANDLING:
-    Lightweight endpoint for the frontend to poll whether the backend task is still alive.
-    Returns running=True if the asyncio task for this thread is running, and completed=True
-    if it has finished. Used by the frontend when the SSE connection drops mid-execution.
+    """Authoritative run status for clients whose SSE stream ended.
+
+    The single source of truth is the graph checkpoint plus the in-process task;
+    the event buffer only supplies counters. ``outcome`` is what the UI keys on:
+    running / checkpoint / completed / failed.
     """
     valid_id = _validate_thread_id(thread_id)
     buf = thread_buffers.get(valid_id)
-    if not buf:
-        return {"running": False, "completed": False, "events_count": 0}
-    task = buf.get("task")
+    graph = get_research_mode_graph()
+    state = await graph.aget_state({"configurable": {"thread_id": valid_id}})
+    has_state = bool(state and state.values)
+
+    if not buf and not has_state:
+        return {
+            "running": False,
+            "completed": False,
+            "failed": True,
+            "available": False,
+            "outcome": "failed",
+            "error": "This research run is no longer available on the server.",
+            "events_count": 0,
+        }
+
+    is_checkpoint, hitl_checkpoint = (
+        _resolve_checkpoint_state(state) if has_state else (False, None)
+    )
+    task = buf.get("task") if buf else None
     running = task is not None and not task.done()
+
+    outcome = (buf or {}).get("outcome")
+    if running:
+        outcome = "running"
+    elif outcome is None:
+        values = state.values if has_state else {}
+        finished = not bool(getattr(state, "next", None)) and values.get("status") == "completed"
+        outcome = (
+            "checkpoint" if is_checkpoint
+            else "completed" if finished
+            else "failed"
+        )
+
+    error = (buf or {}).get("error")
+    if outcome == "failed" and not error:
+        error = REPORT_REJECTED_MESSAGE if (buf or {}).get("report_rejected") else (
+            "Research Mode run failed. Check the server logs for details."
+        )
+
     return {
         "running": running,
-        "completed": buf.get("completed", False),
-        "report_rejected": buf.get("report_rejected", False),
-        "events_count": len(buf.get("events", []))
+        "completed": outcome == "completed",
+        "failed": outcome == "failed",
+        "outcome": outcome,
+        "hitl_checkpoint": hitl_checkpoint or (buf or {}).get("hitl_checkpoint"),
+        "error": error,
+        "report_rejected": (buf or {}).get("report_rejected", False),
+        "events_count": len((buf or {}).get("events", [])),
     }
+
+
+@router.post("/research-mode/retry/{thread_id}")
+@router.post("/research/mode/retry/{thread_id}")
+async def retry_research_mode(thread_id: str):
+    """Continue a failed run from its last graph checkpoint.
+
+    The evidence and hypotheses produced before the failure are already in the
+    checkpoint, so a retry resumes the remaining nodes instead of paying for the
+    whole run again.
+    """
+    valid_id = _validate_thread_id(thread_id)
+    prune_old_buffers()
+    buf = thread_buffers.setdefault(valid_id, {
+        "events": [],
+        "task": None,
+        "updated_at": time.time(),
+        "completed": False,
+        "listeners": set(),
+    })
+    task = buf.get("task")
+    if task is not None and not task.done():
+        return {"started": False, "reason": "already_running"}
+
+    graph = get_research_mode_graph()
+    state = await graph.aget_state({"configurable": {"thread_id": valid_id}})
+    if not state or not state.values:
+        raise HTTPException(
+            status_code=404,
+            detail="This research run is no longer available on the server.",
+        )
+    if not state.next and state.values.get("status") == "completed":
+        raise HTTPException(status_code=409, detail="This run already completed.")
+
+    buf["completed"] = False
+    buf["report_rejected"] = False
+    buf["error"] = None
+    buf["outcome"] = "running"
+    buf["updated_at"] = time.time()
+    new_task = asyncio.create_task(_execute_research_graph(valid_id, None))
+    buf["task"] = new_task
+    active_research_tasks[valid_id] = new_task
+    return {"started": True, "thread_id": valid_id}
 
 
 @router.get("/research-mode/result/{thread_id}")
@@ -547,6 +666,22 @@ async def get_research_mode_result(thread_id: str):
         "hitl_checkpoint": hitl_checkpoint,
         "status": values.get("status")
     }
+    buf = thread_buffers.get(valid_id) or {}
+    task = buf.get("task")
+    running = task is not None and not task.done()
+    outcome = buf.get("outcome") if not running else "running"
+    if not running and outcome is None:
+        outcome = (
+            "checkpoint" if is_checkpoint
+            else "completed" if is_completed
+            else "failed" if values.get("error")
+            else "running"
+        )
+    result["running"] = running
+    result["outcome"] = outcome
+    result["failed"] = outcome == "failed"
+    if result["failed"]:
+        result["message"] = buf.get("error") or REPORT_REJECTED_MESSAGE
     if report_rejected:
         result["message"] = REPORT_REJECTED_MESSAGE
     return result

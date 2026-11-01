@@ -31,6 +31,22 @@ class ScopeRevisionOutput(BaseModel):
     keywords: list[str] = Field(default_factory=list, description="Updated search queries")
 
 
+def _item_text(item: Any) -> str:
+    """Coerce one scope item to non-empty text; models sometimes return objects."""
+    if isinstance(item, dict):
+        for key in ("text", "objective", "question", "content", "statement"):
+            if isinstance(item.get(key), str) and item[key].strip():
+                return item[key].strip()
+        item = next((v for v in item.values() if isinstance(v, str)), "")
+    return str(item or "").strip()
+
+
+def clean_scope_items(items: Any, fallback: list[str]) -> list[str]:
+    """Drop blank/object-shaped items so a checkpoint can never show only 'O1'."""
+    cleaned = [text for text in (_item_text(i) for i in (items or [])) if text]
+    return cleaned[:5] or fallback
+
+
 async def scope_definition_agent(state: dict[str, Any]) -> dict[str, Any]:
     """Agent 1: Refines user problem statement and extracts research objectives and questions."""
     ps = state.get("problem_statement", "")
@@ -48,8 +64,12 @@ Topic:
         )
         return {
             "problem_statement": data.refined_problem_statement or ps,
-            "research_objectives": data.research_objectives or [f"Investigate core dimensions of {ps}"],
-            "research_questions": data.research_questions or [f"What are the empirical impacts of {ps}?"],
+            "research_objectives": clean_scope_items(
+                data.research_objectives, [f"Investigate core dimensions of {ps}"]
+            ),
+            "research_questions": clean_scope_items(
+                data.research_questions, [f"What are the empirical impacts of {ps}?"]
+            ),
             "status": "in_progress"
         }
     except Exception as e:  # noqa: BLE001
@@ -65,7 +85,7 @@ Topic:
 async def protocol_agent(state: dict[str, Any]) -> dict[str, Any]:
     """Agent 2: Formulates PICOC framework, inclusion/exclusion criteria, and search strategy."""
     ps = state.get("problem_statement", "")
-    objs = state.get("research_objectives", [])
+    objs = clean_scope_items(state.get("research_objectives"), [])
     llm = get_llm_for("planner", state, temperature=0.1)
 
     prompt = f"""You are an expert Systematic Review Methodologist adhering to PRISMA 2020 protocols.
@@ -147,7 +167,7 @@ Revise the research plan incorporating the user's specific feedback.
         )
         return {
             "problem_statement": out.problem_statement or ps,
-            "research_objectives": out.research_objectives or objs,
+            "research_objectives": clean_scope_items(out.research_objectives, objs),
             "keywords": out.keywords or kws,
             "hitl_checkpoint": "checkpoint_1",
             "status": "awaiting_approval"

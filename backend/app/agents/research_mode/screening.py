@@ -66,9 +66,13 @@ async def fulltext_eligibility_agent(state: dict[str, Any]) -> dict[str, Any]:
                 p["fulltext_excerpt"] = p["content_excerpt"]
         
         enriched_all = enriched_selected + screened_papers[15:]
+        fetched = sum(1 for p in enriched_all if (p.get("fulltext_excerpt") or "").strip())
         return {
             "paper_records": enriched_all,
             "screened_papers": enriched_all,
+            # Merge rather than replace: corpus_stats is the PRISMA counters block,
+            # and overwriting it here wiped retrieved/screened/included.
+            "corpus_stats": {**(state.get("corpus_stats") or {}), "fulltext_fetched": fetched},
         }
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Full-text fetching encountered error: {e}")

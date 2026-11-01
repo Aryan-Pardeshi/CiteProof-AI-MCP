@@ -1806,6 +1806,25 @@ body.cp-app .rm-hitl-panel {
   margin-bottom: var(--cp-space-6);
 }
 
+body.cp-app .rm-failure-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-space-4);
+  background: var(--cp-accent-red-tint);
+  color: var(--cp-error);
+  border-radius: var(--cp-radius-md);
+  padding: var(--cp-space-4) var(--cp-space-6);
+  margin-bottom: var(--cp-space-6);
+}
+
+body.cp-app .rm-failure-banner span {
+  display: block;
+  font-size: 13px;
+  color: var(--cp-muted);
+  margin-top: 2px;
+}
+
 body.cp-app .hitl-title-group {
   display: flex;
   align-items: center;
