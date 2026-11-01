@@ -43,31 +43,16 @@ async def paper_screener_agent(state: dict[str, Any]) -> dict[str, Any]:
                 "batches_done": batches_done,
                 "total_batches": total_batches,
             }, is_node_event=False)
-        except Exception:
-            pass
-
-    screen_kwargs: dict[str, Any] = {
-        "tracker": tracker,
-        "protocol": state.get("search_protocol"),
-    }
-    try:
-        import inspect
-        target_fn = screen_papers_structured
-        if hasattr(target_fn, "side_effect") and callable(target_fn.side_effect):
-            target_fn = target_fn.side_effect
-        sig = inspect.signature(target_fn)
-        if "on_progress" in sig.parameters or any(
-            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
-        ):
-            screen_kwargs["on_progress"] = _on_screening_progress
-    except Exception:
-        pass
+        except Exception as exc:  # noqa: BLE001 - progress is best effort
+            logger.debug(f"screening_progress broadcast skipped: {exc}")
 
     screened_records, updated_tracker = await screen_papers_structured(
         records,
         ps,
         objs,
-        **screen_kwargs,
+        tracker=tracker,
+        protocol=state.get("search_protocol"),
+        on_progress=_on_screening_progress,
     )
     dict_screened = [r.model_dump() for r in screened_records]
 
@@ -154,10 +139,17 @@ Return a valid JSON array with schema:
 
         for idx, p in enumerate(sample):
             ev = eval_map.get(idx + 1)
+            has_ft = bool((p.get("fulltext_excerpt") or "").strip())
             if ev:
                 p["study_type"] = ev.get("study_type", "empirical")
                 p["quality_rating"] = ev.get("quality_rating", "Medium")
-                p["quality_rubric"] = {"appraisal_notes": ev.get("quality_notes", "")}
+                notes = ev.get("quality_notes", "")
+                if not has_ft and "abstract" not in notes.lower():
+                    notes = f"{notes} (Appraised from abstract only; full text unavailable)".strip()
+                p["quality_rubric"] = {
+                    "appraisal_notes": notes,
+                    "appraisal_basis": "Full text" if has_ft else "Abstract only",
+                }
 
     except Exception as e:  # noqa: BLE001
         logger.warning(f"quality_appraisal JSON parse defaulted: {e}")

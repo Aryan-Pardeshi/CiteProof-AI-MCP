@@ -243,7 +243,7 @@ Return a valid JSON array of strings:
         hyp_list = lines if lines else [
             f"H1: Active interventions yield significant improvements in primary outcomes for {ps[:50]}.",
             f"H2: Comparative intervention efficacy differs across delivery formats in {ps[:50]}.",
-            f"H3: Treatment response is maintained at follow-up assessments across evaluated studies."
+            "H3: Treatment response is maintained at follow-up assessments across evaluated studies."
         ]
 
     # Copy papers cleanly without injecting synthetic modulo ratings

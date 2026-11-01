@@ -959,8 +959,8 @@ async def screen_papers_structured(
                     p_res = on_progress(screened_candidates, len(candidates), completed_batches, len(batches))
                     if asyncio.iscoroutine(p_res):
                         await p_res
-                except Exception:
-                    pass
+                except Exception as exc:  # noqa: BLE001 - progress is best effort
+                    logger.debug(f"screening progress callback failed: {exc}")
         return res
 
     tasks = [_run_batch(i, b) for i, b in enumerate(batches)]

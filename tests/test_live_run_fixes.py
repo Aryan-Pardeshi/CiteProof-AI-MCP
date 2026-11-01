@@ -184,7 +184,7 @@ def test_research_design_template_selection_clinical(monkeypatch):
         "search_protocol": {"intervention": "CBT-I", "population": "Adult insomnia"},
     }
 
-    res = asyncio.run(writing.research_design_agent(state))
+    asyncio.run(writing.research_design_agent(state))
     assert len(captured_prompt) == 1
     assert "Study Design & Methodological Framework" in captured_prompt[0]
     assert "PICO Framework" in captured_prompt[0]
