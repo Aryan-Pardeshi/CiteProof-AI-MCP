@@ -302,7 +302,7 @@ function rmDedupeSections(md) {
             inFramework = /^##\s*(?:\d+\.\s*)?conceptual\s+framework/i.test(part);
         }
         // Match only a repeated subsection heading, so framework prose that mentions gaps stays.
-        if (inFramework && /^###\s*(?:[\d.]+\s*)?(?:integration of (?:identified )?)?methodological gaps/i.test(part)) {
+        if (inFramework && /^###\s*(?:[\d.]+\s*)?(?:integration of (?:identified )?)?methodological gaps\s*(?:\r?\n|$)/i.test(part)) {
             return false;
         }
         const key = part.replace(/\s+/g, ' ').trim().toLowerCase();

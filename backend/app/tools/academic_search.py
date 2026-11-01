@@ -628,7 +628,11 @@ _REVIEW_DESIGN_RE = re.compile(
     r"umbrella review|literature review|narrative review)\b",
     re.IGNORECASE,
 )
-_REVIEW_KIND = r"(?:systematic review|meta-?analysis|scoping review|umbrella review)"
+# The lookahead skips "meta-analysis protocol/guidelines", which an RCT can name without being a review.
+_REVIEW_KIND = (
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)"
+    r"(?!\s+(?:protocols?|guidelines?|framework|methods?|approach|software)\b)"
+)
 # Only design adjectives, so "A recent review..." or "Following a meta-analysis protocol" do not match.
 _REVIEW_ADJ = r"(?:(?:updated|living|comprehensive|rapid|network|bayesian|cumulative|dose-response)\s+){0,2}"
 # "Methods: A systematic review of 18 trials was performed" declares the design too. An opening

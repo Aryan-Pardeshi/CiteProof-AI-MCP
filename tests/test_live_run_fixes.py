@@ -262,3 +262,8 @@ def test_rct_gate_wording_and_declared_reviews():
     assert _excluded_by_study_design(opening, True)
     assert not _excluded_by_study_design(cites_opening, True)
     assert not _excluded_by_study_design(follows_protocol, True)
+    names_protocol = _paper(
+        "CBT-I trial",
+        "Methods: A meta-analysis protocol guided outcome selection; 120 adults were randomized. Results: fewer awakenings.",
+    )
+    assert not _excluded_by_study_design(names_protocol, True)
