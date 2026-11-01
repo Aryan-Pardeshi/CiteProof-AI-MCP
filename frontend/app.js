@@ -2260,7 +2260,7 @@ function renderRMHitlPanel(checkpoint) {
                 <label class="form-label">Systematic Search Protocol (PICOC)</label>
                 <div class="protocol-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.85rem; font-size: 0.85rem;">
                     <p style="margin-bottom: 0.35rem;"><strong>Domain / Population:</strong> ${escapeHtml(protocol.population || 'General')}</p>
-                    <p style="margin-bottom: 0.35rem;"><strong>Inclusion Criteria:</strong> ${escapeHtml((protocol.inclusion_criteria || []).join('; ') || 'Standard peer-reviewed literature')}</p>
+                    <p style="margin-bottom: 0.35rem;"><strong>Inclusion Criteria:</strong> ${escapeHtml((protocol.inclusion_criteria || []).join('; ') || 'Not specified')}</p>
                     <p style="margin-bottom: 0;"><strong>Exclusion Criteria:</strong> ${escapeHtml((protocol.exclusion_criteria || []).join('; ') || 'Non-English or non-empirical preprints')}</p>
                 </div>
             </div>
@@ -2344,7 +2344,7 @@ function renderRMHitlPanel(checkpoint) {
             : 0;
         const gate2NoticeHtml = ftCount === 0 ? `
             <div class="rm-hint-banner" style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: var(--cp-ink);">
-                <strong>Notice: Abstract-level evidence base.</strong> Open-access full texts could not be retrieved for the included studies (Full-Text: 0). Evidence extraction and appraisal are based on peer-reviewed abstracts and published study metadata.
+                <strong>Notice: Abstract-level evidence base.</strong> Open-access full texts could not be retrieved for the included studies (Full-Text: 0). Evidence extraction and appraisal are based on abstracts and published study metadata.
             </div>
         ` : '';
 
@@ -3370,7 +3370,7 @@ function getPaperMarkdown() {
     if (s.researchDesign) {
         const ftCount = (s.corpus_stats && s.corpus_stats.fulltext_fetched != null) ? s.corpus_stats.fulltext_fetched : 0;
         const ftNote = (ftCount === 0)
-            ? `> **Evidence Basis Note**: No open-access full-text PDFs could be retrieved for the included studies; evidence extraction and synthesis were conducted on verified peer-reviewed title and abstract records.\n\n`
+            ? `> **Evidence Basis Note**: No open-access full-text PDFs could be retrieved for the included studies; evidence extraction and synthesis were conducted on included title and abstract records.\n\n`
             : '';
         md += `## 8. Methodology\n${ftNote}### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan || ''}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan || ''}\n\n`;
     }
