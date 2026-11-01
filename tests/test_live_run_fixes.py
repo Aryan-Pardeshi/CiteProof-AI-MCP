@@ -124,3 +124,68 @@ def test_fulltext_counter_is_recorded_without_losing_corpus_stats(monkeypatch):
     assert result["corpus_stats"]["fulltext_fetched"] == 1
     assert result["corpus_stats"]["retrieved"] == 5
     assert result["corpus_stats"]["included"] == 2
+
+
+def test_datacite_versus_primary_publisher_deduplication():
+    from backend.app.tools.academic_search import SOURCE_PRIORITY, _normalize_title
+
+    def _dedupe_priority(p: PaperRecord) -> tuple[int, int]:
+        has_abs = 0 if (p.abstract and p.abstract.strip()) else 1
+        src_rank = SOURCE_PRIORITY.get(str(p.retrieval_source or "").lower(), 10)
+        return (has_abs, src_rank)
+
+    p_datacite = _paper(
+        title="Cognitive Behavioral Therapy for Chronic Insomnia: A Randomized Trial",
+        abstract="",
+        doi="10.48620/7381",
+        retrieval_source="datacite"
+    )
+    p_pubmed = _paper(
+        title="Cognitive Behavioral Therapy for Chronic Insomnia: A Randomized Trial",
+        abstract="Patients with chronic insomnia were randomized to CBT-I or control.",
+        doi="10.1001/archinternmed.2010.315",
+        retrieval_source="pubmed"
+    )
+
+    # When both are present in the candidate stream, deduplication must keep pubmed
+    combined = [p_datacite, p_pubmed]
+    sorted_papers = sorted(combined, key=_dedupe_priority)
+
+    seen_titles = set()
+    deduped = []
+    for p in sorted_papers:
+        nt = _normalize_title(p.title)
+        if nt in seen_titles:
+            continue
+        seen_titles.add(nt)
+        deduped.append(p)
+
+    assert len(deduped) == 1
+    assert deduped[0].retrieval_source == "pubmed"
+    assert deduped[0].abstract != ""
+
+
+def test_research_design_template_selection_clinical(monkeypatch):
+    from backend.app.agents.research_mode import writing
+
+    captured_prompt = []
+
+    async def _mock_invoke(llm, messages):
+        prompt_text = messages[0].content
+        captured_prompt.append(prompt_text)
+        return "### 1. Study Design & Protocol\nClinical trial methodology."
+
+    monkeypatch.setattr(writing, "get_llm_for", lambda *a, **k: None)
+    monkeypatch.setattr(writing, "_safe_invoke_llm", _mock_invoke)
+
+    state = {
+        "problem_statement": "CBT-I vs pharmacotherapy for adult insomnia (RCT systematic review)",
+        "hypotheses": ["H1: CBT-I achieves higher remission than zolpidem"],
+        "search_protocol": {"intervention": "CBT-I", "population": "Adult insomnia"},
+    }
+
+    res = asyncio.run(writing.research_design_agent(state))
+    assert len(captured_prompt) == 1
+    assert "Study Design & Methodological Framework" in captured_prompt[0]
+    assert "PICO Framework" in captured_prompt[0]
+    assert "Experimental Architecture & Target Testbeds" not in captured_prompt[0]

@@ -1186,12 +1186,15 @@ body.cp-app .rm-example-queries-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: var(--cp-space-4);
+  contain: layout style;
 }
 
 body.cp-app .rm-query-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 29px;
   padding: 6px 12px;
   font-family: var(--cp-font-sans);
   font-size: 13px;
@@ -1202,6 +1205,17 @@ body.cp-app .rm-query-chip {
   border: none;
   cursor: pointer;
   transition: background-color var(--cp-dur) var(--cp-ease), color var(--cp-dur) var(--cp-ease);
+}
+
+body.cp-app .rm-query-icon {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+body.cp-app #rm-start-btn {
+  margin-top: var(--cp-space-3);
 }
 
 body.cp-app .rm-query-chip:hover {
@@ -1302,12 +1316,32 @@ body.cp-app .tracker-top-bar {
   gap: var(--cp-space-3);
 }
 
-/* app.js re-shows this block with `display: flex` on expand. Without the
-   column direction the stats bar and the stage matrix sit side by side. */
+/* Animated tracker collapse/expand (respects prefers-reduced-motion) */
 body.cp-app .tracker-expandable-content {
   display: flex;
   flex-direction: column;
   gap: var(--cp-space-4);
+  max-height: 1200px;
+  opacity: 1;
+  overflow: visible;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.35s ease;
+}
+
+body.cp-app .tracker-expandable-content.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, visibility 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.cp-app .tracker-expandable-content {
+    transition: none !important;
+  }
 }
 
 body.cp-app .tracker-title-wrap {
@@ -2048,6 +2082,11 @@ body.cp-app .rm-workspace-grid {
   gap: var(--cp-space-6);
   align-items: start;
   width: 100%;
+}
+
+body.cp-app .rm-workspace-grid:has(.rm-sources-sidebar[style*="display: none"]),
+body.cp-app .rm-workspace-grid.sidebar-collapsed {
+  grid-template-columns: 1fr;
 }
 
 body.cp-app .rm-main-column {
@@ -3232,4 +3271,11 @@ body.cp-app .modal .form-input {
 body.cp-app .modal .form-label {
   display: block;
   margin-bottom: var(--cp-space-1);
+}
+
+/* Ensure clearance for floating bottom-left usage pill at 1024px and mobile */
+body.cp-app .app-footer,
+body.cp-app .rm-workspace-body,
+body.cp-app #workspace-panel {
+  padding-bottom: 72px;
 }

@@ -289,12 +289,19 @@ function rmStripLeadingHeading(body, headingPattern) {
 }
 
 // Models sometimes repeat a whole section (heading + body) in a later section.
-// Remove only exact repeats: same heading and same body.
+// Remove exact repeats and duplicate gap analysis blocks in conceptual framework.
 function rmDedupeSections(md) {
     const parts = String(md || '').split(/(?=^#{2,3}\s)/m);
     const seen = new Set();
+    let hasResearchGap = false;
     return parts.filter(part => {
         if (!/^#{2,3}\s/.test(part)) return true;
+        if (/^##\s*3\.\s*research\s*gap/i.test(part)) {
+            hasResearchGap = true;
+        }
+        if (hasResearchGap && (/integration of (?:identified )?methodological gaps/i.test(part) || /^###\s*(?:\d+\.\s*)?methodological gaps/i.test(part))) {
+            return false;
+        }
         const key = part.replace(/\s+/g, ' ').trim().toLowerCase();
         if (seen.has(key)) return false;
         seen.add(key);
@@ -1148,20 +1155,17 @@ function setupEventListeners() {
         if (e.target === dom.paperDetailModal) closePaperInspector();
     });
 
-    // Pipeline tracker collapse toggle
+    // Pipeline tracker collapse toggle with animated height transition
     const collapseToggleBtn = document.getElementById('rm-tracker-collapse-toggle');
-    const expandableContent = document.getElementById('rm-tracker-expandable-content');
-    const toggleLbl = document.getElementById('tracker-toggle-lbl');
-    const toggleIcon = document.getElementById('tracker-toggle-icon');
-
     collapseToggleBtn?.addEventListener('click', () => {
+        state.rm.userOverrodeTrackerCollapse = true;
+        const expandableContent = document.getElementById('rm-tracker-expandable-content');
         if (!expandableContent) return;
-        const isHidden = expandableContent.style.display === 'none';
-        expandableContent.style.display = isHidden ? 'flex' : 'none';
-        if (toggleLbl) toggleLbl.textContent = isHidden ? 'Collapse' : 'Expand';
-        if (toggleIcon) {
-            toggleIcon.setAttribute('data-lucide', isHidden ? 'chevron-up' : 'chevron-down');
-            refreshIcons();
+        const isCollapsed = expandableContent.classList.contains('is-collapsed') || expandableContent.style.display === 'none';
+        if (isCollapsed) {
+            expandRMTracker(false);
+        } else {
+            collapseRMTracker(false);
         }
     });
 
@@ -1491,10 +1495,41 @@ function saveRMSession() {
 }
 
 function clearRMSession() {
+    stopRMHealthMonitor();
     try {
         localStorage.removeItem('rm_session');
     } catch (e) {
         console.warn('Failed to clear RM session:', e);
+    }
+}
+
+function collapseRMTracker(auto = false) {
+    if (auto && state.rm.userOverrodeTrackerCollapse) return;
+    const expandableContent = document.getElementById('rm-tracker-expandable-content');
+    const toggleLbl = document.getElementById('tracker-toggle-lbl');
+    const toggleIcon = document.getElementById('tracker-toggle-icon');
+    if (!expandableContent) return;
+    expandableContent.classList.add('is-collapsed');
+    expandableContent.style.display = '';
+    if (toggleLbl) toggleLbl.textContent = 'Expand';
+    if (toggleIcon) {
+        toggleIcon.setAttribute('data-lucide', 'chevron-down');
+        refreshIcons();
+    }
+}
+
+function expandRMTracker(auto = false) {
+    if (auto && state.rm.userOverrodeTrackerCollapse) return;
+    const expandableContent = document.getElementById('rm-tracker-expandable-content');
+    const toggleLbl = document.getElementById('tracker-toggle-lbl');
+    const toggleIcon = document.getElementById('tracker-toggle-icon');
+    if (!expandableContent) return;
+    expandableContent.classList.remove('is-collapsed');
+    expandableContent.style.display = '';
+    if (toggleLbl) toggleLbl.textContent = 'Collapse';
+    if (toggleIcon) {
+        toggleIcon.setAttribute('data-lucide', 'chevron-up');
+        refreshIcons();
     }
 }
 
@@ -2301,7 +2336,17 @@ function renderRMHitlPanel(checkpoint) {
         `;
         }).join('');
 
+        const ftCount = (state.rm.corpus_stats && state.rm.corpus_stats.fulltext_fetched != null)
+            ? state.rm.corpus_stats.fulltext_fetched
+            : 0;
+        const gate2NoticeHtml = ftCount === 0 ? `
+            <div class="rm-hint-banner" style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: var(--cp-ink);">
+                <strong>Notice: Abstract-level evidence base.</strong> Open-access full texts could not be retrieved for the included studies (Full-Text: 0). Evidence extraction and appraisal are based on peer-reviewed abstracts and published study metadata.
+            </div>
+        ` : '';
+
         dom.rmHitlBody.innerHTML = `
+            ${gate2NoticeHtml}
             <div class="form-group">
                 <label class="form-label">Screened Literature Corpus <span class="label-tag">${state.rm.screenedPapersCount || topPapers.length} studies included</span></label>
                 <div class="evidence-list">
@@ -2333,7 +2378,17 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBadge.textContent = 'Gate 3 of 3';
         dom.rmHitlFeedbackInput.placeholder = 'e.g. Refine H2 to specify causal mechanism, adjust conceptual framework boundary...';
 
+        const ftCount = (state.rm.corpus_stats && state.rm.corpus_stats.fulltext_fetched != null)
+            ? state.rm.corpus_stats.fulltext_fetched
+            : 0;
+        const gate3NoticeHtml = ftCount === 0 ? `
+            <div class="rm-hint-banner" style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: var(--cp-ink);">
+                <strong>Notice:</strong> Hypotheses are formulated under an abstract-level evidence base (${state.rm.screenedPapersCount || 8} included studies, 0 full texts). Formulations focus on directional comparisons testable without pooled statistical effect sizes.
+            </div>
+        ` : '';
+
         dom.rmHitlBody.innerHTML = `
+            ${gate3NoticeHtml}
             <div class="form-group">
                 <label class="form-label">Formulated Research Hypotheses</label>
                 <div class="subtasks-list">
@@ -2367,24 +2422,37 @@ function renderRMHitlPanel(checkpoint) {
         `;
     }
 
+    collapseRMTracker(true);
     refreshIcons();
 }
 
 async function handleRMApprove(feedback) {
     if (!state.rm.threadId) return;
 
-    state.rm.hitlApproved = true;
-    state.rm.hitlCheckpointPending = false;
-    dom.rmHitlPanel.style.display = 'none';
-    hideRMFailureBanner();
-
     const currentCp = inferCurrentRMCheckpoint(state.rm.hitlCheckpoint);
-    state.rm.hitlCheckpoint = currentCp;
     const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
     const completedStages = cpIdx >= 0 ? RM_STAGES.slice(0, cpIdx + 1).map(s => s.id) : ['scope_definition', 'keyword_extractor', 'checkpoint_1'];
     const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
 
-    try {
+    // Disable action buttons while waiting for server confirmation; don't hide gate optimistically
+    const approveBtn = dom.rmHitlApproveBtn;
+    const reviseBtn = dom.rmHitlReviseBtn;
+    let originalApproveHtml = '';
+    if (approveBtn) {
+        originalApproveHtml = approveBtn.innerHTML;
+        approveBtn.disabled = true;
+        approveBtn.innerHTML = `<span>Confirming with server…</span>`;
+    }
+    if (reviseBtn) reviseBtn.disabled = true;
+
+    // Called strictly after server confirms HTTP 200
+    const onConnected = () => {
+        state.rm.hitlApproved = true;
+        state.rm.hitlCheckpointPending = false;
+        state.rm.hitlCheckpoint = currentCp;
+        if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+        hideRMFailureBanner();
+
         updateRMPipelineTracker(nextStage, completedStages);
         rmTimer.resume();
         showRMCheckpointTransitionLoader(currentCp, feedback !== 'approve');
@@ -2394,23 +2462,31 @@ async function handleRMApprove(feedback) {
         if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
         renderRMPaperLive(true);
         renderRMSourcesPanel();
-    } catch (err) {
-        console.warn('UI update failed before stream connection, proceeding with API call:', err);
-    }
+        expandRMTracker(true);
+        startRMHealthMonitor();
+    };
 
-    const accepted = await openRMEventStream(feedback);
-    if (accepted === false) {
-        // The server never confirmed the approval. Put the gate back rather than
-        // leaving the UI on a stage the run never entered.
+    try {
+        const streamResult = await openRMEventStream(feedback, onConnected);
+        if (streamResult === false) {
+            throw new Error('Approval request failed or was rejected by server.');
+        }
+    } catch (err) {
+        console.error('Approve failed:', err);
+        showToast('Approval could not be confirmed: ' + (err.message || 'Server unreachable'), 'error');
+        appendLogLine('Approval error: ' + (err.message || 'Server unreachable') + '; gate remains active.', 'error');
         state.rm.hitlApproved = false;
         state.rm.hitlCheckpointPending = true;
         state.rm.status = 'awaiting_approval';
         rmTimer.pause();
         hideRMCheckpointTransitionLoader();
-        renderRMHitlPanel(currentCp);
-        dom.rmHitlPanel.style.display = 'block';
-        showToast('Approval was not accepted. The gate is still open — retry.', 'error');
-        appendLogLine('Approval failed; gate restored.', 'error');
+        if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'block';
+        if (approveBtn) {
+            approveBtn.disabled = false;
+            if (originalApproveHtml) approveBtn.innerHTML = originalApproveHtml;
+        }
+        if (reviseBtn) reviseBtn.disabled = false;
+        refreshIcons();
         saveRMSession();
     }
 }
@@ -2429,14 +2505,20 @@ function showRMFailureBanner(message) {
     banner.id = 'rm-failure-banner';
     banner.className = 'rm-failure-banner';
     banner.innerHTML = `
-        <div>
-            <strong>Research run failed.</strong>
-            <span>${escapeHtml(message || 'The pipeline stopped before producing a report.')}</span>
+        <div style="flex:1;">
+            <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Research run failed</div>
+            <div style="font-size:13px; opacity:0.9;">${escapeHtml(message || 'The pipeline stopped before producing a report.')}</div>
         </div>
-        <button id="rm-retry-btn" class="btn-primary" type="button" style="white-space:nowrap;">
-            <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
-            <span>Retry from last checkpoint</span>
-        </button>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button id="rm-retry-btn" class="btn-primary" type="button" style="white-space:nowrap;">
+                <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
+                <span>Retry from last checkpoint</span>
+            </button>
+            <a href="/history" id="rm-history-link" class="btn-secondary" style="white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:6px 12px; border-radius:6px;">
+                <i data-lucide="history" style="width:14px;height:14px;"></i>
+                <span>View in History</span>
+            </a>
+        </div>
     `;
     workspace.prepend(banner);
     document.getElementById('rm-retry-btn')?.addEventListener('click', retryRMFromCheckpoint);
@@ -2470,7 +2552,7 @@ async function retryRMFromCheckpoint() {
 // (after the user acts on a checkpoint) and reconnectRMStream (page reload while
 // the pipeline is still running server-side) so both get the same retry and
 // event-parsing behavior instead of two copies drifting apart.
-async function openRMEventStream(message) {
+async function openRMEventStream(message, onConnected = null) {
     if (activeRMController) activeRMController.abort();
     activeRMController = new AbortController();
 
@@ -2504,6 +2586,15 @@ async function openRMEventStream(message) {
                     return false;
                 }
                 throw new Error(`HTTP ${response.status}`);
+            }
+
+            if (onConnected) {
+                try {
+                    onConnected();
+                } catch (e) {
+                    console.error('onConnected callback failed:', e);
+                }
+                onConnected = null;
             }
 
             const reader = response.body.getReader();
@@ -2638,6 +2729,11 @@ async function openRMEventStream(message) {
                 console.log('RM SSE stream aborted by user.');
                 return isTerminal;
             }
+            if (attempt === 0 && onConnected) {
+                // An explicit user action (e.g. approve/reject) failed on initial call.
+                // Re-throw so the caller can report the error and keep the gate active.
+                throw e;
+            }
             attempt++;
             if (attempt > maxRetries) {
                 showToast('Connection lost. Auto-reconnect failed: ' + e.message, 'error');
@@ -2651,6 +2747,53 @@ async function openRMEventStream(message) {
     return isTerminal;
 }
 
+let rmHealthPollTimer = null;
+
+function startRMHealthMonitor() {
+    stopRMHealthMonitor();
+    if (!state.rm.threadId) return;
+    rmHealthPollTimer = setInterval(async () => {
+        if (!state.rm.threadId || state.rm.status === 'completed' || state.rm.status === 'error') {
+            stopRMHealthMonitor();
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE_URL}/research-mode/pipeline-status/${state.rm.threadId}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.failed || data.outcome === 'failed') {
+                stopRMHealthMonitor();
+                processRMSEEvent({
+                    event: 'error',
+                    message: data.error || 'The research run failed server-side.'
+                });
+            } else if (data.completed || data.outcome === 'completed') {
+                stopRMHealthMonitor();
+                if (state.rm.status !== 'completed') {
+                    const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
+                    if (syncRes.ok) {
+                        const syncData = await syncRes.json();
+                        if (syncData.values) applyRMStatePayload(syncData.values);
+                    }
+                    renderRMPaperFinal();
+                }
+            } else if (data.outcome === 'checkpoint' && !state.rm.hitlCheckpointPending) {
+                const cp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
+                renderRMHitlPanel(cp);
+            }
+        } catch (e) {
+            console.debug('RM health poll transient check:', e);
+        }
+    }, 20000);
+}
+
+function stopRMHealthMonitor() {
+    if (rmHealthPollTimer) {
+        clearInterval(rmHealthPollTimer);
+        rmHealthPollTimer = null;
+    }
+}
+
 
 // Re-attaches to an already-running pipeline after a page reload. The backend
 // keeps executing in its own asyncio task regardless of whether any browser is
@@ -2662,6 +2805,7 @@ async function openRMEventStream(message) {
 async function reconnectRMStream() {
     if (!state.rm.threadId) return;
     appendLogLine('Reconnecting to live pipeline…', 'info');
+    startRMHealthMonitor();
     await openRMEventStream('');
 }
 
@@ -2768,8 +2912,23 @@ function processRMSEEvent(data) {
     // the tracker jumped backwards through nodes it had already passed.
     if (data.seq !== undefined && data.seq !== null) state.rm.lastSeq = data.seq;
 
-    if (data.event === 'node_start') {
+    if (data.event === 'screening_progress') {
+        const screened = data.screened || 0;
+        const total = data.total || 0;
+        const batchesDone = data.batches_done || 0;
+        const totalBatches = data.total_batches || 0;
+        if (dom.statScreened) {
+            dom.statScreened.textContent = `${screened}/${total}`;
+        }
+        if (dom.rmPipelineStatusTag) {
+            dom.rmPipelineStatusTag.textContent = `Screening: ${screened} of ${total} (${batchesDone}/${totalBatches} batches)`;
+        }
+        appendLogLine(`Screening progress: ${screened}/${total} candidate papers evaluated (${batchesDone}/${totalBatches} batches)`, 'info');
+        return data.event;
+    } else if (data.event === 'node_start') {
+        startRMHealthMonitor();
         rmTimer.resume();
+        expandRMTracker(true);
         updateRMPipelineTracker(data.node);
         updateRMTransitionLoaderNode(data.node);
         appendLogLine(`Node started: ${rmStageLabel(data.node)}`, 'info');
@@ -2781,7 +2940,9 @@ function processRMSEEvent(data) {
         // signal that a long node is still alive, so it drives the status tag.
         noteRMTokenActivity(data.node);
     } else if (data.event === 'resume') {
+        startRMHealthMonitor();
         rmTimer.resume();
+        expandRMTracker(true);
         appendLogLine('Pipeline resumed.', 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
@@ -2791,7 +2952,9 @@ function processRMSEEvent(data) {
         renderRMPaperLive();
         saveRMSession();
     } else if (data.event === 'checkpoint') {
+        stopRMHealthMonitor();
         rmTimer.pause();
+        collapseRMTracker(true);
         applyRMStatePayload(data.state || {});
         const cp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
         state.rm.hitlCheckpoint = cp;
@@ -2809,6 +2972,7 @@ function processRMSEEvent(data) {
         dom.rmHitlPanel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         saveRMSession();
     } else if (data.event === 'completed') {
+        stopRMHealthMonitor();
         state.rm.status = 'completed';
         state.rm.hitlCheckpointPending = false;
         state.rm.hitlApproved = true;
@@ -2822,12 +2986,16 @@ function processRMSEEvent(data) {
         renderRMPaperFinal();
         saveRMSession();
     } else if (data.event === 'error') {
+        stopRMHealthMonitor();
         rmTimer.stop();
         hideRMCheckpointTransitionLoader();
         appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         if (trackerContainer) trackerContainer.classList.remove('active-execution');
         if (paperCard) paperCard.classList.remove('active-execution');
-        if (dom.rmPipelineStatusTag) dom.rmPipelineStatusTag.textContent = 'Pipeline stopped — error';
+        if (dom.rmPipelineStatusTag) {
+            dom.rmPipelineStatusTag.textContent = 'Pipeline stopped — error';
+            dom.rmPipelineStatusTag.className = 'stepper-status-pill error';
+        }
         // A failed or rejected paper must not keep the completed-paper export
         // controls (a restored session may have rendered them before the check).
         [dom.rmCopyPaperBtn, dom.rmExportDropdown, dom.rmExportPdfBtn].forEach(el => {
@@ -3159,14 +3327,34 @@ function getPaperMarkdown() {
     const conceptualFramework = rmStripLeadingHeading(s.conceptualFramework, /^#{1,3}\s*(?:6\.\s*)?Conceptual Framework\s*/i);
     let md = `# ${s.title || 'Academic Research Report'}\n\n`;
     if (s.abstract) md += `## Abstract\n${s.abstract}\n\n`;
-    if (s.introduction) md += `## 1. Introduction\n${s.introduction}\n\n`;
-    if (s.literatureReview) md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
+
+    // When previewing prior to Phase 5 writing, if objectives exist but Intro/LitReview are not yet written,
+    // display placeholders so numbering starts at 1, not 4.
+    const isWritingPhase = Boolean(s.introduction || s.literatureReview || s.results || s.discussion);
+    if (s.introduction) {
+        md += `## 1. Introduction\n${s.introduction}\n\n`;
+    } else if (!isWritingPhase && (objectives.length || questions.length || researchGap)) {
+        md += `## 1. Introduction\n*(Will be synthesized in Phase 5)*\n\n`;
+    }
+
+    if (s.literatureReview) {
+        md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
+    } else if (!isWritingPhase && (objectives.length || questions.length || researchGap)) {
+        md += `## 2. Literature Review\n*(Will be synthesized in Phase 5)*\n\n`;
+    }
+
     if (researchGap) md += `## 3. Research Gap\n${researchGap}\n\n`;
     if (objectives.length) md += `## 4. Research Objectives\n${objectives.map((o, i) => `${i+1}. ${o}`).join('\n')}\n\n`;
     if (questions.length) md += `## 5. Research Questions\n${questions.map((q, i) => `**RQ${i+1}**: ${q}`).join('\n\n')}\n\n`;
     if (conceptualFramework) md += `## 6. Conceptual Framework\n${conceptualFramework}\n\n`;
     if (s.hypotheses && s.hypotheses.length) md += `## 7. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
-    if (s.researchDesign) md += `## 8. Methodology\n### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan}\n\n`;
+    if (s.researchDesign) {
+        const ftCount = (s.corpus_stats && s.corpus_stats.fulltext_fetched != null) ? s.corpus_stats.fulltext_fetched : 0;
+        const ftNote = (ftCount === 0)
+            ? `> **Evidence Basis Note**: No open-access full-text PDFs could be retrieved for the included studies; evidence extraction and synthesis were conducted on verified peer-reviewed title and abstract records.\n\n`
+            : '';
+        md += `## 8. Methodology\n${ftNote}### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan || ''}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan || ''}\n\n`;
+    }
     if (s.results) md += `## 9. Results\n${s.results}\n\n`;
     if (s.discussion) md += `## 10. Discussion\n${s.discussion}\n\n${s.implications ? `### 10.1 Implications\n${s.implications}\n\n` : ''}`;
     if (s.limitations) md += `## 11. Limitations\n${s.limitations}\n\n`;

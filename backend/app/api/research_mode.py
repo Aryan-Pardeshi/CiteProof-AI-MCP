@@ -281,8 +281,8 @@ async def _execute_research_graph(thread_id: str, message: str | None):
             "hitl_checkpoint": hitl_checkpoint or values.get("hitl_checkpoint"),
             "state": {
                 "problem_statement": values.get("problem_statement"),
-                "research_objectives": values.get("research_objectives"),
-                "research_questions": values.get("research_questions"),
+                "research_objectives": clean_scope_items(values.get("research_objectives"), []),
+                "research_questions": clean_scope_items(values.get("research_questions"), []),
                 "keywords": values.get("keywords"),
                 "search_protocol": values.get("search_protocol"),
                 "raw_papers_count": (

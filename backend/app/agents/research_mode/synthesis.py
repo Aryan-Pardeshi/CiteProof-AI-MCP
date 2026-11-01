@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 from langchain_core.messages import HumanMessage
@@ -134,6 +135,7 @@ Provide a detailed Conceptual Framework in Markdown format including:
 
 Instructions:
 - Write only the body of this section; do not write a document title, an abstract, or '#'/'##' headings; use '###' for subsections if needed.
+- Do NOT repeat, re-list, or re-synthesize the Research Gaps section or include subsections titled 'Methodological Gaps' or 'Integration of Identified Methodological Gaps'; that analysis belongs exclusively in Section 3 (Research Gap). Focus strictly on theoretical constructs, structural relationships, and mechanisms.
 """
     compact_prompt = f"""You are a Senior Theoretical Framework Architect.
 Construct a concise but complete Conceptual Framework for:
@@ -157,6 +159,34 @@ async def hypotheses_agent(state: dict[str, Any]) -> dict[str, Any]:
     """Agent 19: Formulates directional, testable hypotheses H1..H5 grounded in extracted evidence."""
     ps = state.get("problem_statement", "")
     framework = state.get("conceptual_framework", "")
+    evidence_records = state.get("evidence_records") or []
+    claims = state.get("claims") or []
+    corpus_stats = state.get("corpus_stats") or {}
+    included_count = corpus_stats.get("included") or len(
+        [p for p in state.get("paper_records", []) if p.get("screening_status") == "included"]
+    )
+    fulltext_count = corpus_stats.get("fulltext_fetched", 0)
+    is_abstract_only = fulltext_count == 0
+
+    num_pattern = re.compile(r"\b\d+(?:\.\d+)?%?|\b[pP]\s*[<>=]|\bCI\b|\bSMD\b|\bRR\b|\bOR\b|\bHR\b")
+    numeric_claims_count = sum(
+        1 for r in evidence_records
+        if num_pattern.search(str(r.get("claim_summary", "")) + " " + str(r.get("exact_quote", "")))
+    )
+
+    evidence_constraints = f"""
+Available Evidence Base:
+- Included studies: {included_count}
+- Full-text manuscripts retrieved: {fulltext_count} ({'Abstract-only review: open-access full-texts unavailable' if is_abstract_only else 'Full-text available'})
+- Total extracted empirical claims: {len(evidence_records) + len(claims)}
+- Quantitative statistical findings: {numeric_claims_count}
+
+CRITICAL CONSTRAINTS ON HYPOTHESIS FORMULATION:
+1. Hypotheses MUST be strictly constrained by what the extracted evidence actually supports.
+2. {'Because this review is based on abstracts only (' + str(included_count) + ' included studies), do NOT formulate hypotheses that assume pooled standardized mean differences (SMD), meta-analytic subgroup moderators, dose-response kinetics, or statistical meta-regression models that cannot be tested with abstract-level data.' if is_abstract_only or numeric_claims_count < 3 else 'Ground all hypotheses in observed empirical effect sizes.'}
+3. Formulate directional, testable comparative hypotheses focused on primary intervention outcomes and relative patterns observable from the included evidence.
+"""
+
     llm = get_llm_for("researcher", state, temperature=0.2)
 
     prompt = f"""You are an Expert Hypothesis Formulator.
@@ -165,6 +195,7 @@ Problem Statement: {ps}
 
 Conceptual Framework Context:
 {framework[:1000]}
+{evidence_constraints}
 
 Return a valid JSON array of strings:
 [
@@ -210,9 +241,9 @@ Return a valid JSON array of strings:
         # Fallback regex extraction of H1..H5
         lines = [line.strip() for line in raw.split("\n") if line.strip().startswith(("H1", "H2", "H3", "H4", "H5", "1.", "2.", "3.", "4.", "5."))]
         hyp_list = lines if lines else [
-            f"H1: Architectural optimization improves accuracy across domain tasks in {ps[:40]}.",
-            "H2: Scaling parameter capacity yields non-linear performance gains.",
-            "H3: Multi-source data synthesis reduces empirical error rates."
+            f"H1: Active interventions yield significant improvements in primary outcomes for {ps[:50]}.",
+            f"H2: Comparative intervention efficacy differs across delivery formats in {ps[:50]}.",
+            f"H3: Treatment response is maintained at follow-up assessments across evaluated studies."
         ]
 
     # Copy papers cleanly without injecting synthetic modulo ratings

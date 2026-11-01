@@ -312,6 +312,24 @@ def _expand_keywords_for_simple_sources(
     return fallback[:1] or ["research"]
 
 
+SECONDARY_RETRIEVAL_SOURCES: set[str] = {
+    "datacite",
+    "tavily_web_fallback",
+}
+
+SOURCE_PRIORITY: dict[str, int] = {
+    "pubmed": 1,
+    "crossref": 2,
+    "europe_pmc": 3,
+    "openalex": 4,
+    "semantic_scholar": 5,
+    "doaj": 6,
+    "arxiv": 7,
+    "datacite": 15,
+    "tavily_web_fallback": 20,
+}
+
+
 async def search_academic_papers_structured(
     keywords: list[str]
 ) -> tuple[list[PaperRecord], PRISMATracker]:
@@ -360,13 +378,22 @@ async def search_academic_papers_structured(
                         src = p.retrieval_source
                         records_by_source[src] = records_by_source.get(src, 0) + 1
 
-    # Deduplicate by DOI and normalized title
+    # Deduplicate by DOI and normalized title.
+    # Prioritize primary publisher records and records with abstracts over secondary repository
+    # records (e.g. DataCite repository DOIs) when both index the same paper.
+    def _dedupe_priority(p: PaperRecord) -> tuple[int, int]:
+        has_abs = 0 if (p.abstract and p.abstract.strip()) else 1
+        is_secondary = 1 if str(p.retrieval_source or "").lower() in SECONDARY_RETRIEVAL_SOURCES else 0
+        return (has_abs, is_secondary)
+
+    combined_sorted = sorted(combined, key=_dedupe_priority)
+
     seen_dois = set()
     seen_titles = set()
     seen_paper_ids = set()
     deduped: list[PaperRecord] = []
 
-    for p in combined:
+    for p in combined_sorted:
         doi = p.doi
         norm_title = _normalize_title(p.title)
         pid = p.paper_id
@@ -674,9 +701,10 @@ Score each paper's eligibility for this review on a 1-10 relevance scale:
   digital CBT format, or a different but defensible comparator).
 - 5-6: related but indirect (same broad topic but a different intervention,
   population, outcome, or setting, or useful background only).
-- 1-4: off topic, wrong population or intervention, no relevant outcome, or a
-  study protocol, editorial, opinion piece, or bibliometric analysis without
-  reported results.
+- 1-4: off topic, wrong population or intervention, wrong study design (e.g.
+  review, systematic review, meta-analysis, or editorial when empirical/RCT
+  studies are specified), no relevant outcome, or a study protocol, editorial,
+  opinion piece, or bibliometric analysis without reported results.
 
 Scoring rules:
 - Judge relevance against the problem statement and PICOC, not general interest.
@@ -809,6 +837,7 @@ async def screen_papers_structured(
     tracker: PRISMATracker | None = None,
     model: str | None = None,
     protocol: Any | None = None,
+    on_progress: Any | None = None,
 ) -> tuple[list[PaperRecord], PRISMATracker]:
     """Screen candidate corpus for relevance, updating PRISMATracker deterministically."""
     tr = tracker.model_copy(deep=True) if tracker else PRISMATracker(
@@ -912,13 +941,29 @@ async def screen_papers_structured(
         for i in range(0, len(candidates), SCREEN_BATCH_SIZE)
     ]
 
-    tasks = [
-        _score_batch(
+    completed_batches = 0
+    screened_candidates = 0
+    progress_lock = asyncio.Lock()
+
+    async def _run_batch(idx: int, b: list[PaperRecord]):
+        nonlocal completed_batches, screened_candidates
+        res = await _score_batch(
             llm, b, problem_statement, objectives_str, semaphore, criteria_str,
             timeout=batch_timeout,
         )
-        for b in batches
-    ]
+        async with progress_lock:
+            completed_batches += 1
+            screened_candidates += len(b)
+            if on_progress is not None:
+                try:
+                    p_res = on_progress(screened_candidates, len(candidates), completed_batches, len(batches))
+                    if asyncio.iscoroutine(p_res):
+                        await p_res
+                except Exception:
+                    pass
+        return res
+
+    tasks = [_run_batch(i, b) for i, b in enumerate(batches)]
 
     results = await asyncio.gather(
         *tasks,

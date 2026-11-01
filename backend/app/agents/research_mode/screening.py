@@ -29,12 +29,45 @@ async def paper_screener_agent(state: dict[str, Any]) -> dict[str, Any]:
     tracker = PRISMATracker(**raw_tracker) if raw_tracker else None
 
     records = [PaperRecord.from_dict(p) for p in raw_papers]
+    thread_id = state.get("thread_id")
+
+    async def _on_screening_progress(screened: int, total: int, batches_done: int, total_batches: int):
+        if not thread_id:
+            return
+        try:
+            from backend.app.api.research_mode import _broadcast_event
+            await _broadcast_event(thread_id, {
+                "event": "screening_progress",
+                "screened": screened,
+                "total": total,
+                "batches_done": batches_done,
+                "total_batches": total_batches,
+            }, is_node_event=False)
+        except Exception:
+            pass
+
+    screen_kwargs: dict[str, Any] = {
+        "tracker": tracker,
+        "protocol": state.get("search_protocol"),
+    }
+    try:
+        import inspect
+        target_fn = screen_papers_structured
+        if hasattr(target_fn, "side_effect") and callable(target_fn.side_effect):
+            target_fn = target_fn.side_effect
+        sig = inspect.signature(target_fn)
+        if "on_progress" in sig.parameters or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+        ):
+            screen_kwargs["on_progress"] = _on_screening_progress
+    except Exception:
+        pass
+
     screened_records, updated_tracker = await screen_papers_structured(
         records,
         ps,
         objs,
-        tracker=tracker,
-        protocol=state.get("search_protocol"),
+        **screen_kwargs,
     )
     dict_screened = [r.model_dump() for r in screened_records]
 

@@ -125,6 +125,10 @@ Generate 6-8 diverse, highly effective academic search keywords and Boolean quer
 
 Problem Statement: {ps}
 Target Intervention: {protocol.get('intervention', '')}
+
+Rules:
+1. Never emit bare or unexpanded abbreviations/acronyms (e.g. do NOT write bare 'SRT' or 'SCT'). Always expand acronyms into full terms, e.g. '("sleep restriction therapy" OR "sleep restriction")' instead of bare 'SRT'.
+2. Provide a balanced set of search strings combining primary intervention, condition/population, and study outcomes.
 """
     try:
         out: KeywordOutput = await ainvoke_structured_with_retry(
