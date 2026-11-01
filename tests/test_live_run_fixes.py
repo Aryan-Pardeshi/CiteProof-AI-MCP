@@ -189,3 +189,32 @@ def test_research_design_template_selection_clinical(monkeypatch):
     assert "Study Design & Methodological Framework" in captured_prompt[0]
     assert "PICO Framework" in captured_prompt[0]
     assert "Experimental Architecture & Target Testbeds" not in captured_prompt[0]
+
+
+def test_rct_gate_requires_exclusive_rct_scope():
+    from backend.app.tools.academic_search import (
+        _excluded_by_study_design,
+        _protocol_requires_rcts,
+    )
+
+    assert _protocol_requires_rcts({"inclusion_criteria": ["Randomized controlled trials"]})
+    assert not _protocol_requires_rcts(
+        {"inclusion_criteria": ["Randomized or quasi-experimental studies"]}
+    )
+    assert not _protocol_requires_rcts({"inclusion_criteria": ["Adults with insomnia"]})
+
+    trial = _paper(
+        "CBT-I vs zolpidem: a randomized trial",
+        "Prior systematic review evidence is mixed. We randomized 120 adults.",
+    )
+    review = _paper("CBT-I for insomnia: a systematic review", "We searched five databases.")
+    self_described = _paper("Insomnia treatments", "In this network meta-analysis we pooled 40 trials.")
+    assert not _excluded_by_study_design(trial, True)
+    assert _excluded_by_study_design(review, True)
+    assert _excluded_by_study_design(self_described, True)
+
+
+def test_dedupe_prefers_declared_source_ranking():
+    from backend.app.tools.academic_search import SOURCE_PRIORITY
+
+    assert SOURCE_PRIORITY["pubmed"] < SOURCE_PRIORITY["openalex"] < SOURCE_PRIORITY["datacite"]

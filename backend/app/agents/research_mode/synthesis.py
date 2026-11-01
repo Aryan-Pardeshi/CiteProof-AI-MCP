@@ -168,7 +168,11 @@ async def hypotheses_agent(state: dict[str, Any]) -> dict[str, Any]:
     fulltext_count = corpus_stats.get("fulltext_fetched", 0)
     is_abstract_only = fulltext_count == 0
 
-    num_pattern = re.compile(r"\b\d+(?:\.\d+)?%?|\b[pP]\s*[<>=]|\bCI\b|\bSMD\b|\bRR\b|\bOR\b|\bHR\b")
+    # Statistical markers only: bare numbers (years, sample sizes) are not findings.
+    num_pattern = re.compile(
+        r"\b[pP]\s*[<>=≤]|\b\d+(?:\.\d+)?\s*%|\bCI\b|\bSMD\b|\bRR\b|\bOR\b|\bHR\b"
+        r"|\b(?:Cohen|Hedges)'?s?\s*[dg]\b|\b[dg]\s*=\s*-?\d"
+    )
     numeric_claims_count = sum(
         1 for r in evidence_records
         if num_pattern.search(str(r.get("claim_summary", "")) + " " + str(r.get("exact_quote", "")))
@@ -178,7 +182,7 @@ async def hypotheses_agent(state: dict[str, Any]) -> dict[str, Any]:
 Available Evidence Base:
 - Included studies: {included_count}
 - Full-text manuscripts retrieved: {fulltext_count} ({'Abstract-only review: open-access full-texts unavailable' if is_abstract_only else 'Full-text available'})
-- Total extracted empirical claims: {len(evidence_records) + len(claims)}
+- Total extracted empirical claims: {max(len(evidence_records), len(claims))}
 - Quantitative statistical findings: {numeric_claims_count}
 
 CRITICAL CONSTRAINTS ON HYPOTHESIS FORMULATION:

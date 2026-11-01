@@ -328,6 +328,8 @@ async def _execute_research_graph(thread_id: str, message: str | None):
                 "Research Mode finished without a usable paper; failing the run"
             )
             final_payload["message"] = REPORT_REJECTED_MESSAGE
+            # The graph already finished, so there is no checkpoint to resume from.
+            final_payload["retryable"] = False
         if event_name is not None:
             await _broadcast_event(thread_id, final_payload, is_node_event=True)
         if buf:

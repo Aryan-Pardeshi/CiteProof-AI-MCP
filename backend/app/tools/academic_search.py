@@ -383,8 +383,8 @@ async def search_academic_papers_structured(
     # records (e.g. DataCite repository DOIs) when both index the same paper.
     def _dedupe_priority(p: PaperRecord) -> tuple[int, int]:
         has_abs = 0 if (p.abstract and p.abstract.strip()) else 1
-        is_secondary = 1 if str(p.retrieval_source or "").lower() in SECONDARY_RETRIEVAL_SOURCES else 0
-        return (has_abs, is_secondary)
+        source_rank = SOURCE_PRIORITY.get(str(p.retrieval_source or "").lower(), 10)
+        return (has_abs, source_rank)
 
     combined_sorted = sorted(combined, key=_dedupe_priority)
 
@@ -628,11 +628,33 @@ _REVIEW_DESIGN_RE = re.compile(
     r"umbrella review|literature review|narrative review)\b",
     re.IGNORECASE,
 )
+_SELF_REVIEW_RE = re.compile(
+    r"\b(?:this|the present|the current|our)\s+(?:\w+\s+){0,2}"
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b"
+    r"|\bwe\s+(?:conducted|performed|carried out|undertook|present)\s+(?:a|an)\s+(?:\w+\s+){0,2}"
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b",
+    re.IGNORECASE,
+)
+
+
+# Wording that widens the design scope beyond randomised trials.
+_NON_RCT_ALLOWED_RE = re.compile(
+    r"quasi|non-?randomi[sz]ed|observational|cohort|case[- ]control|cross-sectional|"
+    r"open-label|real-world|and/or|\bor other\b|\bincluding\b|\bsuch as\b|\bany (?:study|design)\b",
+    re.IGNORECASE,
+)
 
 
 def _protocol_requires_rcts(protocol: Any | None) -> bool:
-    """True when the approved protocol restricts inclusion to randomised trials."""
-    return bool(_RCT_ONLY_RE.search(" ".join(_protocol_list(protocol, "inclusion_criteria"))))
+    """True when the approved protocol restricts inclusion to randomised trials.
+
+    A criterion that names RCTs but also admits other designs (quasi-experimental,
+    observational, "or other") does not make the review RCT-only.
+    """
+    criteria = _protocol_list(protocol, "inclusion_criteria")
+    if not any(_RCT_ONLY_RE.search(c) for c in criteria):
+        return False
+    return not any(_NON_RCT_ALLOWED_RE.search(c) for c in criteria)
 
 
 def _excluded_by_study_design(paper: PaperRecord, requires_rcts: bool) -> bool:
@@ -647,9 +669,11 @@ def _excluded_by_study_design(paper: PaperRecord, requires_rcts: bool) -> bool:
     study_type = str(getattr(paper, "study_type", "") or "").lower()
     if "review" in study_type or "meta-analysis" in study_type or "meta analysis" in study_type:
         return True
+    # Only the paper's own self-description counts: a trial that cites "a prior
+    # systematic review" in its abstract is still a trial.
     return bool(
         _REVIEW_DESIGN_RE.search(str(paper.title or ""))
-        or _REVIEW_DESIGN_RE.search(str(paper.abstract or "")[:400])
+        or _SELF_REVIEW_RE.search(str(paper.abstract or "")[:400])
     )
 
 

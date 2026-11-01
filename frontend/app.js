@@ -2497,7 +2497,7 @@ function hideRMFailureBanner() {
 
 // A failed run must say so in the workspace, not only in History. Retry reuses
 // the last graph checkpoint, so approved evidence/hypotheses are not paid for twice.
-function showRMFailureBanner(message) {
+function showRMFailureBanner(message, { retryable = true } = {}) {
     hideRMFailureBanner();
     const workspace = document.getElementById('rm-workspace-panel');
     if (!workspace) return;
@@ -2510,10 +2510,10 @@ function showRMFailureBanner(message) {
             <div style="font-size:13px; opacity:0.9;">${escapeHtml(message || 'The pipeline stopped before producing a report.')}</div>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <button id="rm-retry-btn" class="btn-primary" type="button" style="white-space:nowrap;">
+            ${retryable ? `<button id="rm-retry-btn" class="btn-primary" type="button" style="white-space:nowrap;">
                 <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
                 <span>Retry from last checkpoint</span>
-            </button>
+            </button>` : ''}
             <a href="/history" id="rm-history-link" class="btn-secondary" style="white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:6px 12px; border-radius:6px;">
                 <i data-lucide="history" style="width:14px;height:14px;"></i>
                 <span>View in History</span>
@@ -2634,12 +2634,14 @@ async function openRMEventStream(message, onConnected = null) {
             // This happens when the host's reverse proxy terminates idle SSE connections
             // or when network drops occur between client and server during heavy LLM tasks.
             // We check the pipeline-status endpoint to verify if the server is still executing.
+            let statusConfirmed = false;
             if (!isTerminal && state.rm.threadId) {
                 try {
                     const statusRes = await fetch(
                         `${API_BASE_URL}/research-mode/pipeline-status/${state.rm.threadId}`
                     );
                     if (statusRes.ok) {
+                        statusConfirmed = true;
                         const statusData = await statusRes.json();
                         if (statusData.running) {
                             // PROXY ERROR HANDLING:
@@ -2713,9 +2715,19 @@ async function openRMEventStream(message, onConnected = null) {
                 }
             }
 
+            if (!isTerminal && !statusConfirmed && attempt < maxRetries) {
+                // The server never confirmed the run's state (status call failed), so
+                // the run may still be executing. Keep reconnecting instead of
+                // reporting a failure the server has not reported.
+                attempt++;
+                appendLogLine('Could not confirm run status — reconnecting…', 'warn');
+                await new Promise(res => setTimeout(res, 3000));
+                continue;
+            }
+
             if (!isTerminal) {
-                // Nothing is executing, nothing is paused at a gate, and no report
-                // exists: the run died. Show the failure and the retry action
+                // The server confirmed (or retries ran out): nothing is executing,
+                // nothing is paused at a gate, and no report exists: the run died. Show the failure and the retry action
                 // instead of leaving a fake "running" timer on screen.
                 processRMSEEvent({
                     event: 'error',
@@ -3007,7 +3019,10 @@ function processRMSEEvent(data) {
         state.rm.hitlCheckpointPending = false;
         state.rm.hitlApproved = true;
         renderRMPaperLive(false);
-        showRMFailureBanner(data.message || 'The research run failed before producing a report.');
+        showRMFailureBanner(
+            data.message || 'The research run failed before producing a report.',
+            { retryable: data.retryable !== false }
+        );
         showToast(data.message || 'Pipeline error occurred.', 'error');
         saveRMSession();
     }

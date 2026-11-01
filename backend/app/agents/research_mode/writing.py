@@ -542,10 +542,11 @@ async def research_design_agent(state: dict[str, Any]) -> dict[str, Any]:
     hypotheses = state.get("hypotheses", [])
     protocol = state.get("search_protocol") or {}
     ps_lower = ps.lower()
+    criteria = protocol.get("inclusion_criteria") if isinstance(protocol, dict) else None
     is_clinical = bool(
         re.search(r"\b(clinical|trial|patient|insomnia|therapy|treatment|drug|pharmac|medical|disease|health|cbt|rct|placebo)\b", ps_lower)
         or re.search(r"\b(systematic review|meta-analysis)\b", ps_lower)
-        or (isinstance(protocol, dict) and (protocol.get("population") or protocol.get("intervention")))
+        or re.search(r"\brandomi[sz]ed\b", " ".join(map(str, criteria or [])).lower())
     )
 
     if is_clinical:
