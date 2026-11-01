@@ -41,10 +41,13 @@ def _item_text(item: Any) -> str:
     return str(item or "").strip()
 
 
-def clean_scope_items(items: Any, fallback: list[str]) -> list[str]:
-    """Drop blank/object-shaped items so a checkpoint can never show only 'O1'."""
+def clean_scope_items(items: Any, fallback: list[str], limit: int = 5) -> list[str]:
+    """Drop blank/object-shaped items so a checkpoint can never show only 'O1'.
+
+    ``limit`` caps model output at 5; user-supplied lists pass the request cap.
+    """
     cleaned = [text for text in (_item_text(i) for i in (items or [])) if text]
-    return cleaned[:5] or fallback
+    return cleaned[:limit] or fallback
 
 
 async def scope_definition_agent(state: dict[str, Any]) -> dict[str, Any]:

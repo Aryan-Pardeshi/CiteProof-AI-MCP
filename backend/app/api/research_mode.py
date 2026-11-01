@@ -281,8 +281,8 @@ async def _execute_research_graph(thread_id: str, message: str | None):
             "hitl_checkpoint": hitl_checkpoint or values.get("hitl_checkpoint"),
             "state": {
                 "problem_statement": values.get("problem_statement"),
-                "research_objectives": clean_scope_items(values.get("research_objectives"), []),
-                "research_questions": clean_scope_items(values.get("research_questions"), []),
+                "research_objectives": clean_scope_items(values.get("research_objectives"), [], limit=MAX_LIST_ITEMS),
+                "research_questions": clean_scope_items(values.get("research_questions"), [], limit=MAX_LIST_ITEMS),
                 "keywords": values.get("keywords"),
                 "search_protocol": values.get("search_protocol"),
                 "raw_papers_count": (
@@ -378,8 +378,8 @@ async def start_research_mode(request: ResearchModeStartRequest):
         "thread_id": thread_id,
         "mode": "research",
         "problem_statement": request.problem_statement,
-        "research_objectives": clean_scope_items(request.research_objectives, []),
-        "research_questions": clean_scope_items(request.research_questions, []),
+        "research_objectives": clean_scope_items(request.research_objectives, [], limit=MAX_LIST_ITEMS),
+        "research_questions": clean_scope_items(request.research_questions, [], limit=MAX_LIST_ITEMS),
         "keywords": [],
         "raw_papers": [],
         "screened_papers": [],
@@ -406,8 +406,8 @@ async def start_research_mode(request: ResearchModeStartRequest):
         return {
             "thread_id": thread_id,
             "problem_statement": values.get("problem_statement"),
-            "research_objectives": clean_scope_items(values.get("research_objectives"), []),
-            "research_questions": clean_scope_items(values.get("research_questions"), []),
+            "research_objectives": clean_scope_items(values.get("research_objectives"), [], limit=MAX_LIST_ITEMS),
+            "research_questions": clean_scope_items(values.get("research_questions"), [], limit=MAX_LIST_ITEMS),
             "keywords": values.get("keywords"),
             "hitl_checkpoint": values.get("hitl_checkpoint", "checkpoint_1"),
             "status": values.get("status", "awaiting_approval"),
@@ -627,7 +627,13 @@ async def retry_research_mode(thread_id: str):
             detail="This research run is no longer available on the server.",
         )
     if not state.next and state.values.get("status") == "completed":
-        raise HTTPException(status_code=409, detail="This run already completed.")
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The report did not pass quality checks and cannot be resumed; start a new run."
+                if buf.get("report_rejected") else "This run already completed."
+            ),
+        )
 
     buf["completed"] = False
     buf["report_rejected"] = False

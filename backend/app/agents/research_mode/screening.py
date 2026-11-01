@@ -75,16 +75,22 @@ async def fulltext_eligibility_agent(state: dict[str, Any]) -> dict[str, Any]:
     if not screened_papers:
         return {}
 
-    logger.info(f"fulltext_eligibility_agent fetching full texts for top {len(screened_papers[:15])} papers...")
+    # Excluded records follow the included ones in this list; fetching or counting
+    # them would report full text for a corpus that is really abstract-only.
+    selected_idx = [
+        i for i, p in enumerate(screened_papers) if p.get("screening_status") == "included"
+    ][:15]
+    logger.info(f"fulltext_eligibility_agent fetching full texts for top {len(selected_idx)} included papers...")
     try:
-        selected = screened_papers[:15]
-        enriched_selected = await fetch_fulltexts(selected)
+        enriched_selected = await fetch_fulltexts([screened_papers[i] for i in selected_idx])
         for p in enriched_selected:
             if "content_excerpt" in p and not p.get("fulltext_excerpt"):
                 p["fulltext_excerpt"] = p["content_excerpt"]
-        
-        enriched_all = enriched_selected + screened_papers[15:]
-        fetched = sum(1 for p in enriched_all if (p.get("fulltext_excerpt") or "").strip())
+
+        enriched_all = list(screened_papers)
+        for i, enriched in zip(selected_idx, enriched_selected, strict=False):
+            enriched_all[i] = enriched
+        fetched = sum(1 for p in enriched_selected if (p.get("fulltext_excerpt") or "").strip())
         return {
             "paper_records": enriched_all,
             "screened_papers": enriched_all,
@@ -143,7 +149,7 @@ Return a valid JSON array with schema:
             if ev:
                 p["study_type"] = ev.get("study_type", "empirical")
                 p["quality_rating"] = ev.get("quality_rating", "Medium")
-                notes = ev.get("quality_notes", "")
+                notes = str(ev.get("quality_notes") or "")
                 if not has_ft and "abstract" not in notes.lower():
                     notes = f"{notes} (Appraised from abstract only; full text unavailable)".strip()
                 p["quality_rubric"] = {

@@ -1852,8 +1852,7 @@ body.cp-app .rm-failure-banner {
   margin-bottom: var(--cp-space-6);
 }
 
-body.cp-app .rm-failure-banner span {
-  display: block;
+body.cp-app .rm-failure-banner > div:first-child > div:last-child {
   font-size: 13px;
   color: var(--cp-muted);
   margin-top: 2px;

@@ -218,3 +218,23 @@ def test_dedupe_prefers_declared_source_ranking():
     from backend.app.tools.academic_search import SOURCE_PRIORITY
 
     assert SOURCE_PRIORITY["pubmed"] < SOURCE_PRIORITY["openalex"] < SOURCE_PRIORITY["datacite"]
+
+
+def test_clean_scope_items_honours_caller_limit():
+    items = [f"objective {i}" for i in range(8)]
+    assert len(clean_scope_items(items, [])) == 5
+    assert len(clean_scope_items(items, [], limit=10)) == 8
+
+
+def test_fulltext_count_ignores_excluded_papers(monkeypatch):
+    async def fake_fetch(papers):
+        return [{**p, "fulltext_excerpt": "full text"} for p in papers]
+
+    monkeypatch.setattr(screening, "fetch_fulltexts", fake_fetch)
+    papers = [
+        {"title": "kept", "screening_status": "included"},
+        {"title": "dropped review", "screening_status": "excluded"},
+    ]
+    result = asyncio.run(screening.fulltext_eligibility_agent({"paper_records": papers}))
+    assert result["corpus_stats"]["fulltext_fetched"] == 1
+    assert "fulltext_excerpt" not in result["paper_records"][1]

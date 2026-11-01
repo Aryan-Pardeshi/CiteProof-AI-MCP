@@ -541,8 +541,13 @@ async def research_design_agent(state: dict[str, Any]) -> dict[str, Any]:
     ps = state.get("problem_statement", "")
     hypotheses = state.get("hypotheses", [])
     protocol = state.get("search_protocol") or {}
-    ps_lower = ps.lower()
     criteria = protocol.get("inclusion_criteria") if isinstance(protocol, dict) else None
+    protocol_text = (
+        f"{protocol.get('population', '')} {protocol.get('intervention', '')}"
+        if isinstance(protocol, dict) else ""
+    )
+    # Match clinical vocabulary in the topic and PICOC text, not mere field presence.
+    ps_lower = f"{ps} {protocol_text}".lower()
     is_clinical = bool(
         re.search(r"\b(clinical|trial|patient|insomnia|therapy|treatment|drug|pharmac|medical|disease|health|cbt|rct|placebo)\b", ps_lower)
         or re.search(r"\b(systematic review|meta-analysis)\b", ps_lower)

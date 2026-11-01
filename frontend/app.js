@@ -293,13 +293,15 @@ function rmStripLeadingHeading(body, headingPattern) {
 function rmDedupeSections(md) {
     const parts = String(md || '').split(/(?=^#{2,3}\s)/m);
     const seen = new Set();
-    let hasResearchGap = false;
+    // The gap analysis belongs to Section 3; only strip its repeats inside the
+    // Conceptual Framework section so the real Methodological Gaps stay.
+    let inFramework = false;
     return parts.filter(part => {
         if (!/^#{2,3}\s/.test(part)) return true;
-        if (/^##\s*3\.\s*research\s*gap/i.test(part)) {
-            hasResearchGap = true;
+        if (/^##\s/.test(part)) {
+            inFramework = /^##\s*(?:\d+\.\s*)?conceptual\s+framework/i.test(part);
         }
-        if (hasResearchGap && (/integration of (?:identified )?methodological gaps/i.test(part) || /^###\s*(?:\d+\.\s*)?methodological gaps/i.test(part))) {
+        if (inFramework && (/integration of (?:identified )?methodological gaps/i.test(part) || /^###\s*(?:\d+\.\s*)?methodological gaps/i.test(part))) {
             return false;
         }
         const key = part.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -2580,12 +2582,18 @@ async function openRMEventStream(message, onConnected = null) {
             });
 
             if (!response.ok) {
+                // Only the initial approve/reject call is rejected outright; a later
+                // reconnect that sees 404/409 falls through to the status check so a
+                // dead run gets its failure banner instead of "approval failed".
                 if (response.status === 404 || response.status === 409) {
-                    const payload = await response.json().catch(() => ({}));
-                    showToast(payload.detail || `Request rejected (HTTP ${response.status}).`, 'error');
-                    return false;
+                    if (onConnected) {
+                        const payload = await response.json().catch(() => ({}));
+                        showToast(payload.detail || `Request rejected (HTTP ${response.status}).`, 'error');
+                        return false;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
                 }
-                throw new Error(`HTTP ${response.status}`);
             }
 
             if (onConnected) {
@@ -2597,7 +2605,10 @@ async function openRMEventStream(message, onConnected = null) {
                 onConnected = null;
             }
 
-            const reader = response.body.getReader();
+            // A 404/409 on reconnect has no stream; the status check below decides.
+            const reader = response.ok
+                ? response.body.getReader()
+                : { read: async () => ({ done: true }) };
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
 
@@ -2790,8 +2801,16 @@ function startRMHealthMonitor() {
                     renderRMPaperFinal();
                 }
             } else if (data.outcome === 'checkpoint' && !state.rm.hitlCheckpointPending) {
-                const cp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
-                renderRMHitlPanel(cp);
+                // The stream missed the checkpoint event. Replay it with fresh server
+                // state so the gate, timer and monitor behave as on a normal arrival
+                // (and the gate is not rebuilt every poll, wiping typed feedback).
+                const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
+                const syncData = syncRes.ok ? await syncRes.json() : {};
+                processRMSEEvent({
+                    event: 'checkpoint',
+                    hitl_checkpoint: data.hitl_checkpoint || syncData.hitl_checkpoint,
+                    state: syncData.values || {}
+                });
             }
         } catch (e) {
             console.debug('RM health poll transient check:', e);
