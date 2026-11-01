@@ -650,4 +650,4 @@ async def test_fanout_dedupes_across_sources(monkeypatch):
     assert len(records) == 1
     assert tracker.duplicates_removed == 1
     # First-seen source wins retention.
-    assert records[0].retrieval_source == "openalex"
+    assert records[0].retrieval_source == "europe_pmc"  # SOURCE_PRIORITY ranks europe_pmc above openalex
