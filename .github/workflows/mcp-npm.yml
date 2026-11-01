@@ -108,7 +108,7 @@ jobs:
       - name: Build and validate the bundle
         run: node MCP/mcpb/build.mjs
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
 
       - name: Build the Python wheel
         run: uv build --wheel --out-dir dist MCP
