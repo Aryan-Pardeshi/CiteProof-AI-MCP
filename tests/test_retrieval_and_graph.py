@@ -61,6 +61,7 @@ async def test_metadata_validator_passes_orcid_max_authors_and_keeps_ids(monkeyp
     calls: list[int] = []
 
     async def fake_enrich(records, max_authors=2, **kwargs):
+        """Record the max_authors it was called with and attach a fixed iD."""
         calls.append(max_authors)
         return [r.model_copy(update={"author_orcids": {r.authors[0]: "0000-0002-1825-0097"}}) for r in records]
 

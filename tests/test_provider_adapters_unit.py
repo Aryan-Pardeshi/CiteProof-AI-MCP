@@ -578,6 +578,7 @@ def _orcid_by_name_handler(ids: dict[str, str], seen: list[str]):
     """Mock expanded-search that returns one confident hit per known quoted name."""
 
     def handler(request: httpx.Request) -> httpx.Response:
+        """Record the queried name and answer with its iD, or no results if unknown."""
         name = request.url.params["q"].strip('"')
         seen.append(name)
         if name not in ids:
@@ -616,6 +617,7 @@ async def test_enrich_record_authors_respects_max_authors():
     [(None, 2), ("", 2), ("5", 5), ("0", 1), ("-3", 1), ("50", 10), ("lots", 2)],
 )
 def test_orcid_max_authors_from_env(monkeypatch, raw, expected):
+    """Unset, blank, or invalid values fall back to 2; numbers are clamped to 1..10."""
     if raw is None:
         monkeypatch.delenv("ORCID_MAX_AUTHORS", raising=False)
     else:
