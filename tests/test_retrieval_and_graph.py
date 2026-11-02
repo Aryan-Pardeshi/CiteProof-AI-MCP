@@ -52,6 +52,29 @@ async def test_metadata_validator_normalizes_text_but_does_not_validate_doi_or_v
     assert rec["venue"] == "  Not   A Real Journal  "
 
 
+@pytest.mark.asyncio
+async def test_metadata_validator_passes_orcid_max_authors_and_keeps_ids(monkeypatch):
+    """With ORCID enrichment on, ORCID_MAX_AUTHORS reaches the enricher and stored iDs survive."""
+    from backend.app.agents.research_mode.retrieval import metadata_validator_agent
+    from backend.app.tools import orcid_search
+
+    calls: list[int] = []
+
+    async def fake_enrich(records, max_authors=2, **kwargs):
+        calls.append(max_authors)
+        return [r.model_copy(update={"author_orcids": {r.authors[0]: "0000-0002-1825-0097"}}) for r in records]
+
+    monkeypatch.setenv("ORCID_AUTHOR_ENRICHMENT", "1")
+    monkeypatch.setenv("ORCID_MAX_AUTHORS", "4")
+    monkeypatch.setattr(orcid_search, "enrich_records_authors", fake_enrich)
+
+    paper = {"paper_id": "p1", "title": "T", "authors": ["Josiah Carberry"]}
+    result = await metadata_validator_agent({"paper_records": [paper]})
+
+    assert calls == [4]
+    assert result["paper_records"][0]["author_orcids"] == {"Josiah Carberry": "0000-0002-1825-0097"}
+
+
 def test_normalize_title():
     """Test title normalization ignores punctuation, whitespace, and case."""
     t1 = _normalize_title("Deep Learning in 2026: A Survey!")

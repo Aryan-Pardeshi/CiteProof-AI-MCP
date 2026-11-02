@@ -2878,7 +2878,14 @@ function openPaperInspector(paper) {
     const title = escapeHtml(paper.title || 'Paper Details');
     if (dom.modalPaperTitle) dom.modalPaperTitle.textContent = paper.title || 'Paper Details';
     if (dom.modalPaperBody) {
-        const authors = Array.isArray(paper.authors) ? paper.authors.map(escapeHtml).join(', ') : escapeHtml(paper.authors || 'N/A');
+        // ORCID iDs are only present for confident matches (ORCID_AUTHOR_ENRICHMENT=1).
+        const orcids = (paper.author_orcids && typeof paper.author_orcids === 'object') ? paper.author_orcids : {};
+        const authorHtml = (name) => {
+            const id = orcids[name];
+            if (typeof id !== 'string' || !/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(id)) return escapeHtml(name);
+            return `${escapeHtml(name)} <a href="https://orcid.org/${id}" target="_blank" rel="noopener noreferrer" title="ORCID ${id}"><img src="assets/orcid.svg" alt="ORCID ${id}" style="width: 14px; height: 14px; vertical-align: -2px;"></a>`;
+        };
+        const authors = Array.isArray(paper.authors) ? paper.authors.map(authorHtml).join(', ') : escapeHtml(paper.authors || 'N/A');
         const venue = escapeHtml(paper.venue || paper.journal || 'Academic Index');
         const year = escapeHtml(String(paper.year || 'N/A'));
         const doi = paper.doi ? `<a href="https://doi.org/${encodeURIComponent(paper.doi)}" target="_blank" rel="noopener noreferrer" style="color: var(--academic-blue);">${escapeHtml(paper.doi)}</a>` : 'N/A';
