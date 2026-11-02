@@ -561,6 +561,19 @@ async def test_enrich_record_authors_ambiguous_match_stores_no_orcid():
     assert enriched.author_orcids == {}
 
 
+@pytest.mark.asyncio
+async def test_enrich_record_authors_drops_orcid_for_duplicate_names():
+    # Only the first author is looked up, but canonicalization makes their name
+    # identical to an unlooked-up namesake; the iD must not be shown for both.
+    record = PaperRecord(paper_id="x", title="T", authors=["Josiah Q. Carberry", "Josiah Carberry"])
+
+    async with _mock_client(lambda req: httpx.Response(200, json=ORCID_EXPANDED)) as client:
+        enriched = await enrich_record_authors(record, max_authors=1, client=client)
+
+    assert enriched.authors == ["Josiah Carberry", "Josiah Carberry"]  # names still canonicalized
+    assert enriched.author_orcids == {}
+
+
 def _orcid_by_name_handler(ids: dict[str, str], seen: list[str]):
     """Mock expanded-search that returns one confident hit per known quoted name."""
 

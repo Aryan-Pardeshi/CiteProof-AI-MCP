@@ -42,6 +42,7 @@ import asyncio
 import logging
 import os
 import re
+from collections import Counter
 from typing import Any
 
 import httpx
@@ -211,7 +212,8 @@ async def enrich_record_authors(
     ORCID public API; when exactly one candidate confidently matches (token
     subset, see _confident_match), the author string is replaced by the ORCID
     display name and its iD is stored in author_orcids under that name.
-    Ambiguous or failed lookups leave the original untouched and store no iD.
+    Ambiguous or failed lookups leave the original untouched and store no iD,
+    and no iD is kept for a name that appears more than once on the paper.
 
     Returns a new PaperRecord (model_copy); the input record is never mutated.
     Intended for the metadata-validation stage; opt-in via
@@ -250,6 +252,12 @@ async def enrich_record_authors(
     finally:
         if own_client is not None:
             await own_client.aclose()
+
+    # author_orcids is keyed by name, so an iD is only safe when that name is
+    # unique on the paper; otherwise it would also be shown for a namesake.
+    name_counts = Counter(updated)
+    for name in [n for n in orcids if name_counts[n] > 1]:
+        del orcids[name]
 
     if not changed:
         return record
