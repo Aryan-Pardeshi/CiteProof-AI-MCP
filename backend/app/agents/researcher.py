@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.graph.state import ResearchState
 from backend.app.llm import llm
-from backend.app.tools.tavily_search import search_web
+from backend.app.tools.web_search import search_web
 
 logger = logging.getLogger(__name__)
 
