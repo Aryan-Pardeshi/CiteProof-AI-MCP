@@ -587,6 +587,7 @@ def test_importing_with_no_keys_does_not_crash(clean_env):
 
     probe = subprocess.run(
         [sys.executable, "-c", _IMPORT_PROBE],
+        check=False,
         cwd=str(root_dir),
         env=env,
         capture_output=True,
