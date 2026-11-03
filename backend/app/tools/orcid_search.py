@@ -29,7 +29,8 @@ only canonical author name strings and confidently matched iDs reach PaperRecord
                                           string is replaced by the canonical
                                           display_name when the ORCID record
                                           confidently matches the input name
-                                          (same token set). Ambiguous or failed
+                                          (ORCID name tokens are a subset of the
+                                          input name's). Ambiguous or failed
                                           lookups leave the original untouched.
     (derived)                          -> PaperRecord.author_orcids[name] =
                                           AuthorIdentity.orcid_id, on the same
@@ -255,9 +256,10 @@ async def enrich_record_authors(
 
     # author_orcids is keyed by name, so an iD is only safe when that name is
     # unique on the paper; otherwise it would also be shown for a namesake.
+    # Keys for names no longer on the paper (e.g. a pre-canonical spelling) are
+    # dropped too.
     name_counts = Counter(updated)
-    for name in [n for n in orcids if name_counts[n] > 1]:
-        del orcids[name]
+    orcids = {name: oid for name, oid in orcids.items() if name_counts[name] == 1}
 
     if not changed:
         return record
