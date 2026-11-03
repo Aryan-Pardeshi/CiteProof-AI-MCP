@@ -16,7 +16,7 @@ client = TestClient(app)
         ("/docs/research-workflow", "<h1>"),
         ("/docs/self-hosting", "Self-hosting CiteProof"),
         ("/docs/troubleshooting", "<h1>"),
-        ("/mcp", "Give Claude Science a verifiable research workflow"),
+        ("/mcp", "Literature reviews, checked against their sources."),
     ],
 )
 def test_documentation_pages_are_served(path: str, marker: str) -> None:

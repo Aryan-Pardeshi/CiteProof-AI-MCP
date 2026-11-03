@@ -1,6 +1,6 @@
 # <img src="frontend/assets/logo.png" alt="" width="32" height="32" style="vertical-align: middle; border-radius: 7px;"> CiteProof
 
-**Audit tools for AI literature reviews.** CiteProof checks that a review's citations, quotes, counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
+**Anti-hallucination checks for AI literature reviews.** CiteProof checks that every quote, number, DOI and citation in a review matches its source, and that the counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
 
 
 [![npm](https://img.shields.io/npm/v/citeproof-mcp?label=npm%20citeproof-mcp)](https://www.npmjs.com/package/citeproof-mcp)
@@ -52,7 +52,7 @@ AI research agents are now good at finding and reading papers. They are less goo
 
 | | **CiteProof MCP** | **CiteProof Research** |
 |---|---|---|
-| **What it is** | An MCP server with 40 audit tools | A web app with a 24-agent research pipeline |
+| **What it is** | An MCP server with 40 evidence and audit tools | A web app with a 24-agent research pipeline |
 | **Who does the research** | Your agent (Claude Science, or any MCP client) | The app's own agents |
 | **Language model inside** | None. It needs no API key | Yes, any OpenAI-compatible endpoint |
 | **Best for** | Systematic reviews that need an audit trail | Fast cited reports and full evidence-grounded papers |
@@ -64,7 +64,7 @@ A small first benchmark (two reviews against Claude Science) showed that agents 
 
 ## CiteProof MCP
 
-CiteProof MCP keeps the records a systematic review needs and checks them: a protocol, a PRISMA record, a screening log, an evidence table, claim checks, risk-of-bias records and an exportable audit trail. It works with [Claude Science](MCP/docs/CLAUDE_SCIENCE.md) and with other tools that can run a stdio MCP server, such as research agents and desktop AI clients.
+CiteProof MCP adds evidence checks to a research agent. Language models can invent quotes, figures and references, so each quote is compared with the source text you supply, each number with its quote, each DOI with Crossref, and each in-text citation with the papers in your record. Around those checks it keeps a protocol, PRISMA counts, a screening log, an evidence table, claim checks, risk-of-bias records and an exportable audit trail. It flags what does not hold and never decides whether a study is right. It works with [Claude Science](MCP/docs/CLAUDE_SCIENCE.md) and with other tools that can run a stdio MCP server, such as research agents and desktop AI clients.
 
 The server has no language model inside. The agent searches, reads, decides and writes. The server stores each decision, checks the evidence it points to, computes the numbers and refuses bad input.
 

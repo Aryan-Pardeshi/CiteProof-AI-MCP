@@ -198,7 +198,7 @@
             </a>
             <a href="#mcp" class="btn btn-white btn-lg">
               <svg class="btn-logo" width="18" height="18" aria-hidden="true"><use href="#logo-mcp"></use></svg>
-              <span>CiteProof MCP for Claude Science</span>
+              <span>Evidence checks for Claude Science</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </a>
   
@@ -452,41 +452,41 @@
         <div class="mcp-layout">
           <div class="mcp-text scroll-reveal">
             <div class="mcp-logos" aria-hidden="true"><svg class="mcp-logo-claude" width="30" height="30"><use href="#logo-claude"></use></svg><span class="mcp-logos-plus">+</span><svg class="mcp-logo-mcp" width="30" height="30"><use href="#logo-mcp"></use></svg></div>
-            <h2 class="section-title">Works inside Claude Science</h2>
-            <p class="mcp-subtitle">CiteProof also ships as a local MCP server. Your AI agent does the thinking; CiteProof keeps the record straight.</p>
+            <h2 class="section-title">Anti-hallucination checks for Claude Science</h2>
+            <p class="mcp-subtitle">CiteProof MCP is a local evidence layer for literature reviews. Claude Science finds and writes; CiteProof checks each quote, number and citation against its source and keeps the record.</p>
 
             <ul class="mcp-feature-list">
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Stores every review decision in a per-review local database</span>
+                <span>Checks every quote against the source text you supply</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Counts PRISMA numbers and checks that they add up</span>
+                <span>Confirms each number in an evidence row appears in its quote, and recomputes effect sizes from arm counts</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Checks quotes against the source text you supply</span>
+                <span>Looks up every DOI at Crossref and doi.org, and flags retractions</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Records screening decisions and computes reviewer agreement (Cohen's kappa)</span>
+                <span>Matches in-text citations to your recorded papers, and lists orphans and unresolved citations</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Finds duplicate records and clusters them</span>
+                <span>Computes PRISMA counts from the record and checks the draft against them</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Checks DOIs and flags retractions through Crossref</span>
+                <span>Records screening decisions and reviewer agreement (Cohen's kappa)</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Exports an audit bundle you can keep with the review</span>
+                <span>Exports a local audit bundle of every check, so the record stays with the review</span>
               </li>
             </ul>
 
-            <p class="mcp-honesty">The server contains no language model. The agent makes every judgement; CiteProof stores it and checks it where it can.</p>
+            <p class="mcp-honesty">The server contains no language model, so it flags mismatches and never decides whether a study or claim is right. The agent and the researcher make every judgement.</p>
 
             <div class="mcp-actions">
               <a href="/mcp" class="btn btn-white btn-lg"><span>How to connect</span></a>
