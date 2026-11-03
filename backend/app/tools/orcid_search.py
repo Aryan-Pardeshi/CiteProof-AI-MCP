@@ -261,7 +261,9 @@ async def enrich_record_authors(
     name_counts = Counter(updated)
     orcids = {name: oid for name, oid in orcids.items() if name_counts[name] == 1}
 
-    if not changed:
+    # Also copy when only the stale-key cleanup changed something, e.g. the
+    # lookup failed but an old spelling's iD was still on the record.
+    if not changed and orcids == (record.author_orcids or {}):
         return record
     return record.model_copy(update={"authors": updated, "author_orcids": orcids})
 
