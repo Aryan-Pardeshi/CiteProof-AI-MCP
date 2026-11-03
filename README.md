@@ -316,7 +316,8 @@ of provider names and defaults to `tavily`.
 | **Tavily** — default | `TAVILY_API_KEY` | Paid service with a free tier |
 | **SerpBase** — optional Google organic results | `SERPBASE_API_KEY` and `serpbase` in `WEB_SEARCH_PROVIDERS` | Paid third-party service; new accounts get 100 free credits |
 
-SerpBase is never used unless it is both listed and keyed:
+SerpBase has no date filter, so a search with a `time_range` skips it and moves
+on to the next provider. SerpBase is never used unless it is both listed and keyed:
 
 ```bash
 WEB_SEARCH_PROVIDERS="tavily,serpbase"

@@ -574,6 +574,41 @@ async def test_enrich_record_authors_drops_orcid_for_duplicate_names():
     assert enriched.author_orcids == {}
 
 
+@pytest.mark.asyncio
+async def test_enrich_record_authors_drops_orcid_keys_for_renamed_authors():
+    # A pre-existing iD keyed by the old spelling must not linger once the
+    # author is renamed to the canonical ORCID display name.
+    record = PaperRecord(
+        paper_id="x",
+        title="T",
+        authors=["Josiah Q. Carberry"],
+        author_orcids={"Josiah Q. Carberry": "0000-0002-1825-0097"},
+    )
+
+    async with _mock_client(lambda req: httpx.Response(200, json=ORCID_EXPANDED)) as client:
+        enriched = await enrich_record_authors(record, client=client)
+
+    assert enriched.authors == ["Josiah Carberry"]
+    assert enriched.author_orcids == {"Josiah Carberry": "0000-0002-1825-0097"}
+
+
+@pytest.mark.asyncio
+async def test_enrich_record_authors_drops_stale_orcid_keys_when_lookup_fails():
+    # The cleanup must persist even when no author resolves.
+    record = PaperRecord(
+        paper_id="x",
+        title="T",
+        authors=["Josiah Carberry"],
+        author_orcids={"Josiah Q. Carberry": "0000-0002-1825-0097"},
+    )
+
+    async with _mock_client(lambda req: httpx.Response(503)) as client:
+        enriched = await enrich_record_authors(record, client=client)
+
+    assert enriched.authors == ["Josiah Carberry"]
+    assert enriched.author_orcids == {}
+
+
 def _orcid_by_name_handler(ids: dict[str, str], seen: list[str]):
     """Mock expanded-search that returns one confident hit per known quoted name."""
 

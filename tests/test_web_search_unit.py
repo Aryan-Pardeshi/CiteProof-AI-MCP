@@ -290,11 +290,31 @@ def test_serpbase_wraps_transport_errors(serpbase_key):
 
 
 def test_serpbase_without_a_key_refuses_to_call(clean_env):
-    provider = SerpBaseProvider(client=_serpbase_provider(SERPBASE_PAYLOAD))
+    captured: list[httpx.Request] = []
+    provider = _serpbase_provider(SERPBASE_PAYLOAD, captured=captured)
 
     assert provider.is_configured() is False
     with pytest.raises(SerpBaseError, match="SERPBASE_API_KEY"):
         provider.search("q")
+    assert captured == []
+
+
+@pytest.mark.parametrize("time_range", ["day", "week", "month", "year"])
+def test_serpbase_refuses_a_time_restricted_search(serpbase_key, time_range):
+    # No date filter in the SerpBase API, so a restricted search must fail
+    # (and fall back) instead of returning results from any period.
+    captured: list[httpx.Request] = []
+    provider = _serpbase_provider(SERPBASE_PAYLOAD, captured=captured)
+
+    with pytest.raises(SerpBaseError, match="time_range"):
+        provider.search("q", time_range=time_range)
+    assert captured == []
+
+
+@pytest.mark.parametrize("time_range", [None, "", "none", "last week"])
+def test_serpbase_ignores_an_unset_or_invalid_time_range(serpbase_key, time_range):
+    results = _serpbase_provider(SERPBASE_PAYLOAD).search("q", time_range=time_range)
+    assert len(results) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -352,6 +372,25 @@ def test_falls_back_to_the_next_configured_provider(clean_env, monkeypatch, fail
     assert second.calls, "the second provider should have been used as a fallback"
     assert "provider: serpbase" in text
     assert "serpbase title 1" in text
+
+
+def test_time_restricted_search_falls_back_when_serpbase_is_listed_first(clean_env, monkeypatch):
+    clean_env.setenv("WEB_SEARCH_PROVIDERS", "serpbase,tavily")
+    clean_env.setenv("SERPBASE_API_KEY", "test-serpbase-key")
+    clean_env.setenv("TAVILY_API_KEY", "test-tavily-key")
+    captured: list[httpx.Request] = []
+    serpbase = _serpbase_provider(SERPBASE_PAYLOAD, captured=captured)
+    tavily = FakeProvider("tavily", results=[_result("tavily")])
+    monkeypatch.setitem(registry.PROVIDERS, "serpbase", serpbase)
+    monkeypatch.setitem(registry.PROVIDERS, "tavily", tavily)
+
+    text = search_web.invoke({"query": "ai", "time_range": "week"})
+
+    assert captured == []
+    assert tavily.calls
+    assert tavily.calls[0]["time_range"] == "week"
+    assert "provider: tavily" in text
+    assert "tavily title 1" in text
 
 
 def test_unconfigured_providers_are_skipped_silently(clean_env, monkeypatch):
@@ -522,6 +561,10 @@ def test_format_results_collapses_whitespace_and_keeps_order():
 # ---------------------------------------------------------------------------
 
 _IMPORT_PROBE = """
+# Keep a developer's local .env from restoring the keys this probe removed.
+import dotenv
+dotenv.load_dotenv = lambda *args, **kwargs: False
+
 import backend.app.tools.tavily_search as legacy
 import backend.app.tools.web_search as ws
 import backend.app.tools.web_search.tavily as tavily_module
@@ -544,11 +587,11 @@ def test_importing_with_no_keys_does_not_crash(clean_env):
 
     probe = subprocess.run(
         [sys.executable, "-c", _IMPORT_PROBE],
-        check=False,
         cwd=str(root_dir),
         env=env,
         capture_output=True,
         text=True,
+        check=False,
     )
 
     assert probe.returncode == 0, probe.stderr
