@@ -69,7 +69,10 @@ def build_mermaid(s: dict[str, Any]) -> str:
     lines += [
         "    end",
         "    subgraph Included",
-        f'        inc["Studies included in review (n = {s["studies_included"]})"]',
+        (
+            f'        inc["Studies included in review (n = {s["study_count"]})<br/>'
+            f'Reports of included studies (n = {s["reports_included"]})"]'
+        ),
         "        sc3 --> inc",
         "    end",
     ]
@@ -142,7 +145,7 @@ def build_svg(s: dict[str, Any]) -> str:
             True,
         ),
         _svg_arrow(220, 520, 220, 570),
-        _svg_box(40, 570, 360, 70, "incl", ["Included", f"Studies included in review: {s['studies_included']}"], True),
+        _svg_box(40, 570, 360, 70, "incl", ["Included", f"Studies included in review: {s['study_count']}", f"Reports of included studies: {s['reports_included']}"], True),
         "</svg>",
     ]
     return "\n".join(parts)
@@ -177,7 +180,12 @@ def build_markdown(s: dict[str, Any]) -> str:
     if s["exclusion_reasons"]:
         lines.append("     - Exclusion reasons:")
         lines += [f"     - {_md_text(k)}: {v}" for k, v in _top(s["exclusion_reasons"], 5)]
-    lines += ["", "3. **Included**", f"   - Studies included in review: {s['studies_included']}"]
+    lines += [
+        "",
+        "3. **Included**",
+        f"   - Studies included in review: {s['study_count']}",
+        f"   - Reports of included studies: {s['reports_included']}",
+    ]
     return "\n".join(lines)
 
 
@@ -304,7 +312,9 @@ def number_checks(report_text: str, status: dict[str, Any], limit: int = 50) -> 
                             "field": field,
                             "reported": reported,
                             "recorded": status[field],
-                            "matches": reported == status[field],
+                            # "N studies were included" may count linked studies rather than reports.
+                            "matches": reported == status[field]
+                            or (field == "studies_included" and reported == status.get("study_count")),
                             "snippet": snippet[:160],
                         },
                     )

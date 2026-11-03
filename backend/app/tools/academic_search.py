@@ -312,6 +312,24 @@ def _expand_keywords_for_simple_sources(
     return fallback[:1] or ["research"]
 
 
+SECONDARY_RETRIEVAL_SOURCES: set[str] = {
+    "datacite",
+    "tavily_web_fallback",
+}
+
+SOURCE_PRIORITY: dict[str, int] = {
+    "pubmed": 1,
+    "crossref": 2,
+    "europe_pmc": 3,
+    "openalex": 4,
+    "semantic_scholar": 5,
+    "doaj": 6,
+    "arxiv": 7,
+    "datacite": 15,
+    "tavily_web_fallback": 20,
+}
+
+
 async def search_academic_papers_structured(
     keywords: list[str]
 ) -> tuple[list[PaperRecord], PRISMATracker]:
@@ -360,13 +378,22 @@ async def search_academic_papers_structured(
                         src = p.retrieval_source
                         records_by_source[src] = records_by_source.get(src, 0) + 1
 
-    # Deduplicate by DOI and normalized title
+    # Deduplicate by DOI and normalized title.
+    # Prioritize primary publisher records and records with abstracts over secondary repository
+    # records (e.g. DataCite repository DOIs) when both index the same paper.
+    def _dedupe_priority(p: PaperRecord) -> tuple[int, int]:
+        has_abs = 0 if (p.abstract and p.abstract.strip()) else 1
+        source_rank = SOURCE_PRIORITY.get(str(p.retrieval_source or "").lower(), 10)
+        return (has_abs, source_rank)
+
+    combined_sorted = sorted(combined, key=_dedupe_priority)
+
     seen_dois = set()
     seen_titles = set()
     seen_paper_ids = set()
     deduped: list[PaperRecord] = []
 
-    for p in combined:
+    for p in combined_sorted:
         doi = p.doi
         norm_title = _normalize_title(p.title)
         pid = p.paper_id
@@ -595,6 +622,79 @@ def _is_protocol_without_results(paper: PaperRecord) -> bool:
     return not _PROTOCOL_RESULTS_RE.search(abstract)
 
 
+_RCT_ONLY_RE = re.compile(r"\brandomi[sz]ed\b|\brandomi[sz]ation\b|\brcts?\b", re.IGNORECASE)
+_REVIEW_DESIGN_RE = re.compile(
+    r"\b(?:systematic review|meta-?analysis|network meta-?analysis|scoping review|"
+    r"umbrella review|literature review|narrative review)\b",
+    re.IGNORECASE,
+)
+# The lookahead skips "meta-analysis protocol/guidelines", which an RCT can name without being a review.
+_REVIEW_KIND = (
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)"
+    r"(?!\s+(?:protocols?|guidelines?|framework|methods?|approach|software)\b)"
+)
+# Only design adjectives, so "A recent review..." or "Following a meta-analysis protocol" do not match.
+_REVIEW_ADJ = r"(?:(?:updated|living|comprehensive|rapid|network|bayesian|cumulative|dose-response)\s+){0,2}"
+# "Methods: A systematic review of 18 trials was performed" declares the design too. An opening
+# sentence counts only when it says the review was done, since RCT abstracts often open by citing one.
+_DECLARED_REVIEW_RE = re.compile(
+    r"\b(?:methods?|design|study design|type of study)\s*:\s*"
+    r"(?:we\s+(?:conducted|performed|undertook|carried out)\s+)?(?:(?:a|an)\s+)?" + _REVIEW_ADJ + _REVIEW_KIND + r"\b"
+    r"|^\s*(?:a|an)\s+" + _REVIEW_ADJ + _REVIEW_KIND
+    + r"\b[^.]{0,160}?\b(?:was|were)\s+(?:performed|conducted|undertaken|carried out)\b",
+    re.IGNORECASE,
+)
+_SELF_REVIEW_RE = re.compile(
+    r"\b(?:this|the present|the current|our)\s+(?:\w+\s+){0,2}"
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b"
+    r"|\bwe\s+(?:conducted|performed|carried out|undertook|present)\s+(?:a|an)\s+(?:\w+\s+){0,2}"
+    r"(?:systematic review|meta-?analysis|scoping review|umbrella review)\b",
+    re.IGNORECASE,
+)
+
+
+# Wording that widens the design scope beyond randomised trials.
+_NON_RCT_ALLOWED_RE = re.compile(
+    r"quasi|non-?randomi[sz]ed|observational|cohort|case[- ]control|cross-sectional|"
+    r"open-label|real-world|and/or|\bor other (?:study |trial )?(?:designs?|studies|trials)\b|"
+    r"\bany (?:study |trial )?designs?\b",
+    re.IGNORECASE,
+)
+
+
+def _protocol_requires_rcts(protocol: Any | None) -> bool:
+    """True when the approved protocol restricts inclusion to randomised trials.
+
+    A criterion that names RCTs but also admits other designs (quasi-experimental,
+    observational, "or other") does not make the review RCT-only.
+    """
+    criteria = _protocol_list(protocol, "inclusion_criteria")
+    if not any(_RCT_ONLY_RE.search(c) for c in criteria):
+        return False
+    return not any(_NON_RCT_ALLOWED_RE.search(c) for c in criteria)
+
+
+def _excluded_by_study_design(paper: PaperRecord, requires_rcts: bool) -> bool:
+    """Deterministic design gate: a review is not an RCT, however relevant.
+
+    Relevance screening alone admitted a network meta-analysis and a systematic
+    review into an RCT-only corpus. Title/abstract design labels are reliable
+    for reviews, and ``study_type`` is set by retrieval when known.
+    """
+    if not requires_rcts:
+        return False
+    study_type = str(getattr(paper, "study_type", "") or "").lower()
+    if "review" in study_type or "meta-analysis" in study_type or "meta analysis" in study_type:
+        return True
+    # Only the paper's own self-description counts: a trial that cites "a prior
+    # systematic review" in its abstract is still a trial.
+    return bool(
+        _REVIEW_DESIGN_RE.search(str(paper.title or ""))
+        or _SELF_REVIEW_RE.search(str(paper.abstract or "")[:400])
+        or _DECLARED_REVIEW_RE.search(str(paper.abstract or "")[:400])
+    )
+
+
 def _screen_batch_timeout_seconds() -> float:
     """Per-batch LLM timeout, overridable by SCREEN_BATCH_TIMEOUT_SECONDS."""
     raw = os.getenv("SCREEN_BATCH_TIMEOUT_SECONDS", "").strip()
@@ -643,9 +743,10 @@ Score each paper's eligibility for this review on a 1-10 relevance scale:
   digital CBT format, or a different but defensible comparator).
 - 5-6: related but indirect (same broad topic but a different intervention,
   population, outcome, or setting, or useful background only).
-- 1-4: off topic, wrong population or intervention, no relevant outcome, or a
-  study protocol, editorial, opinion piece, or bibliometric analysis without
-  reported results.
+- 1-4: off topic, wrong population or intervention, wrong study design (e.g.
+  review, systematic review, meta-analysis, or editorial when empirical/RCT
+  studies are specified), no relevant outcome, or a study protocol, editorial,
+  opinion piece, or bibliometric analysis without reported results.
 
 Scoring rules:
 - Judge relevance against the problem statement and PICOC, not general interest.
@@ -778,6 +879,7 @@ async def screen_papers_structured(
     tracker: PRISMATracker | None = None,
     model: str | None = None,
     protocol: Any | None = None,
+    on_progress: Any | None = None,
 ) -> tuple[list[PaperRecord], PRISMATracker]:
     """Screen candidate corpus for relevance, updating PRISMATracker deterministically."""
     tr = tracker.model_copy(deep=True) if tracker else PRISMATracker(
@@ -806,7 +908,9 @@ async def screen_papers_structured(
         logger.info(f"Excluding {retracted_count} retracted papers before title/abstract screening.")
 
     protocol_excluded_papers: list[PaperRecord] = []
+    design_excluded_papers: list[PaperRecord] = []
     screenable: list[PaperRecord] = []
+    requires_rcts = _protocol_requires_rcts(protocol)
     for p in papers:
         if getattr(p, "is_retracted", False) is True:
             continue
@@ -815,18 +919,30 @@ async def screen_papers_structured(
             p.exclusion_reason = "Protocol without reported results"
             protocol_excluded_papers.append(p)
             continue
+        if _excluded_by_study_design(p, requires_rcts):
+            p.screening_status = "excluded"
+            p.exclusion_reason = "Study design does not match protocol (RCTs only)"
+            design_excluded_papers.append(p)
+            continue
         screenable.append(p)
 
     protocol_excluded_count = len(protocol_excluded_papers)
+    design_excluded_count = len(design_excluded_papers)
     if protocol_excluded_count:
         logger.info(
             f"Excluding {protocol_excluded_count} study protocols without reported results "
             "before relevance screening."
         )
+    if design_excluded_count:
+        logger.info(
+            f"Excluding {design_excluded_count} reviews/meta-analyses: the protocol is RCT-only."
+        )
 
     if len(papers) <= SCREEN_THRESHOLD:
         tr.records_screened = len(papers)
-        tr.excluded_title_abstract = retracted_count + protocol_excluded_count
+        tr.excluded_title_abstract = (
+            retracted_count + protocol_excluded_count + design_excluded_count
+        )
         tr.full_text_requested = len(screenable)
         tr.full_text_assessed = len(screenable)
         tr.studies_included = len(screenable)
@@ -837,9 +953,14 @@ async def screen_papers_structured(
             copied_papers.append(p_copy)
         if protocol_excluded_count:
             tr.exclusion_reasons["Protocol without reported results"] = protocol_excluded_count
+        if design_excluded_count:
+            tr.exclusion_reasons["Study design does not match protocol (RCTs only)"] = design_excluded_count
         if retracted_count:
             tr.exclusion_reasons["Retracted publication"] = retracted_count
-        return copied_papers + protocol_excluded_papers + retracted_papers, tr
+        return (
+            copied_papers + protocol_excluded_papers + design_excluded_papers + retracted_papers,
+            tr,
+        )
 
     candidates = _select_candidates(
         screenable,
@@ -862,13 +983,29 @@ async def screen_papers_structured(
         for i in range(0, len(candidates), SCREEN_BATCH_SIZE)
     ]
 
-    tasks = [
-        _score_batch(
+    completed_batches = 0
+    screened_candidates = 0
+    progress_lock = asyncio.Lock()
+
+    async def _run_batch(idx: int, b: list[PaperRecord]):
+        nonlocal completed_batches, screened_candidates
+        res = await _score_batch(
             llm, b, problem_statement, objectives_str, semaphore, criteria_str,
             timeout=batch_timeout,
         )
-        for b in batches
-    ]
+        async with progress_lock:
+            completed_batches += 1
+            screened_candidates += len(b)
+            if on_progress is not None:
+                try:
+                    p_res = on_progress(screened_candidates, len(candidates), completed_batches, len(batches))
+                    if asyncio.iscoroutine(p_res):
+                        await p_res
+                except Exception as exc:  # noqa: BLE001 - progress is best effort
+                    logger.debug(f"screening progress callback failed: {exc}")
+        return res
+
+    tasks = [_run_batch(i, b) for i, b in enumerate(batches)]
 
     results = await asyncio.gather(
         *tasks,
@@ -999,6 +1136,7 @@ async def screen_papers_structured(
         + unscreened_surplus
         + retracted_count
         + protocol_excluded_count
+        + design_excluded_count
     )
     tr.full_text_requested = len(included)
     tr.full_text_assessed = len(included)
@@ -1010,6 +1148,8 @@ async def screen_papers_structured(
         tr.exclusion_reasons["Not screened: candidate pool limit"] = unscreened_surplus
     if protocol_excluded_count:
         tr.exclusion_reasons["Protocol without reported results"] = protocol_excluded_count
+    if design_excluded_count:
+        tr.exclusion_reasons["Study design does not match protocol (RCTs only)"] = design_excluded_count
     if retracted_count:
         tr.exclusion_reasons["Retracted publication"] = retracted_count
 
@@ -1017,11 +1157,13 @@ async def screen_papers_structured(
         f"Screening complete: {len(included)} included ({len(top_up)} via top-up, "
         f"{len(guaranteed)} via source-guarantee), {len(excluded_scored)} scored exclusions, "
         f"{len(unscored_papers)} unscored, {unscreened_surplus} not screened (candidate pool limit), "
-        f"{protocol_excluded_count} protocols, {retracted_count} retracted."
+        f"{protocol_excluded_count} protocols, {design_excluded_count} non-RCT designs, "
+        f"{retracted_count} retracted."
     )
     return (
         included
         + protocol_excluded_papers
+        + design_excluded_papers
         + retracted_papers
     ), tr
 

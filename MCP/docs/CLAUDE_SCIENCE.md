@@ -1,6 +1,6 @@
 # Use CiteProof MCP in Claude Science
 
-This page shows how to add the CiteProof MCP server to Claude Science as a **Local command** connector. The npx method is the recommended install; the bundle method is the fallback. Both were tested on Windows 11 with the native sandbox (Claude Science 0.1.67 for the bundle, 0.1.70 for the npx failure that led to the bundled-server launcher). Other platforms may differ; if you try them, please open an issue.
+This page shows how to add the CiteProof MCP server to Claude Science as a **Local command** connector. The npx method is the recommended install; the bundle method is the fallback. Both were tested on Windows 11 with the native sandbox (Claude Science 0.1.67 for the bundle, 0.1.70 for the npx failure that led to the bundled-server launcher; version 0.2.1 with 24 tools was verified, while 0.3.0 with 40 tools has not yet been tested in Claude Science). Other platforms may differ; if you try them, please open an issue.
 
 ## Contents
 
@@ -34,7 +34,7 @@ The launcher checks, in order: `CITEPROOF_MCP_PYTHON` (or `--python`), `uvx` if 
    On Windows the workspace folder is `C:/Users/<you>/.claude-science/orgs/<org-id>/workspaces/_mcp-citeproof`. It normally appears after the first start attempt of the connector. `claude-science logs` also prints it as `cwd` in the sandbox policy lines for `_mcp-citeproof`. If you leave `CITEPROOF_MCP_HOME` out, review files go to `~/.citeproof-mcp`, which may be outside the sandbox's writable area.
 
 5. Save and start a new conversation.
-6. **Check the tool list.** The connector page should list 24 tools, from `review_create` to `export_bundle`. By default Claude Science asks for approval each time a tool runs. You can set each tool to always allow once you trust it.
+6. **Check the tool list.** The connector page should list 40 tools (version 0.2.1 had 24), from `review_create` to `review_history`. By default Claude Science asks for approval each time a tool runs. You can set each tool to always allow once you trust it.
 7. **Start a review.** Ask Claude Science to create a review with `review_create`, then follow the order in [SPEC.md](SPEC.md#workflow). `review_status` tells the agent what to do next at any point.
 
 If the connector reports `uv (uvx) was not found ... No Python 3.12+ with the mcp, pydantic and httpx packages was found either`, the launcher did not find a Python with the required packages. The bundle method below can help when npx cannot stage or read the server source, but it still uses Claude Science's `python3` and needs those packages. If that interpreter lacks them, set `CITEPROOF_MCP_PYTHON` to an interpreter readable inside the sandbox that has them.
@@ -77,7 +77,7 @@ We do not ask you to run `claude-science sandbox setup`. That command changes Wi
      CITEPROOF_MCP_HOME=C:/Users/<you>/.claude-science/orgs/<org-id>/workspaces/_mcp-citeproof/data
      ```
 
-5. **Check the tool list.** The connector page should list 24 tools, from `review_create` to `export_bundle`.
+5. **Check the tool list.** The connector page should list 40 tools (version 0.2.1 had 24), from `review_create` to `review_history`.
 6. **Start a review** with `review_create`, then follow the order in [SPEC.md](SPEC.md#workflow).
 
 ## Update after a new release
@@ -108,7 +108,7 @@ The sandbox only lets the connector write inside its own workspace folder, which
 | `Set "command" to node, npx or python3 ...` | You gave an absolute path to a Python that Claude Science does not provide. Use `python3` or `npx`. |
 | `can't open file ... Permission denied` (bundle method) | The bundle is not inside the connector's workspace folder. Build it into `.../workspaces/_mcp-citeproof/bundle`. |
 | Name rejected | Names allow lowercase letters, digits and hyphens only. |
-| 18 tools instead of 24 | The old server process is still running. Remove and re-add the connector. |
+| Fewer tools than expected (e.g. 18 or 24 instead of 40) | The old server process is still running. Remove and re-add the connector. |
 
 ## Other MCP clients
 

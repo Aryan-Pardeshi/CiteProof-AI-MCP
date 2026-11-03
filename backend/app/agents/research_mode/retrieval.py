@@ -132,9 +132,10 @@ async def metadata_validator_agent(state: dict[str, Any]) -> dict[str, Any]:
 
     Collapses whitespace in titles (dropping a trailing period) and strips blank
     author entries. When ORCID_AUTHOR_ENRICHMENT=1 (off by default: one ORCID
-    lookup per enriched author would otherwise add latency to every run), leading
-    author names are replaced by their canonical ORCID display name on a confident
-    match.
+    lookup per enriched author would otherwise add latency to every run), the first
+    ORCID_MAX_AUTHORS authors (default 2) are replaced by their canonical ORCID
+    display name on a confident match, and the matched iD is stored in
+    author_orcids.
 
     It does not validate venues, clean or resolve DOIs, or cross-check metadata
     against a registry: DOIs and venues pass through unchanged.
@@ -144,7 +145,10 @@ async def metadata_validator_agent(state: dict[str, Any]) -> dict[str, Any]:
 
     orcid_enrichment = os.getenv("ORCID_AUTHOR_ENRICHMENT", "").strip().lower() in {"1", "true", "yes"}
     if orcid_enrichment:
-        from backend.app.tools.orcid_search import enrich_records_authors
+        from backend.app.tools.orcid_search import (
+            enrich_records_authors,
+            orcid_max_authors_from_env,
+        )
 
     for p in paper_dicts:
         item = dict(p)
@@ -160,7 +164,7 @@ async def metadata_validator_agent(state: dict[str, Any]) -> dict[str, Any]:
     if orcid_enrichment:
         try:
             records = [PaperRecord.from_dict(item) for item in cleaned_records]
-            enriched = await enrich_records_authors(records)
+            enriched = await enrich_records_authors(records, max_authors=orcid_max_authors_from_env())
             cleaned_records = [r.model_dump() for r in enriched]
             logger.info("ORCID author enrichment applied to corpus.")
         except Exception as e:  # noqa: BLE001

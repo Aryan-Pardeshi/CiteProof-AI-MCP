@@ -7,9 +7,8 @@ from typing import Any
 
 import pytest
 from citeproof_mcp.server import build_server
-from mcp.client import Client
 
-from tests.conftest import call
+from tests.conftest import Client, call
 
 # ---------------------------------------------------------------------------
 # verify_dois tests
@@ -331,11 +330,27 @@ async def test_list_tools_descriptions() -> None:
         "rob_summary",
         "review_status",
         "export_bundle",
+        "reviewer_record",
+        "screening_stage_set",
+        "screening_stage_close",
+        "paper_resolve",
+        "paper_alias_record",
+        "study_link",
+        "study_unlink",
+        "study_overview",
+        "recall_seed_record",
+        "recall_check",
+        "stats_check_ratio_ci",
+        "stats_recompute_2x2",
+        "stats_check_evidence",
+        "prisma_excluded_studies",
+        "manuscript_check",
+        "review_history",
     }
     assert set(tools_by_name) == expected_tools
     for name in expected_tools:
         desc = tools_by_name[name].description
         assert desc is not None and len(desc.strip()) > 40, f"Tool '{name}' description is too short"
-        schema = tools_by_name[name].input_schema
+        schema = tools_by_name[name].model_dump(by_alias=True)["inputSchema"]
         for prop, spec in schema.get("properties", {}).items():
             assert spec.get("description"), f"{name}.{prop} has no description"

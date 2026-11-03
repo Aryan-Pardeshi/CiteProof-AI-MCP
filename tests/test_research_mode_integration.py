@@ -493,6 +493,7 @@ async def test_research_mode_runs_offline_from_problem_to_final_paper():
         objectives,
         tracker=None,
         protocol=None,
+        on_progress=None,
     ):
         screened = []
 

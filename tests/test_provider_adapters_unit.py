@@ -26,6 +26,7 @@ from backend.app.tools.orcid_search import (
     _confident_match,
     enrich_record_authors,
     fetch_orcid_profile,
+    orcid_max_authors_from_env,
     resolve_orcid_authors,
 )
 from backend.app.tools.semantic_scholar_search import search_semantic_scholar
@@ -514,7 +515,9 @@ async def test_enrich_record_authors_canonicalizes_confident_match():
 
     assert enriched.authors[0] == "Josiah Carberry"
     assert enriched.authors[1] == "Mystery Writer"  # beyond-confidence or unmatched names untouched
+    assert enriched.author_orcids == {"Josiah Carberry": "0000-0002-1825-0097"}
     assert record.authors == ["Josiah Q. Carberry", "Mystery Writer"]  # input never mutated
+    assert record.author_orcids == {}
 
 
 @pytest.mark.asyncio
@@ -526,6 +529,100 @@ async def test_enrich_record_authors_no_network_change_on_empty():
 
     # No confident match in the empty ORCID response -> authors unchanged.
     assert enriched.authors == ["Josiah Carberry"]
+    assert enriched.author_orcids == {}
+
+
+@pytest.mark.asyncio
+async def test_enrich_record_authors_stores_orcid_when_name_already_canonical():
+    record = PaperRecord(paper_id="x", title="T", authors=["Josiah Carberry"])
+
+    async with _mock_client(lambda req: httpx.Response(200, json=ORCID_EXPANDED)) as client:
+        enriched = await enrich_record_authors(record, client=client)
+
+    assert enriched.authors == ["Josiah Carberry"]
+    assert enriched.author_orcids == {"Josiah Carberry": "0000-0002-1825-0097"}
+
+
+@pytest.mark.asyncio
+async def test_enrich_record_authors_ambiguous_match_stores_no_orcid():
+    # Two distinct iDs both confidently match the name -> neither is attached.
+    ambiguous = {
+        "expanded-result": [
+            {"orcid-id": "0000-0002-1825-0097", "given-names": "Josiah", "family-names": "Carberry"},
+            {"orcid-id": "0000-0001-5109-3700", "given-names": "Josiah", "family-names": "Carberry"},
+        ]
+    }
+    record = PaperRecord(paper_id="x", title="T", authors=["Josiah Carberry"])
+
+    async with _mock_client(lambda req: httpx.Response(200, json=ambiguous)) as client:
+        enriched = await enrich_record_authors(record, client=client)
+
+    assert enriched.authors == ["Josiah Carberry"]
+    assert enriched.author_orcids == {}
+
+
+@pytest.mark.asyncio
+async def test_enrich_record_authors_drops_orcid_for_duplicate_names():
+    # Only the first author is looked up, but canonicalization makes their name
+    # identical to an unlooked-up namesake; the iD must not be shown for both.
+    record = PaperRecord(paper_id="x", title="T", authors=["Josiah Q. Carberry", "Josiah Carberry"])
+
+    async with _mock_client(lambda req: httpx.Response(200, json=ORCID_EXPANDED)) as client:
+        enriched = await enrich_record_authors(record, max_authors=1, client=client)
+
+    assert enriched.authors == ["Josiah Carberry", "Josiah Carberry"]  # names still canonicalized
+    assert enriched.author_orcids == {}
+
+
+def _orcid_by_name_handler(ids: dict[str, str], seen: list[str]):
+    """Mock expanded-search that returns one confident hit per known quoted name."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        """Record the queried name and answer with its iD, or no results if unknown."""
+        name = request.url.params["q"].strip('"')
+        seen.append(name)
+        if name not in ids:
+            return httpx.Response(200, json={"expanded-result": []})
+        given, family = name.split(" ", 1)
+        entry = {"orcid-id": ids[name], "given-names": given, "family-names": family}
+        return httpx.Response(200, json={"expanded-result": [entry]})
+
+    return handler
+
+
+@pytest.mark.asyncio
+async def test_enrich_record_authors_respects_max_authors():
+    ids = {
+        "Ada Lovelace": "0000-0001-0000-0001",
+        "Alan Turing": "0000-0001-0000-0002",
+        "Grace Hopper": "0000-0001-0000-003X",
+    }
+    record = PaperRecord(paper_id="x", title="T", authors=list(ids))
+
+    seen: list[str] = []
+    async with _mock_client(_orcid_by_name_handler(ids, seen)) as client:
+        two = await enrich_record_authors(record, max_authors=2, client=client)
+    assert seen == ["Ada Lovelace", "Alan Turing"]
+    assert set(two.author_orcids) == {"Ada Lovelace", "Alan Turing"}
+
+    seen.clear()
+    async with _mock_client(_orcid_by_name_handler(ids, seen)) as client:
+        three = await enrich_record_authors(record, max_authors=3, client=client)
+    assert seen == list(ids)
+    assert three.author_orcids == ids
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [(None, 2), ("", 2), ("5", 5), ("0", 1), ("-3", 1), ("50", 10), ("lots", 2)],
+)
+def test_orcid_max_authors_from_env(monkeypatch, raw, expected):
+    """Unset, blank, or invalid values fall back to 2; numbers are clamped to 1..10."""
+    if raw is None:
+        monkeypatch.delenv("ORCID_MAX_AUTHORS", raising=False)
+    else:
+        monkeypatch.setenv("ORCID_MAX_AUTHORS", raw)
+    assert orcid_max_authors_from_env() == expected
 
 
 @pytest.mark.asyncio
@@ -650,4 +747,4 @@ async def test_fanout_dedupes_across_sources(monkeypatch):
     assert len(records) == 1
     assert tracker.duplicates_removed == 1
     # First-seen source wins retention.
-    assert records[0].retrieval_source == "openalex"
+    assert records[0].retrieval_source == "europe_pmc"  # SOURCE_PRIORITY ranks europe_pmc above openalex
