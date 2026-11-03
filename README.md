@@ -37,6 +37,7 @@ npx -y citeproof-mcp
   - [Academic integrity and research invariants](#academic-integrity-and-research-invariants)
   - [Tech stack](#tech-stack)
   - [Academic API coverage](#academic-api-coverage)
+  - [Web search providers](#web-search-providers)
   - [Getting started](#getting-started)
 - [Repository layout](#repository-layout)
 - [Contributing](#contributing)
@@ -293,6 +294,36 @@ Research Mode uses each academic API for a specific stage:
 | **ORCID** | Optional author identity enrichment | Set `ORCID_AUTHOR_ENRICHMENT=1`; optional `ORCID_MAX_AUTHORS` (default 2, max 10) |
 | **Unpaywall** | Open-access PDF resolution | Uses `OPENALEX_EMAIL` |
 | **CORE** | Optional full-text fallback | Optional `CORE_API_KEY` |
+
+### Web search providers
+
+DeepSearch's `search_web` tool goes through a small provider layer instead of a
+single Tavily client. `WEB_SEARCH_PROVIDERS` is an ordered, comma-separated list
+of provider names and defaults to `tavily`.
+
+- A provider is tried only when it is listed **and** its API key is set.
+  Providers without credentials are skipped silently, the same way Research Mode
+  skips an academic source that has no key.
+- If a provider errors, times out or returns no results, the next configured
+  provider in the list is tried. If every provider fails, `search_web` returns an
+  error string (`Error using <Provider> search: ...`) instead of raising, so the
+  research graph keeps running.
+- API clients are created lazily on first use, so importing the module never
+  requires a key.
+
+| Provider | Configuration | Paid? |
+|---|---|---|
+| **Tavily** — default | `TAVILY_API_KEY` | Paid service with a free tier |
+| **SerpBase** — optional Google organic results | `SERPBASE_API_KEY` and `serpbase` in `WEB_SEARCH_PROVIDERS` | Paid third-party service; new accounts get 100 free credits |
+
+SerpBase is never used unless it is both listed and keyed:
+
+```bash
+WEB_SEARCH_PROVIDERS="tavily,serpbase"
+SERPBASE_API_KEY="your_key_here"
+```
+
+With only `TAVILY_API_KEY` set, DeepSearch behaves exactly as it did before.
 
 ### Getting started
 
