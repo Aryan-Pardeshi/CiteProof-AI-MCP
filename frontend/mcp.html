@@ -194,7 +194,7 @@
       <section class="mcp-section scroll-reveal" aria-labelledby="capabilities">
         <p class="mcp-section-eyebrow">Anti-hallucination checks</p>
         <h2 id="capabilities">Four checks against invented evidence</h2>
-        <p>A polished draft can hide an invented quote, a wrong number or a citation to a paper that is not in the record. CiteProof MCP runs four deterministic checks on the evidence the agent records. The server contains no language model: it checks the text and numbers it is given, and the agent makes each judgement.</p>
+        <p>A polished draft can hide an invented quote, a wrong number or a citation to a paper that is not in the record. CiteProof MCP runs four checks on the evidence the agent records. The server contains no language model: it checks the text and numbers it is given, and the agent makes each judgement.</p>
 
         <div class="mcp-pillar-grid">
           <div class="mcp-pillar scroll-reveal">
@@ -217,7 +217,7 @@
 
           <div class="mcp-pillar scroll-reveal">
             <h3>Citations and DOIs must resolve</h3>
-            <p>Each DOI is looked up at Crossref, with doi.org as the fallback when Crossref has no record, and the retraction flag when Crossref has one. Author-year and DOI citations in a draft are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as [1] are counted but not resolved, and a match does not mean the paper supports the sentence. A registry that cannot be reached returns unverified, never not found.</p>
+            <p>Each DOI is looked up at Crossref, with doi.org as the fallback when Crossref does not return a record, and the retraction flag when Crossref has one. Author-year and DOI citations in a draft are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as [1] are counted but not resolved, and a match does not mean the paper supports the sentence. A doi.org 404 returns not found; any other failed lookup returns unverified.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-verify-dois">verify_dois</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-resolve-citations">resolve_citations</a></li>
@@ -418,7 +418,7 @@
           <div class="mcp-cap-card mcp-feature--amber scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5 14 9.5a3 3 0 0 1 4.2 4.2l-2.5 2.5a3 3 0 0 1-4.2 0"></path><path d="m14 10.5-4 4a3 3 0 0 1-4.2-4.2l2.5-2.5a3 3 0 0 1 4.2 0"></path></svg>
             <h3>DOI verification</h3>
-            <p>Check up to 100 DOIs or doi.org URLs against Crossref, with doi.org as the fallback when Crossref has no record. Results include title, year, journal, authors and the Crossref retraction flag when available. A registry that cannot be reached returns <code>unverified</code>, never <code>not_found</code>; a value that is not DOI-shaped is rejected before any request. Redirects are not followed.</p>
+            <p>Check up to 100 DOIs or doi.org URLs against Crossref, with doi.org as the fallback when Crossref does not return a record. Results include title, year, journal, authors and the Crossref retraction flag when available. A doi.org 404 returns <code>not_found</code>; any other failed lookup returns <code>unverified</code>; a value that is not DOI-shaped is rejected before any request. Redirects are not followed.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-verify-dois">verify_dois</a></li>
             </ul>
