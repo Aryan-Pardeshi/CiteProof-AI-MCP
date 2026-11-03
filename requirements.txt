@@ -16,5 +16,5 @@ matplotlib>=3.11.2
 openai>=3.35.1
 feedparser>=6.0.14
 fpdf2>=2.8.9
-pypdf>=6.21.1
+pypdf>=6.21.2
 python-docx>=1.2.0
