@@ -102,7 +102,7 @@ stdout is reserved for the MCP protocol. The launcher never writes to it during 
 | --- | --- |
 | `CITEPROOF_MCP_HOME` | Data directory for the server's local SQLite records (default `~/.citeproof-mcp`). |
 | `CITEPROOF_MCP_PYTHON` | Python 3.12+ interpreter to use with the bundled server. Skips uv entirely. The `--python <path>` flag does the same and wins over the variable. |
-| `CITEPROOF_MCP_SOURCE` | Override the `uvx --from` value, for example `citeproof-mcp==0.2.1` once the server is on PyPI, or an absolute path to a local checkout of `MCP/`. |
+| `CITEPROOF_MCP_SOURCE` | Override the `uvx --from` value, for example `citeproof-mcp==0.3.0` once the server is on PyPI, or an absolute path to a local checkout of `MCP/`. |
 | `CITEPROOF_UV_HOME` | Keep everything uv writes in one folder: `cache/`, `tools/`, `python/` and `bin/`. Useful inside a sandbox. The `--uv-home <dir>` flag does the same and wins over the variable. |
 | `CITEPROOF_NO_AUTO_INSTALL` | Set to `1` to never install uv automatically. The launcher then exits with a manual install link. |
 | `CITEPROOF_UVX` | Full path to the `uvx` executable, if it is not on `PATH`. |
@@ -117,7 +117,7 @@ Example with a pinned source and a custom data directory:
       "args": ["-y", "citeproof-mcp"],
       "env": {
         "CITEPROOF_MCP_HOME": "/Users/you/Documents/citeproof",
-        "CITEPROOF_MCP_SOURCE": "citeproof-mcp==0.2.1"
+        "CITEPROOF_MCP_SOURCE": "citeproof-mcp==0.3.0"
       }
     }
   }
