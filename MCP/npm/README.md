@@ -13,7 +13,7 @@
 }
 ```
 
-CiteProof MCP checks what your research agent records: quotes against their source text, numbers against their quotes, DOIs at Crossref and citations against your recorded papers. It also records review protocols, PRISMA counts (PRISMA 2020), screening decisions, extracted evidence, risk-of-bias records (RoB 2, ROBINS-I, Newcastle–Ottawa) and a reproducible export bundle. **It does not search the literature or read papers**, and it contains no language model. Your agent does the research; CiteProof keeps it auditable. No API key is required.
+CiteProof MCP checks what your research agent records: quotes against their source text, numbers against their quotes, DOIs at Crossref, and author-year and DOI citations against the reference list you supply (numeric `[1]` citations are counted, not resolved). It also records review protocols, PRISMA counts (PRISMA 2020), screening decisions, extracted evidence, risk-of-bias records (RoB 2, ROBINS-I, Newcastle–Ottawa) and a reproducible export bundle. **It does not search the literature or read papers**, and it contains no language model. Your agent does the research; CiteProof keeps it auditable. No API key is required.
 
 CiteProof runs **entirely on your computer**. There is no hosted server, no account, and no upload of review data.
 

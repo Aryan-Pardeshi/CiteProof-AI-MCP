@@ -1,7 +1,7 @@
 {
   "name": "citeproof-mcp",
   "version": "0.3.0",
-  "description": "Anti-hallucination checks for AI literature reviews: run the CiteProof MCP server over stdio with npx. Checks quotes, numbers, DOIs and citations supplied by your research agent against their sources.",
+  "description": "Anti-hallucination checks for AI literature reviews: run the CiteProof MCP server over stdio with npx. Checks quotes and numbers supplied by your research agent against their source text, looks up DOIs and matches citations to a reference list.",
   "license": "MIT",
   "author": "Aryan Pardeshi",
   "bin": {

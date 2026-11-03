@@ -453,7 +453,7 @@
           <div class="mcp-text scroll-reveal">
             <div class="mcp-logos" aria-hidden="true"><svg class="mcp-logo-claude" width="30" height="30"><use href="#logo-claude"></use></svg><span class="mcp-logos-plus">+</span><svg class="mcp-logo-mcp" width="30" height="30"><use href="#logo-mcp"></use></svg></div>
             <h2 class="section-title">Anti-hallucination checks for Claude Science</h2>
-            <p class="mcp-subtitle">CiteProof MCP is a local evidence layer for literature reviews. Claude Science finds and writes; CiteProof checks each quote, number and citation against its source and keeps the record.</p>
+            <p class="mcp-subtitle">CiteProof MCP is a local evidence layer for literature reviews. Claude Science finds and writes; CiteProof checks recorded quotes and numbers against the source text, looks up DOIs, matches citations to your reference list and keeps the record. It does not check that a source supports a claim.</p>
 
             <ul class="mcp-feature-list">
               <li class="mcp-feature">
@@ -462,15 +462,15 @@
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Confirms each number in an evidence row appears in its quote, and recomputes effect sizes from arm counts</span>
+                <span>Confirms the sample size, effect estimate and confidence limits in an evidence row appear in its quote, and recomputes effect sizes from arm counts</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Looks up every DOI at Crossref and doi.org, and flags retractions</span>
+                <span>Looks up every DOI at Crossref and doi.org, and flags retractions recorded at Crossref</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Matches in-text citations to your recorded papers, and lists orphans and unresolved citations</span>
+                <span>Matches author-year and DOI citations to the reference list you supply, and lists orphans and unresolved citations. Numeric citations such as [1] are counted, not resolved</span>
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -482,7 +482,7 @@
               </li>
               <li class="mcp-feature">
                 <svg class="mcp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Exports a local audit bundle of every check, so the record stays with the review</span>
+                <span>Exports a local audit bundle of the saved review records and checks. Keep citation and draft-check results separately</span>
               </li>
             </ul>
 

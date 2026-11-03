@@ -208,7 +208,7 @@
 
           <div class="mcp-pillar scroll-reveal">
             <h3>Numbers must match their quote</h3>
-            <p>Every number in an evidence row must also appear in its quote. Ratio estimates, confidence intervals and p-values are checked for agreement, and risk ratios, odds ratios and risk differences are recomputed from the arm counts. A finding means the numbers disagree, not that the paper is wrong.</p>
+            <p>The sample size, effect estimate and confidence limits in an evidence row must appear in its quote. Ratio estimates, confidence intervals and p-values are checked for agreement, and risk ratios, odds ratios and risk differences are recomputed from the arm counts. A finding means the numbers disagree, not that the paper is wrong.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-check-evidence">stats_check_evidence</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-recompute-2x2">stats_recompute_2x2</a></li>
@@ -217,7 +217,7 @@
 
           <div class="mcp-pillar scroll-reveal">
             <h3>Citations and DOIs must resolve</h3>
-            <p>Each DOI is looked up at Crossref and doi.org, with the retraction flag when Crossref has one. In-text citations in a draft are matched to the papers you recorded, and orphans and unresolved citations are listed. A registry that cannot be reached returns unverified, never not found.</p>
+            <p>Each DOI is looked up at Crossref and doi.org, with the retraction flag when Crossref has one. Author-year and DOI citations in a draft are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as [1] are counted but not resolved, and a match does not mean the paper supports the sentence. A registry that cannot be reached returns unverified, never not found.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-verify-dois">verify_dois</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-resolve-citations">resolve_citations</a></li>
@@ -226,7 +226,7 @@
 
           <div class="mcp-pillar scroll-reveal">
             <h3>Counts come from the record</h3>
-            <p>PRISMA counts are computed from the stored searches, deduplication and screening decisions, not typed in. The manuscript check compares the draft's counts, effect estimates, databases and methods with that record, and export_bundle writes the full trail with its SHA-256.</p>
+            <p>PRISMA counts are computed from the stored searches, deduplication and screening decisions, not typed in. The manuscript check compares the draft's counts, effect estimates, databases and methods with that record, and export_bundle returns the saved records with a change-history summary and its SHA-256, writing a file only with save: true. Keep the review database for the full history.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-prisma-status">prisma_status</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-manuscript-check">manuscript_check</a></li>
