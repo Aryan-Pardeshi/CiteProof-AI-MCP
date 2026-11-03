@@ -1,6 +1,6 @@
 # <img src="frontend/assets/logo.png" alt="" width="32" height="32" style="vertical-align: middle; border-radius: 7px;"> CiteProof
 
-**Anti-hallucination checks for AI literature reviews.** CiteProof checks recorded quotes and numbers against the source text, looks up DOIs, matches citations to a reference list, and that the counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
+**Anti-hallucination checks for AI literature reviews.** CiteProof checks recorded quotes and numbers against the source text, looks up DOIs, matches citations to a reference list, and checks that counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
 
 
 [![npm](https://img.shields.io/npm/v/citeproof-mcp?label=npm%20citeproof-mcp)](https://www.npmjs.com/package/citeproof-mcp)
@@ -316,7 +316,8 @@ of provider names and defaults to `tavily`.
 | **Tavily** — default | `TAVILY_API_KEY` | Paid service with a free tier |
 | **SerpBase** — optional Google organic results | `SERPBASE_API_KEY` and `serpbase` in `WEB_SEARCH_PROVIDERS` | Paid third-party service; new accounts get 100 free credits |
 
-SerpBase is never used unless it is both listed and keyed:
+SerpBase has no date filter, so a search with a `time_range` skips it and moves
+on to the next provider. SerpBase is never used unless it is both listed and keyed:
 
 ```bash
 WEB_SEARCH_PROVIDERS="tavily,serpbase"
