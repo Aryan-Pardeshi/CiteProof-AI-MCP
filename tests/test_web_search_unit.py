@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import httpx
 import pytest
@@ -98,7 +99,7 @@ class FakeTavilyClient:
 class FakeProvider(WebSearchProvider):
     """Configurable stand-in used to test ordering and fallback."""
 
-    _DISPLAY_NAMES = {"tavily": "Tavily", "serpbase": "SerpBase"}
+    _DISPLAY_NAMES: ClassVar[dict[str, str]] = {"tavily": "Tavily", "serpbase": "SerpBase"}
 
     def __init__(self, name, *, results=None, error=None, configured=True):
         self.name = name
@@ -457,7 +458,7 @@ def test_search_web_keeps_its_name_and_signature():
     assert search_web.name == "search_web"
     assert list(search_web.args) == ["query", "search_topic", "time_range"]
 
-    signature = inspect.signature(getattr(search_web, "func"))
+    signature = inspect.signature(search_web.func)
     assert list(signature.parameters) == ["query", "search_topic", "time_range"]
     assert signature.return_annotation == "str"
 
@@ -543,6 +544,7 @@ def test_importing_with_no_keys_does_not_crash(clean_env):
 
     probe = subprocess.run(
         [sys.executable, "-c", _IMPORT_PROBE],
+        check=False,
         cwd=str(root_dir),
         env=env,
         capture_output=True,
