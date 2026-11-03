@@ -149,16 +149,17 @@
     },
     {
       url: '/mcp',
-      title: 'Claude Science setup hub',
+      title: 'Anti-hallucination MCP for Claude Science',
       headings: [
-        ['capabilities', 'What the MCP server does'],
+        ['capabilities', 'Four checks against invented evidence'],
+        ['all-tools', 'All 40 tools, grouped by review stage'],
         ['review-flow', 'How a review flows'],
         ['local-data', 'Local by default'],
         ['why-citeproof', 'Why CiteProof with Claude Science'],
         ['setup', 'Set up CiteProof'],
         ['compatibility', 'Compatibility'],
         ['next-steps', 'Next steps'],
-        ['mcp-final-title', 'Keep every review decision in view.']
+        ['mcp-final-title', 'Check quotes and citations against their sources.']
       ]
     }
   ];

@@ -1,6 +1,6 @@
 # citeproof-mcp (npm launcher)
 
-**Audit layer for AI literature reviews.** This package is a thin Node launcher for the [CiteProof MCP](https://citeproof.top/mcp) server. It ships the Python server source and runs it with a Python 3.12+ that is already on your machine, or with `uvx` if that is available (installing [uv](https://docs.astral.sh/uv/) automatically if it is missing and no Python works). Any MCP client can add CiteProof the same way as any other MCP server.
+**Anti-hallucination checks for AI literature reviews.** This package is a thin Node launcher for the [CiteProof MCP](https://citeproof.top/mcp) server. It ships the Python server source and runs it with a Python 3.12+ that is already on your machine, or with `uvx` if that is available (installing [uv](https://docs.astral.sh/uv/) automatically if it is missing and no Python works). Any MCP client can add CiteProof the same way as any other MCP server.
 
 ```json
 {
@@ -13,7 +13,7 @@
 }
 ```
 
-CiteProof MCP records and checks what your research agent supplies: review protocols, PRISMA counts, screening decisions, extracted evidence, risk-of-bias records, DOI and quote checks, and a reproducible export bundle. **It does not search the literature or read papers**, and it contains no language model. Your agent does the research; CiteProof keeps it auditable. No API key is required.
+CiteProof MCP checks what your research agent records: quotes against their source text, numbers against their quotes, DOIs at Crossref (with a doi.org fallback), and author-year and DOI citations against the reference list you supply (numeric `[1]` citations are counted, not resolved). It also records review protocols, PRISMA counts (PRISMA 2020), screening decisions, extracted evidence, risk-of-bias records (RoB 2, ROBINS-I, Newcastle–Ottawa) and a reproducible export bundle. **It does not search the literature or read papers**, and it contains no language model. Your agent does the research; CiteProof keeps it auditable. No API key is required.
 
 CiteProof runs **entirely on your computer**. There is no hosted server, no account, and no upload of review data.
 

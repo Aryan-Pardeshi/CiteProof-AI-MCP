@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-  <title>CiteProof MCP setup for Claude Science | CiteProof</title>
-  <meta name="description" content="Install CiteProof MCP for Claude Science: three local setup paths, honest client compatibility, local review data, and links to the full tool reference.">
+  <title>Anti-hallucination MCP for Claude Science | CiteProof</title>
+  <meta name="description" content="Check quotes, numbers, DOIs and citations in a PRISMA literature review against their sources. CiteProof MCP runs on your computer in Claude Science.">
   <meta name="application-name" content="CiteProof">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="https://citeproof.top/mcp">
@@ -17,8 +17,8 @@
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="CiteProof">
-  <meta property="og:title" content="CiteProof MCP setup for Claude Science | CiteProof">
-  <meta property="og:description" content="Install CiteProof MCP for Claude Science: three local setup paths, honest client compatibility, local review data, and links to the full tool reference.">
+  <meta property="og:title" content="Anti-hallucination MCP for Claude Science | CiteProof">
+  <meta property="og:description" content="Check quotes, numbers, DOIs and citations in a PRISMA literature review against their sources. CiteProof MCP runs on your computer in Claude Science.">
   <meta property="og:url" content="https://citeproof.top/mcp">
   <meta property="og:image" content="https://citeproof.top/assets/og-image.png">
   <meta property="og:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
@@ -27,8 +27,8 @@
   <meta property="og:locale" content="en_US">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="CiteProof MCP setup for Claude Science | CiteProof">
-  <meta name="twitter:description" content="Install CiteProof MCP for Claude Science: three local setup paths, honest client compatibility, local review data, and links to the full tool reference.">
+  <meta name="twitter:title" content="Anti-hallucination MCP for Claude Science | CiteProof">
+  <meta name="twitter:description" content="Check quotes, numbers, DOIs and citations in a PRISMA literature review against their sources. CiteProof MCP runs on your computer in Claude Science.">
   <meta name="twitter:image" content="https://citeproof.top/assets/og-image.png">
   <meta name="twitter:image:alt" content="CiteProof: turn a research question into human-reviewed literature reviews.">
 
@@ -40,8 +40,8 @@
         "@type": "WebPage",
         "@id": "https://citeproof.top/mcp#webpage",
         "url": "https://citeproof.top/mcp",
-        "name": "CiteProof MCP setup for Claude Science | CiteProof",
-        "description": "Install CiteProof MCP for Claude Science: three local setup paths, honest client compatibility, local review data, and links to the full tool reference.",
+        "name": "Anti-hallucination MCP for Claude Science | CiteProof",
+        "description": "Check quotes, numbers, DOIs and citations in a PRISMA literature review against their sources. CiteProof MCP runs on your computer in Claude Science.",
         "inLanguage": "en",
         "isPartOf": {"@type": "WebSite", "name": "CiteProof", "url": "https://citeproof.top/"},
         "about": {
@@ -76,7 +76,7 @@
   <link rel="stylesheet" href="/landing.css?v=5.0.0">
   <link rel="stylesheet" href="/footer.css?v=1.0.0">
   <link rel="stylesheet" href="/docs.css?v=1.0.0">
-  <link rel="stylesheet" href="/mcp.css?v=2.1.0">
+  <link rel="stylesheet" href="/mcp.css?v=2.2.0">
 </head>
 <body class="docs-page mcp-page">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -132,8 +132,16 @@
           <li><span aria-current="page">Claude Science + MCP</span></li>
         </ol>
       </nav>
-      <h1>Give Claude Science a verifiable research workflow</h1>
-      <p class="mcp-lede">A research agent can draft a paper, but the decisions and evidence behind it also need a traceable record. CiteProof MCP is a local audit layer: Claude Science does the research, CiteProof records and checks the review artefacts.</p>
+      <p class="mcp-hero-eyebrow">PRISMA 2020 · RoB 2 · ROBINS-I · Newcastle–Ottawa</p>
+      <h1>Literature reviews, checked against their sources.</h1>
+      <p class="mcp-lede">A local MCP server for Claude Science. It checks the evidence behind your review and keeps the PRISMA record in one file. It flags what does not hold and never rewrites your work.</p>
+      <ul class="mcp-hero-checks" aria-label="What CiteProof checks">
+        <li>Quotes</li>
+        <li>Numbers</li>
+        <li>DOIs</li>
+        <li>Citations</li>
+        <li>PRISMA counts</li>
+      </ul>
 
       <div class="mcp-install">
         <div class="mcp-lockup" aria-label="Claude Science plus Model Context Protocol plus CiteProof">
@@ -184,9 +192,55 @@
 
     <div class="mcp-body">
       <section class="mcp-section scroll-reveal" aria-labelledby="capabilities">
-        <p class="mcp-section-eyebrow">Review records with a clear trail</p>
-        <h2 id="capabilities">What the MCP server does</h2>
-        <p>CiteProof MCP adds the record-keeping parts of a systematic review to a research agent. It has 40 tools, every tool returns <code>ok</code>, and the server contains no language model: the agent makes each judgement, while the server validates its shape and computes the numbers.</p>
+        <p class="mcp-section-eyebrow">Anti-hallucination checks</p>
+        <h2 id="capabilities">Four checks against invented evidence</h2>
+        <p>A polished draft can hide an invented quote, a wrong number or a citation to a paper that is not in the record. CiteProof MCP runs four checks on the evidence the agent records. The server contains no language model: it checks the text and numbers it is given, and the agent makes each judgement.</p>
+
+        <div class="mcp-pillar-grid">
+          <div class="mcp-pillar scroll-reveal">
+            <h3>Quotes must appear in the source</h3>
+            <p>Each quote in an evidence row or claim is compared with the source text you supplied, and the result is recorded. A quote that is not in the source is counted as unverified. A supported or partial claim cannot be saved without a quote and its source text.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-evidence-record">evidence_record</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-claim-report">claim_report</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-pillar scroll-reveal">
+            <h3>Numbers must match their quote</h3>
+            <p>The sample size, effect estimate and confidence limits in an evidence row must appear in its quote. Ratio estimates, confidence intervals and p-values are checked for agreement, and risk ratios, odds ratios and risk differences are recomputed from the arm counts. A finding means the numbers disagree, not that the paper is wrong.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-check-evidence">stats_check_evidence</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-stats-recompute-2x2">stats_recompute_2x2</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-pillar scroll-reveal">
+            <h3>Citations and DOIs must resolve</h3>
+            <p>Each DOI is looked up at Crossref, with doi.org as the fallback when Crossref does not return a record, and the retraction flag when Crossref has one. Author-year and DOI citations in a draft are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as [1] are counted but not resolved, and a match does not mean the paper supports the sentence. A doi.org 404 returns not found; any other failed lookup returns unverified.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-verify-dois">verify_dois</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-resolve-citations">resolve_citations</a></li>
+            </ul>
+          </div>
+
+          <div class="mcp-pillar scroll-reveal">
+            <h3>Counts come from the record</h3>
+            <p>PRISMA counts are computed from the stored searches, deduplication and screening decisions, not typed in. The manuscript check compares the draft's counts, effect estimates, databases and methods with that record, and export_bundle returns the saved records with a change-history summary and its SHA-256, writing a file only with save: true. Keep the review database for the full history.</p>
+            <ul class="mcp-tool-links">
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-prisma-status">prisma_status</a></li>
+              <li><a class="mcp-tool-link" href="/docs/mcp#tool-manuscript-check">manuscript_check</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="mcp-frameworks">Built around published frameworks: <strong>PRISMA 2020</strong>, <strong>RoB 2</strong>, <strong>ROBINS-I</strong> and the <strong>Newcastle–Ottawa Scale</strong>.</p>
+      </section>
+
+      <section class="mcp-section scroll-reveal" aria-labelledby="all-tools">
+        <p class="mcp-section-eyebrow">Full reference</p>
+        <h2 id="all-tools">All 40 tools, grouped by review stage</h2>
+        <p>Every tool returns <code>ok</code>. A failed validation names the invalid field or the limit it hit. Other failures, such as a busy review file, may not, so read the message before you retry.</p>
 
         <div class="mcp-cap-grid">
           <div class="mcp-cap-card mcp-feature--blue scroll-reveal">
@@ -313,7 +367,7 @@
           <div class="mcp-cap-card mcp-feature--teal scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5Z"></path><path d="M4 6v12M9 8h7M9 12h6"></path><path d="M10 16c.5 1 2.5 1 3 0 .8-1.4-2.8-1.4-2-2.8.5-.9 2.4-.9 3 0"></path></svg>
             <h3>Evidence extraction and quote checks</h3>
-            <p>Store one row per paper and outcome with design, effect measure, estimate, confidence interval, sample and context. Every quote is checked against the supplied source text, and every number in the row must also appear in the quote. The table exports as Markdown, CSV or JSON and counts unverified quotes and number mismatches; source text is kept only as length and SHA-256.</p>
+            <p>Store one row per paper and outcome with design, effect measure, estimate, confidence interval, sample and context. Every quote is checked against the supplied source text, and the sample size, effect estimate and confidence limits must also appear in the quote. The table exports as Markdown, CSV or JSON and counts unverified quotes and number mismatches; source text is kept only as length and SHA-256.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-evidence-record">evidence_record</a></li>
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-evidence-table">evidence_table</a></li>
@@ -364,7 +418,7 @@
           <div class="mcp-cap-card mcp-feature--amber scroll-reveal">
             <svg class="mcp-cap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5 14 9.5a3 3 0 0 1 4.2 4.2l-2.5 2.5a3 3 0 0 1-4.2 0"></path><path d="m14 10.5-4 4a3 3 0 0 1-4.2-4.2l2.5-2.5a3 3 0 0 1 4.2 0"></path></svg>
             <h3>DOI verification</h3>
-            <p>Check up to 100 DOIs or doi.org URLs against Crossref and doi.org, with title, year, journal, authors and the Crossref retraction flag when available. A registry that cannot be reached returns <code>unverified</code>, never <code>not_found</code>; a value that is not DOI-shaped is rejected before any request. Redirects are not followed.</p>
+            <p>Check up to 100 DOIs or doi.org URLs against Crossref, with doi.org as the fallback when Crossref does not return a record. Results include title, year, journal, authors and the Crossref retraction flag when available. A doi.org 404 returns <code>not_found</code>; any other failed lookup returns <code>unverified</code>; a value that is not DOI-shaped is rejected before any request. Redirects are not followed.</p>
             <ul class="mcp-tool-links">
               <li><a class="mcp-tool-link" href="/docs/mcp#tool-verify-dois">verify_dois</a></li>
             </ul>
@@ -559,7 +613,7 @@
       <div class="mcp-final-cta-inner">
         <div class="mcp-final-copy">
           <p class="mcp-section-eyebrow">Ready to inspect the toolset?</p>
-          <h2 id="mcp-final-title">Keep every review decision in view.</h2>
+          <h2 id="mcp-final-title">Check quotes and citations against their sources.</h2>
           <p>Explore the full reference, then choose the local install path that fits your client.</p>
         </div>
         <div class="mcp-final-command" aria-label="npx install command">
@@ -667,6 +721,6 @@
   </footer>
 
   <script src="/landing.js?v=5.0.0"></script>
-  <script src="/docs.js?v=1.1.0"></script>
+  <script src="/docs.js?v=1.1.1"></script>
 </body>
 </html>

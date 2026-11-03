@@ -1,7 +1,7 @@
 {
   "name": "citeproof-mcp",
   "version": "0.3.0",
-  "description": "Audit layer for AI literature reviews: run the CiteProof MCP server over stdio with npx. Records PRISMA counts, screening decisions, evidence checks and citation checks supplied by your research agent.",
+  "description": "Anti-hallucination checks for AI literature reviews: run the CiteProof MCP server over stdio with npx. Checks quotes and numbers supplied by your research agent against their source text, looks up DOIs and matches citations to a reference list.",
   "license": "MIT",
   "author": "Aryan Pardeshi",
   "bin": {
@@ -36,6 +36,9 @@
     "claude",
     "systematic-review",
     "prisma",
-    "citations"
+    "citations",
+    "literature-review",
+    "hallucination",
+    "claude-science"
   ]
 }

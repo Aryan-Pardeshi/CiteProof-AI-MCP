@@ -345,7 +345,7 @@ def test_mcp_hub_headline_setup_paths_and_compatibility() -> None:
     parser = parse(HUB)
     markup = text(HUB)
     assert parser.heading("h1") == [
-        "Give Claude Science a verifiable research workflow"
+        "Literature reviews, checked against their sources."
     ]
     for phrase in (
         "Claude Desktop extension",
@@ -530,7 +530,7 @@ def test_mcp_hub_hero_styles_and_copy_handler_exist() -> None:
         "prefers-reduced-motion",
     ):
         assert selector in css, selector
-    assert 'href="/mcp.css?v=2.1.0"' in text(HUB)
+    assert 'href="/mcp.css?v=2.2.0"' in text(HUB)
     script = text("docs.js")
     assert "[data-copy-target]" in script
     assert "Copied to clipboard" in script

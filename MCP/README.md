@@ -1,6 +1,6 @@
 # CiteProof MCP
 
-**A local audit trail for AI-assisted systematic reviews.** CiteProof MCP gives research agents structured records for review protocols, PRISMA counts, screening decisions, extracted evidence, risk-of-bias assessments, citation checks, and a reproducible export.
+**Anti-hallucination checks for AI-assisted systematic reviews.** CiteProof MCP checks the quotes and numbers a research agent records against the source text, looks up DOIs, matches citations to a supplied reference list, and keeps the review's records local and exportable: protocols, PRISMA counts, screening decisions, extracted evidence, risk-of-bias assessments and a reproducible audit bundle.
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server · Python 3.12+ · stdio transport · MIT
 
@@ -10,12 +10,12 @@
 
 Systematic reviews involve many decisions that are easy to lose track of across searches, screening, extraction, and reporting. CiteProof MCP provides one local record of that work and checks that the pieces are internally consistent.
 
+- **Quotes checked against source:** each evidence and claim quote is compared with the source text you supply. A quote that is not in the source is counted as unverified.
+- **Numbers checked against quotes:** the sample size, effect estimate and confidence limits in an evidence row must appear in its quote. Effect estimates, confidence intervals and p-values are checked for agreement, and risk ratios, odds ratios and risk differences are recomputed from arm counts.
+- **DOIs and citations checked:** DOIs are looked up at Crossref, with doi.org as the fallback when Crossref does not return a record, and the retraction flag when available. Author-year and DOI citations are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as `[1]` are counted but not resolved, and a match does not show that the paper supports the sentence.
+- **Published frameworks built in:** PRISMA 2020 counts and checklist, plus RoB 2, ROBINS-I and Newcastle–Ottawa risk-of-bias records with rule-based summaries.
 - **Traceable screening:** record title/abstract and full-text decisions, reasons for exclusion, and reviewer agreement using Cohen's kappa.
-- **PRISMA accounting:** track database searches, deduplication, screening counts, pending decisions, and consistency invariants.
-- **Evidence checks:** compare supplied quotations with source text and flag numbers that do not appear in a recorded quote.
-- **Risk-of-bias records:** maintain domain-level judgements for RoB 2, ROBINS-I, and Newcastle–Ottawa scales, with rule-based summaries.
-- **Citation checks:** look up DOI registration, resolve in-text citations against a supplied reference list, and lint prose for advisory issues.
-- **One export:** assemble the protocol, decisions, evidence, checks, warnings, and next steps into a review bundle.
+- **One export:** assemble the protocol, decisions, evidence, checks, warnings, and next steps into a review bundle with a SHA-256.
 
 ## How it works
 
