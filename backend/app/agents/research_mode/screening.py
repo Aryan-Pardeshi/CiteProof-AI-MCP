@@ -29,12 +29,30 @@ async def paper_screener_agent(state: dict[str, Any]) -> dict[str, Any]:
     tracker = PRISMATracker(**raw_tracker) if raw_tracker else None
 
     records = [PaperRecord.from_dict(p) for p in raw_papers]
+    thread_id = state.get("thread_id")
+
+    async def _on_screening_progress(screened: int, total: int, batches_done: int, total_batches: int):
+        if not thread_id:
+            return
+        try:
+            from backend.app.api.research_mode import _broadcast_event
+            await _broadcast_event(thread_id, {
+                "event": "screening_progress",
+                "screened": screened,
+                "total": total,
+                "batches_done": batches_done,
+                "total_batches": total_batches,
+            }, is_node_event=False)
+        except Exception as exc:  # noqa: BLE001 - progress is best effort
+            logger.debug(f"screening_progress broadcast skipped: {exc}")
+
     screened_records, updated_tracker = await screen_papers_structured(
         records,
         ps,
         objs,
         tracker=tracker,
         protocol=state.get("search_protocol"),
+        on_progress=_on_screening_progress,
     )
     dict_screened = [r.model_dump() for r in screened_records]
 
@@ -57,18 +75,28 @@ async def fulltext_eligibility_agent(state: dict[str, Any]) -> dict[str, Any]:
     if not screened_papers:
         return {}
 
-    logger.info(f"fulltext_eligibility_agent fetching full texts for top {len(screened_papers[:15])} papers...")
+    # Excluded records follow the included ones in this list; fetching or counting
+    # them would report full text for a corpus that is really abstract-only.
+    selected_idx = [
+        i for i, p in enumerate(screened_papers) if p.get("screening_status") == "included"
+    ][:15]
+    logger.info(f"fulltext_eligibility_agent fetching full texts for top {len(selected_idx)} included papers...")
     try:
-        selected = screened_papers[:15]
-        enriched_selected = await fetch_fulltexts(selected)
+        enriched_selected = await fetch_fulltexts([screened_papers[i] for i in selected_idx])
         for p in enriched_selected:
             if "content_excerpt" in p and not p.get("fulltext_excerpt"):
                 p["fulltext_excerpt"] = p["content_excerpt"]
-        
-        enriched_all = enriched_selected + screened_papers[15:]
+
+        enriched_all = list(screened_papers)
+        for i, enriched in zip(selected_idx, enriched_selected, strict=False):
+            enriched_all[i] = enriched
+        fetched = sum(1 for p in enriched_selected if (p.get("fulltext_excerpt") or "").strip())
         return {
             "paper_records": enriched_all,
             "screened_papers": enriched_all,
+            # Merge rather than replace: corpus_stats is the PRISMA counters block,
+            # and overwriting it here wiped retrieved/screened/included.
+            "corpus_stats": {**(state.get("corpus_stats") or {}), "fulltext_fetched": fetched},
         }
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Full-text fetching encountered error: {e}")
@@ -117,10 +145,17 @@ Return a valid JSON array with schema:
 
         for idx, p in enumerate(sample):
             ev = eval_map.get(idx + 1)
+            has_ft = bool((p.get("fulltext_excerpt") or "").strip())
             if ev:
                 p["study_type"] = ev.get("study_type", "empirical")
                 p["quality_rating"] = ev.get("quality_rating", "Medium")
-                p["quality_rubric"] = {"appraisal_notes": ev.get("quality_notes", "")}
+                notes = str(ev.get("quality_notes") or "")
+                if not has_ft and "abstract" not in notes.lower():
+                    notes = f"{notes} (Appraised from abstract only; full text unavailable)".strip()
+                p["quality_rubric"] = {
+                    "appraisal_notes": notes,
+                    "appraisal_basis": "Full text" if has_ft else "Abstract only",
+                }
 
     except Exception as e:  # noqa: BLE001
         logger.warning(f"quality_appraisal JSON parse defaulted: {e}")

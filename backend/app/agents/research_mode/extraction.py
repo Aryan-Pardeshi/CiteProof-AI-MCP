@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 from langchain_core.messages import HumanMessage
@@ -51,6 +52,13 @@ KNOWN_SECTIONS = (
     "results",
     "discussion",
     "conclusion",
+)
+
+# Model refusals are not findings. They used to be stored as claim summaries for
+# sources with no quotable text.
+_REFUSAL_RE = re.compile(
+    r"\bunable to extract\b|\bcannot extract\b|\bno (?:specific )?(?:claims|findings)\b",
+    re.IGNORECASE,
 )
 
 
@@ -161,6 +169,17 @@ async def evidence_extractor_agent(state: dict[str, Any]) -> dict[str, Any]:
 
     # Process top 10 included papers
     for p_idx, p in enumerate(included_papers(paper_dicts)[:10]):
+        abstract = (p.get("abstract") or "").strip()
+        excerpt = (p.get("fulltext_excerpt") or "").strip()
+        # A title-only record has nothing to quote. Sending it to the model
+        # produced refusal text ("Unable to extract...") that was then stored as
+        # a claim at paraphrase confidence, i.e. an error string became evidence.
+        if not abstract and not excerpt:
+            logger.info(
+                "Skipping title-only paper %r: no abstract or full text to anchor evidence.",
+                (p.get("title") or "")[:60],
+            )
+            continue
         paper_id = p.get("paper_id")
         if not paper_id:
             # Persist a stable identifier back onto the record so downstream
@@ -212,6 +231,9 @@ Return a valid JSON array of objects:
                 if not quote:
                     continue
                 claim_summary = str(item.get("claim_summary") or "").strip() or "Empirical finding"
+                if _REFUSAL_RE.search(claim_summary):
+                    logger.info("Dropping model refusal as evidence: %r", claim_summary[:80])
+                    continue
                 extras = anchor_quote_to_paper(p, str(quote), item.get("source_section"))
                 paper_seq = ev_seq_by_paper.get(paper_id, 0) + 1
                 ev_seq_by_paper[paper_id] = paper_seq
