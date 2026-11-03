@@ -159,7 +159,7 @@
         ['setup', 'Set up CiteProof'],
         ['compatibility', 'Compatibility'],
         ['next-steps', 'Next steps'],
-        ['mcp-final-title', 'Check every quote and citation against its source.']
+        ['mcp-final-title', 'Check quotes and citations against their sources.']
       ]
     }
   ];

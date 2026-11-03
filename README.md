@@ -1,6 +1,6 @@
 # <img src="frontend/assets/logo.png" alt="" width="32" height="32" style="vertical-align: middle; border-radius: 7px;"> CiteProof
 
-**Anti-hallucination checks for AI literature reviews.** CiteProof checks recorded quotes and numbers against the source text, looks up DOIs, matches citations to a reference list, and that the counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
+**Anti-hallucination checks for AI literature reviews.** CiteProof checks recorded quotes and numbers against the source text, looks up DOIs, matches citations to a reference list, and checks that counts and risk-of-bias judgements hold up. It comes in two parts: an **MCP server** for Claude Science and other research agents, and a full **research assistant app** that writes evidence-grounded papers.
 
 
 [![npm](https://img.shields.io/npm/v/citeproof-mcp?label=npm%20citeproof-mcp)](https://www.npmjs.com/package/citeproof-mcp)
