@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import httpx
 import pytest
@@ -98,7 +99,7 @@ class FakeTavilyClient:
 class FakeProvider(WebSearchProvider):
     """Configurable stand-in used to test ordering and fallback."""
 
-    _DISPLAY_NAMES = {"tavily": "Tavily", "serpbase": "SerpBase"}
+    _DISPLAY_NAMES: ClassVar[dict[str, str]] = {"tavily": "Tavily", "serpbase": "SerpBase"}
 
     def __init__(self, name, *, results=None, error=None, configured=True):
         self.name = name
@@ -289,11 +290,31 @@ def test_serpbase_wraps_transport_errors(serpbase_key):
 
 
 def test_serpbase_without_a_key_refuses_to_call(clean_env):
-    provider = SerpBaseProvider(client=_serpbase_provider(SERPBASE_PAYLOAD))
+    captured: list[httpx.Request] = []
+    provider = _serpbase_provider(SERPBASE_PAYLOAD, captured=captured)
 
     assert provider.is_configured() is False
     with pytest.raises(SerpBaseError, match="SERPBASE_API_KEY"):
         provider.search("q")
+    assert captured == []
+
+
+@pytest.mark.parametrize("time_range", ["day", "week", "month", "year"])
+def test_serpbase_refuses_a_time_restricted_search(serpbase_key, time_range):
+    # No date filter in the SerpBase API, so a restricted search must fail
+    # (and fall back) instead of returning results from any period.
+    captured: list[httpx.Request] = []
+    provider = _serpbase_provider(SERPBASE_PAYLOAD, captured=captured)
+
+    with pytest.raises(SerpBaseError, match="time_range"):
+        provider.search("q", time_range=time_range)
+    assert captured == []
+
+
+@pytest.mark.parametrize("time_range", [None, "", "none", "last week"])
+def test_serpbase_ignores_an_unset_or_invalid_time_range(serpbase_key, time_range):
+    results = _serpbase_provider(SERPBASE_PAYLOAD).search("q", time_range=time_range)
+    assert len(results) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -457,7 +478,7 @@ def test_search_web_keeps_its_name_and_signature():
     assert search_web.name == "search_web"
     assert list(search_web.args) == ["query", "search_topic", "time_range"]
 
-    signature = inspect.signature(getattr(search_web, "func"))
+    signature = inspect.signature(search_web.func)
     assert list(signature.parameters) == ["query", "search_topic", "time_range"]
     assert signature.return_annotation == "str"
 
@@ -521,6 +542,10 @@ def test_format_results_collapses_whitespace_and_keeps_order():
 # ---------------------------------------------------------------------------
 
 _IMPORT_PROBE = """
+# Keep a developer's local .env from restoring the keys this probe removed.
+import dotenv
+dotenv.load_dotenv = lambda *args, **kwargs: False
+
 import backend.app.tools.tavily_search as legacy
 import backend.app.tools.web_search as ws
 import backend.app.tools.web_search.tavily as tavily_module
@@ -547,6 +572,7 @@ def test_importing_with_no_keys_does_not_crash(clean_env):
         env=env,
         capture_output=True,
         text=True,
+        check=False,
     )
 
     assert probe.returncode == 0, probe.stderr
