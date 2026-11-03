@@ -12,7 +12,7 @@ Systematic reviews involve many decisions that are easy to lose track of across 
 
 - **Quotes checked against source:** each evidence and claim quote is compared with the source text you supply. A quote that is not in the source is counted as unverified.
 - **Numbers checked against quotes:** the sample size, effect estimate and confidence limits in an evidence row must appear in its quote. Effect estimates, confidence intervals and p-values are checked for agreement, and risk ratios, odds ratios and risk differences are recomputed from arm counts.
-- **DOIs and citations checked:** DOIs are looked up at Crossref and doi.org, with the retraction flag when available. Author-year and DOI citations are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as `[1]` are counted but not resolved, and a match does not show that the paper supports the sentence.
+- **DOIs and citations checked:** DOIs are looked up at Crossref, with doi.org as the fallback when Crossref has no record, and the retraction flag when available. Author-year and DOI citations are matched to the reference list you supply, and orphans and unresolved citations are listed. Numeric citations such as `[1]` are counted but not resolved, and a match does not show that the paper supports the sentence.
 - **Published frameworks built in:** PRISMA 2020 counts and checklist, plus RoB 2, ROBINS-I and Newcastle–Ottawa risk-of-bias records with rule-based summaries.
 - **Traceable screening:** record title/abstract and full-text decisions, reasons for exclusion, and reviewer agreement using Cohen's kappa.
 - **One export:** assemble the protocol, decisions, evidence, checks, warnings, and next steps into a review bundle with a SHA-256.
