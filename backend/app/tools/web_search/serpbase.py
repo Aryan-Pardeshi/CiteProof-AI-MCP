@@ -22,7 +22,11 @@ from typing import Any
 
 import httpx
 
-from backend.app.tools.web_search.base import SearchResult, WebSearchProvider
+from backend.app.tools.web_search.base import (
+    SearchResult,
+    WebSearchProvider,
+    normalize_time_range,
+)
 
 SERPBASE_BASE_URL = "https://api.serpbase.dev"
 SERPBASE_SEARCH_PATH = "/google/search"
@@ -117,8 +121,12 @@ class SerpBaseProvider(WebSearchProvider):
         max_results: int = 4,
         time_range: str | None = None,
     ) -> list[SearchResult]:
-        # SerpBase's documented request body has no time filter, so
-        # ``time_range`` is intentionally not forwarded.
+        """Return SerpBase organic results, or fail fast on unsupported filters."""
+        # SerpBase's documented request body has no time filter. Rather than
+        # silently return results outside the requested period, fail so
+        # run_search falls back to a provider that supports the restriction.
+        if normalize_time_range(time_range) is not None:
+            raise SerpBaseError("time_range is not supported by SerpBase")
         api_key = _api_key()
         if not api_key:
             raise SerpBaseError("SERPBASE_API_KEY is not set")
