@@ -44,6 +44,9 @@ TOOL_GROUPS = {
         "prisma_record_search",
         "dedup_papers",
         "prisma_record_dedup",
+        "reviewer_record",
+        "screening_stage_set",
+        "screening_stage_close",
         "screening_record",
         "screening_record_many",
         "screening_list",
@@ -52,9 +55,13 @@ TOOL_GROUPS = {
         "prisma_flow_diagram",
         "prisma_checklist",
     ],
+    "tools-identity": ["paper_resolve", "paper_alias_record", "study_link", "study_unlink", "study_overview"],
+    "tools-validation": ["recall_seed_record", "recall_check"],
     "tools-evidence": ["evidence_record", "evidence_table"],
+    "tools-stats": ["stats_check_ratio_ci", "stats_recompute_2x2", "stats_check_evidence"],
     "tools-claims": ["claim_record", "claim_report", "rob_record", "rob_summary"],
-    "tools-review": ["review_status", "export_bundle"],
+    "tools-reporting": ["prisma_excluded_studies", "manuscript_check"],
+    "tools-review": ["review_history", "review_status", "export_bundle"],
 }
 ALL_TOOLS = [tool for tools in TOOL_GROUPS.values() for tool in tools]
 
@@ -300,7 +307,7 @@ def test_all_tools_have_arguments_and_examples() -> None:
         markup,
         re.DOTALL,
     )
-    assert len(blocks) == len(ALL_TOOLS) == 24
+    assert len(blocks) == len(ALL_TOOLS) == 40
     for block in blocks:
         name = re.search(r'<h3 id="tool-([a-z0-9-]+)">', block)
         assert name, block[:80]
@@ -429,7 +436,7 @@ def test_mcp_hub_feature_grid_icons_and_tool_chips() -> None:
         markup,
         re.DOTALL,
     )
-    assert len(cards) == 15
+    assert len(cards) == 21
     for card in cards:
         assert 'class="mcp-cap-icon' in card
         assert 'href="/docs/mcp#tool-' in card

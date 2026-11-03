@@ -264,24 +264,52 @@ function applyRMStatePayload(payload) {
     }
 }
 
-// Accurately infers the active checkpoint from explicit checkpoint keys and state content
-function inferCurrentRMCheckpoint(suggestedCp) {
-    const raw = (suggestedCp || state.rm.hitlCheckpoint || state.rm.hitl_checkpoint || '').replace(/_(approved|revising)$/, '');
-    // If explicitly pointing to downstream checkpoints (2, 3, 4), trust it
-    if (raw === 'checkpoint_2' || raw === 'checkpoint_3' || raw === 'checkpoint_4') {
-        return raw;
+// Scope items arrive as strings, but a model that returns objects ("{text: ...}")
+// used to render as blank O1/RQ1 rows. Coerce and drop empties at render time.
+function rmItemText(value) {
+    if (value && typeof value === 'object') {
+        for (const key of ['text', 'objective', 'question', 'content', 'statement']) {
+            if (typeof value[key] === 'string' && value[key].trim()) return value[key].trim();
+        }
+        const firstString = Object.values(value).find(v => typeof v === 'string' && v.trim());
+        return firstString ? firstString.trim() : '';
     }
-    // If raw is empty, or raw is 'checkpoint_1', verify whether downstream stages already generated data
-    if (state.rm.researchDesign || state.rm.dataCollectionPlan || state.rm.dataAnalysisPlan) {
-        return 'checkpoint_4';
-    }
-    if (state.rm.hypotheses && Array.isArray(state.rm.hypotheses) && state.rm.hypotheses.length > 0) {
-        return 'checkpoint_3';
-    }
-    if (state.rm.literatureReview || state.rm.conceptualFramework || (state.rm.screenedPapers && state.rm.screenedPapers.length > 0)) {
-        return 'checkpoint_2';
-    }
-    return raw || 'checkpoint_1';
+    return String(value ?? '').trim();
+}
+
+function rmCleanItems(list) {
+    return (Array.isArray(list) ? list : []).map(rmItemText).filter(Boolean);
+}
+
+// Drop a heading the model repeated inside a section body; the renderer already
+// emits that section's numbered heading.
+function rmStripLeadingHeading(body, headingPattern) {
+    const text = String(body || '').trim();
+    return text.replace(headingPattern, '').trim();
+}
+
+// Models sometimes repeat a whole section (heading + body) in a later section.
+// Remove exact repeats and duplicate gap analysis blocks in conceptual framework.
+function rmDedupeSections(md) {
+    const parts = String(md || '').split(/(?=^#{2,3}\s)/m);
+    const seen = new Set();
+    // The gap analysis belongs to Section 3; only strip its repeats inside the
+    // Conceptual Framework section so the real Methodological Gaps stay.
+    let inFramework = false;
+    return parts.filter(part => {
+        if (!/^#{2,3}\s/.test(part)) return true;
+        if (/^##\s/.test(part)) {
+            inFramework = /^##\s*(?:\d+\.\s*)?conceptual\s+framework/i.test(part);
+        }
+        // Match only a repeated subsection heading, so framework prose that mentions gaps stays.
+        if (inFramework && /^###\s*(?:[\d.]+\s*)?(?:integration of (?:identified )?)?methodological gaps\s*(?:\r?\n|$)/i.test(part)) {
+            return false;
+        }
+        const key = part.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).join('');
 }
 
 // Papers arrive from the backend already relevance-ranked in practice, but
@@ -1130,20 +1158,17 @@ function setupEventListeners() {
         if (e.target === dom.paperDetailModal) closePaperInspector();
     });
 
-    // Pipeline tracker collapse toggle
+    // Pipeline tracker collapse toggle with animated height transition
     const collapseToggleBtn = document.getElementById('rm-tracker-collapse-toggle');
-    const expandableContent = document.getElementById('rm-tracker-expandable-content');
-    const toggleLbl = document.getElementById('tracker-toggle-lbl');
-    const toggleIcon = document.getElementById('tracker-toggle-icon');
-
     collapseToggleBtn?.addEventListener('click', () => {
+        state.rm.userOverrodeTrackerCollapse = true;
+        const expandableContent = document.getElementById('rm-tracker-expandable-content');
         if (!expandableContent) return;
-        const isHidden = expandableContent.style.display === 'none';
-        expandableContent.style.display = isHidden ? 'flex' : 'none';
-        if (toggleLbl) toggleLbl.textContent = isHidden ? 'Collapse' : 'Expand';
-        if (toggleIcon) {
-            toggleIcon.setAttribute('data-lucide', isHidden ? 'chevron-up' : 'chevron-down');
-            refreshIcons();
+        const isCollapsed = expandableContent.classList.contains('is-collapsed') || expandableContent.style.display === 'none';
+        if (isCollapsed) {
+            expandRMTracker(false);
+        } else {
+            collapseRMTracker(false);
         }
     });
 
@@ -1473,10 +1498,41 @@ function saveRMSession() {
 }
 
 function clearRMSession() {
+    stopRMHealthMonitor();
     try {
         localStorage.removeItem('rm_session');
     } catch (e) {
         console.warn('Failed to clear RM session:', e);
+    }
+}
+
+function collapseRMTracker(auto = false) {
+    if (auto && state.rm.userOverrodeTrackerCollapse) return;
+    const expandableContent = document.getElementById('rm-tracker-expandable-content');
+    const toggleLbl = document.getElementById('tracker-toggle-lbl');
+    const toggleIcon = document.getElementById('tracker-toggle-icon');
+    if (!expandableContent) return;
+    expandableContent.classList.add('is-collapsed');
+    expandableContent.style.display = '';
+    if (toggleLbl) toggleLbl.textContent = 'Expand';
+    if (toggleIcon) {
+        toggleIcon.setAttribute('data-lucide', 'chevron-down');
+        refreshIcons();
+    }
+}
+
+function expandRMTracker(auto = false) {
+    if (auto && state.rm.userOverrodeTrackerCollapse) return;
+    const expandableContent = document.getElementById('rm-tracker-expandable-content');
+    const toggleLbl = document.getElementById('tracker-toggle-lbl');
+    const toggleIcon = document.getElementById('tracker-toggle-icon');
+    if (!expandableContent) return;
+    expandableContent.classList.remove('is-collapsed');
+    expandableContent.style.display = '';
+    if (toggleLbl) toggleLbl.textContent = 'Collapse';
+    if (toggleIcon) {
+        toggleIcon.setAttribute('data-lucide', 'chevron-up');
+        refreshIcons();
     }
 }
 
@@ -1580,14 +1636,16 @@ async function restoreRMSessionOnLoad() {
                     updateCorpusStats(state.rm.corpus_stats);
                 }
 
-                if (data.report_rejected) {
-                    // Finished, but the report guard rejected the paper.
+                if (data.report_rejected || data.failed) {
+                    // Finished/failed without a usable paper: never render it as a success.
                     processRMSEEvent({ event: 'error', message: data.message });
+                    showResumeBanner({ hitl_checkpoint: null, is_completed: false, failed: true });
                 } else if (data.is_completed) {
                     rmTimer.stop();
                     state.rm.hitlCheckpoint = 'title';
                     updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
                     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+                    showResumeBanner({ hitl_checkpoint: null, is_completed: true });
                     renderRMPaperFinal();
                 } else if (data.is_checkpoint) {
                     rmTimer.pause();
@@ -1599,17 +1657,24 @@ async function restoreRMSessionOnLoad() {
                     const doneStages = idx > 0 ? RM_STAGES.slice(0, idx).map(s => s.id) : [];
                     updateRMPipelineTracker(resolvedCp, doneStages);
                     renderRMHitlPanel(resolvedCp);
+                    dom.rmHitlPanel.style.display = 'block';
+                    // Server truth wins over the stale local banner text.
+                    showResumeBanner({ hitl_checkpoint: resolvedCp, is_completed: false });
+                    requestAnimationFrame(() => dom.rmHitlPanel?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
                     if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
                         renderRMPaperLive(false);
                     }
                 } else {
-                    // Not finished, not paused: a node is actively running on the
-                    // backend right now. Show live progress and reopen the event
-                    // stream so it keeps updating instead of sitting frozen.
+                    // Not finished, not paused, and not failed: a node is actively
+                    // running on the backend right now. Show live progress and reopen
+                    // the event stream so it keeps updating instead of sitting frozen.
                     rmTimer.resume();
                     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
                     state.rm.hitlApproved = true;
                     state.rm.hitlCheckpointPending = false;
+                    hideRMFailureBanner();
+                    // The local cache may still say checkpoint_3; the run has moved on.
+                    showResumeBanner({ hitl_checkpoint: null, is_completed: false });
                     if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
                         renderRMPaperLive(true);
                     }
@@ -1647,9 +1712,13 @@ function showResumeBanner(data) {
     }
 
     const shortId = state.rm.threadId ? state.rm.threadId.slice(0, 8) : '';
-    const statusText = data.is_completed
-        ? 'Completed Academic Paper'
-        : (data.hitl_checkpoint ? `Checkpoint (${data.hitl_checkpoint})` : 'In Progress');
+    const statusText = data.failed
+        ? 'Failed — no report produced'
+        : data.is_completed
+            ? 'Completed Academic Paper'
+            : data.running
+                ? 'In Progress'
+                : (data.hitl_checkpoint ? `Checkpoint (${data.hitl_checkpoint})` : 'In Progress');
 
     banner.innerHTML = `
         <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -1669,6 +1738,7 @@ function showResumeBanner(data) {
 
 function resetResearchModeForm() {
     clearRMSession();
+    hideRMFailureBanner();
     setResearchBackdropActive(false);
     state.rm.threadId = null;
     state.rm.status = 'idle';
@@ -2176,8 +2246,8 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBadge.textContent = 'Gate 1 of 3';
         dom.rmHitlFeedbackInput.placeholder = 'e.g. Include population constraints, add boolean keyword for transformer models...';
 
-        const objectives = state.rm.researchObjectives || [];
-        const questions = state.rm.researchQuestions || [];
+        const objectives = rmCleanItems(state.rm.researchObjectives);
+        const questions = rmCleanItems(state.rm.researchQuestions);
         const protocol = state.rm.searchProtocol || {};
 
         dom.rmHitlBody.innerHTML = `
@@ -2190,7 +2260,7 @@ function renderRMHitlPanel(checkpoint) {
                 <label class="form-label">Systematic Search Protocol (PICOC)</label>
                 <div class="protocol-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.85rem; font-size: 0.85rem;">
                     <p style="margin-bottom: 0.35rem;"><strong>Domain / Population:</strong> ${escapeHtml(protocol.population || 'General')}</p>
-                    <p style="margin-bottom: 0.35rem;"><strong>Inclusion Criteria:</strong> ${escapeHtml((protocol.inclusion_criteria || []).join('; ') || 'Standard peer-reviewed literature')}</p>
+                    <p style="margin-bottom: 0.35rem;"><strong>Inclusion Criteria:</strong> ${escapeHtml((protocol.inclusion_criteria || []).join('; ') || 'Not specified')}</p>
                     <p style="margin-bottom: 0;"><strong>Exclusion Criteria:</strong> ${escapeHtml((protocol.exclusion_criteria || []).join('; ') || 'Non-English or non-empirical preprints')}</p>
                 </div>
             </div>
@@ -2269,7 +2339,17 @@ function renderRMHitlPanel(checkpoint) {
         `;
         }).join('');
 
+        const ftCount = (state.rm.corpus_stats && state.rm.corpus_stats.fulltext_fetched != null)
+            ? state.rm.corpus_stats.fulltext_fetched
+            : 0;
+        const gate2NoticeHtml = ftCount === 0 ? `
+            <div class="rm-hint-banner" style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: var(--cp-ink);">
+                <strong>Notice: Abstract-level evidence base.</strong> Open-access full texts could not be retrieved for the included studies (Full-Text: 0). Evidence extraction and appraisal are based on abstracts and published study metadata.
+            </div>
+        ` : '';
+
         dom.rmHitlBody.innerHTML = `
+            ${gate2NoticeHtml}
             <div class="form-group">
                 <label class="form-label">Screened Literature Corpus <span class="label-tag">${state.rm.screenedPapersCount || topPapers.length} studies included</span></label>
                 <div class="evidence-list">
@@ -2301,7 +2381,17 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBadge.textContent = 'Gate 3 of 3';
         dom.rmHitlFeedbackInput.placeholder = 'e.g. Refine H2 to specify causal mechanism, adjust conceptual framework boundary...';
 
+        const ftCount = (state.rm.corpus_stats && state.rm.corpus_stats.fulltext_fetched != null)
+            ? state.rm.corpus_stats.fulltext_fetched
+            : 0;
+        const gate3NoticeHtml = ftCount === 0 ? `
+            <div class="rm-hint-banner" style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: var(--cp-ink);">
+                <strong>Notice:</strong> Hypotheses are formulated under an abstract-level evidence base (${state.rm.screenedPapersCount || 8} included studies, 0 full texts). Formulations focus on directional comparisons testable without pooled statistical effect sizes.
+            </div>
+        ` : '';
+
         dom.rmHitlBody.innerHTML = `
+            ${gate3NoticeHtml}
             <div class="form-group">
                 <label class="form-label">Formulated Research Hypotheses</label>
                 <div class="subtasks-list">
@@ -2335,23 +2425,37 @@ function renderRMHitlPanel(checkpoint) {
         `;
     }
 
+    collapseRMTracker(true);
     refreshIcons();
 }
 
 async function handleRMApprove(feedback) {
     if (!state.rm.threadId) return;
 
-    state.rm.hitlApproved = true;
-    state.rm.hitlCheckpointPending = false;
-    dom.rmHitlPanel.style.display = 'none';
-
     const currentCp = inferCurrentRMCheckpoint(state.rm.hitlCheckpoint);
-    state.rm.hitlCheckpoint = currentCp;
     const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
     const completedStages = cpIdx >= 0 ? RM_STAGES.slice(0, cpIdx + 1).map(s => s.id) : ['scope_definition', 'keyword_extractor', 'checkpoint_1'];
     const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
 
-    try {
+    // Disable action buttons while waiting for server confirmation; don't hide gate optimistically
+    const approveBtn = dom.rmHitlApproveBtn;
+    const reviseBtn = dom.rmHitlReviseBtn;
+    let originalApproveHtml = '';
+    if (approveBtn) {
+        originalApproveHtml = approveBtn.innerHTML;
+        approveBtn.disabled = true;
+        approveBtn.innerHTML = `<span>Confirming with server…</span>`;
+    }
+    if (reviseBtn) reviseBtn.disabled = true;
+
+    // Called strictly after server confirms HTTP 200
+    const onConnected = () => {
+        state.rm.hitlApproved = true;
+        state.rm.hitlCheckpointPending = false;
+        state.rm.hitlCheckpoint = currentCp;
+        if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+        hideRMFailureBanner();
+
         updateRMPipelineTracker(nextStage, completedStages);
         rmTimer.resume();
         showRMCheckpointTransitionLoader(currentCp, feedback !== 'approve');
@@ -2361,18 +2465,97 @@ async function handleRMApprove(feedback) {
         if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
         renderRMPaperLive(true);
         renderRMSourcesPanel();
-    } catch (err) {
-        console.warn('UI update failed before stream connection, proceeding with API call:', err);
-    }
+        expandRMTracker(true);
+        startRMHealthMonitor();
+    };
 
-    await openRMEventStream(feedback);
+    try {
+        const streamResult = await openRMEventStream(feedback, onConnected);
+        if (streamResult === false) {
+            throw new Error('Approval request failed or was rejected by server.');
+        }
+    } catch (err) {
+        console.error('Approve failed:', err);
+        showToast('Approval could not be confirmed: ' + (err.message || 'Server unreachable'), 'error');
+        appendLogLine('Approval error: ' + (err.message || 'Server unreachable') + '; gate remains active.', 'error');
+        state.rm.hitlApproved = false;
+        state.rm.hitlCheckpointPending = true;
+        state.rm.status = 'awaiting_approval';
+        rmTimer.pause();
+        hideRMCheckpointTransitionLoader();
+        if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'block';
+        if (approveBtn) {
+            approveBtn.disabled = false;
+            if (originalApproveHtml) approveBtn.innerHTML = originalApproveHtml;
+        }
+        if (reviseBtn) reviseBtn.disabled = false;
+        refreshIcons();
+        saveRMSession();
+    }
+}
+
+function hideRMFailureBanner() {
+    document.getElementById('rm-failure-banner')?.remove();
+}
+
+// A failed run must say so in the workspace, not only in History. Retry reuses
+// the last graph checkpoint, so approved evidence/hypotheses are not paid for twice.
+function showRMFailureBanner(message, { retryable = true } = {}) {
+    hideRMFailureBanner();
+    const workspace = document.getElementById('rm-workspace-panel');
+    if (!workspace) return;
+    const banner = document.createElement('div');
+    banner.id = 'rm-failure-banner';
+    banner.className = 'rm-failure-banner';
+    banner.innerHTML = `
+        <div style="flex:1;">
+            <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Research run failed</div>
+            <div style="font-size:13px; opacity:0.9;">${escapeHtml(message || 'The pipeline stopped before producing a report.')}</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            ${retryable ? `<button id="rm-retry-btn" class="btn-primary" type="button" style="white-space:nowrap;">
+                <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
+                <span>Retry from last checkpoint</span>
+            </button>` : ''}
+            <a href="/history" id="rm-history-link" class="btn-secondary" style="white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:6px 12px; border-radius:6px;">
+                <i data-lucide="history" style="width:14px;height:14px;"></i>
+                <span>View in History</span>
+            </a>
+        </div>
+    `;
+    workspace.prepend(banner);
+    document.getElementById('rm-retry-btn')?.addEventListener('click', retryRMFromCheckpoint);
+    refreshIcons();
+}
+
+async function retryRMFromCheckpoint() {
+    if (!state.rm.threadId) return;
+    hideRMFailureBanner();
+    try {
+        const res = await fetch(`${API_BASE_URL}/research-mode/retry/${state.rm.threadId}`, { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.started === false) {
+            throw new Error(data.detail || (data.reason === 'already_running' ? 'The run is already executing.' : `HTTP ${res.status}`));
+        }
+        state.rm.status = 'running';
+        state.rm.hitlApproved = true;
+        state.rm.hitlCheckpointPending = false;
+        rmTimer.resume();
+        renderRMPaperLive(true);
+        appendLogLine('Retrying from the last checkpoint…', 'info');
+        showToast('Retrying from the last checkpoint…', 'info');
+        await openRMEventStream('');
+    } catch (e) {
+        showRMFailureBanner(e.message || 'Retry failed.');
+        showToast('Retry failed: ' + e.message, 'error');
+    }
 }
 
 // Opens (or reconnects to) the Research Mode SSE stream. Shared by handleRMApprove
 // (after the user acts on a checkpoint) and reconnectRMStream (page reload while
 // the pipeline is still running server-side) so both get the same retry and
 // event-parsing behavior instead of two copies drifting apart.
-async function openRMEventStream(message) {
+async function openRMEventStream(message, onConnected = null) {
     if (activeRMController) activeRMController.abort();
     activeRMController = new AbortController();
 
@@ -2380,7 +2563,6 @@ async function openRMEventStream(message) {
     const maxRetries = 999;
     let isTerminal = false;
     let receivedEventsCount = 0;
-
     while (attempt <= maxRetries && !isTerminal) {
         try {
             const reqMessage = attempt === 0 ? (message || '') : '';
@@ -2401,10 +2583,33 @@ async function openRMEventStream(message) {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                // Only the initial approve/reject call is rejected outright; a later
+                // reconnect that sees 404/409 falls through to the status check so a
+                // dead run gets its failure banner instead of "approval failed".
+                if (response.status === 404 || response.status === 409) {
+                    if (onConnected) {
+                        const payload = await response.json().catch(() => ({}));
+                        showToast(payload.detail || `Request rejected (HTTP ${response.status}).`, 'error');
+                        return false;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
             }
 
-            const reader = response.body.getReader();
+            if (onConnected) {
+                try {
+                    onConnected();
+                } catch (e) {
+                    console.error('onConnected callback failed:', e);
+                }
+                onConnected = null;
+            }
+
+            // A 404/409 on reconnect has no stream; the status check below decides.
+            const reader = response.ok
+                ? response.body.getReader()
+                : { read: async () => ({ done: true }) };
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
 
@@ -2441,12 +2646,14 @@ async function openRMEventStream(message) {
             // This happens when the host's reverse proxy terminates idle SSE connections
             // or when network drops occur between client and server during heavy LLM tasks.
             // We check the pipeline-status endpoint to verify if the server is still executing.
+            let statusConfirmed = false;
             if (!isTerminal && state.rm.threadId) {
                 try {
                     const statusRes = await fetch(
                         `${API_BASE_URL}/research-mode/pipeline-status/${state.rm.threadId}`
                     );
                     if (statusRes.ok) {
+                        statusConfirmed = true;
                         const statusData = await statusRes.json();
                         if (statusData.running) {
                             // PROXY ERROR HANDLING:
@@ -2459,27 +2666,18 @@ async function openRMEventStream(message) {
                             attempt++;
                             await new Promise(res => setTimeout(res, 3000));
                             continue; // retry the SSE connection
-                        } else if (statusData.completed) {
-                            // Backend finished while we were disconnected — sync final state
-                            try {
-                                const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
-                                if (syncRes.ok) {
-                                    const syncData = await syncRes.json();
-                                    if (syncData.values) applyRMStatePayload(syncData.values);
-                                    if (syncData.report_rejected) {
-                                        processRMSEEvent({ event: 'error', message: syncData.message });
-                                    } else if (syncData.is_checkpoint) {
-                                        const cp = (syncData.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
-                                        renderRMHitlPanel(cp);
-                                    } else if (!syncData.next || syncData.next.length === 0) {
-                                        renderRMPaperFinal();
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn('RM result sync failed:', e);
-                            }
+                        } else if (statusData.failed) {
+                            // The task is gone and the graph is not paused or finished:
+                            // this run is dead. Say so in the workspace and offer retry.
+                            processRMSEEvent({
+                                event: 'error',
+                                message: statusData.error || 'The research run failed before producing a report.'
+                            });
+                            isTerminal = true;
                             break;
                         }
+                        // completed: the backend finished while we were disconnected; the
+                        // result sync below renders it and retries if that sync fails.
                     }
                 } catch (e) {
                     console.warn('Pipeline status check failed:', e);
@@ -2488,40 +2686,127 @@ async function openRMEventStream(message) {
 
             // Fallback sync if stream ended cleanly without a terminal event
             // (regardless of whether we received some events before the disconnect)
+            let resultSynced = false;
             if (!isTerminal && state.rm.threadId) {
                 try {
                     const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
                     if (syncRes.ok) {
+                        resultSynced = true;
                         const syncData = await syncRes.json();
                         if (syncData.values) applyRMStatePayload(syncData.values);
                         if (syncData.report_rejected) {
                             processRMSEEvent({ event: 'error', message: syncData.message });
+                            isTerminal = true;
                         } else if (syncData.is_checkpoint) {
                             const cp = (syncData.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
                             renderRMHitlPanel(cp);
+                            isTerminal = true;
                         } else if (!syncData.next || syncData.next.length === 0) {
                             renderRMPaperFinal();
+                            isTerminal = true;
                         }
                     }
                 } catch (e) {
                     console.warn('RM result sync failed:', e);
                 }
             }
+
+            if (!isTerminal && (!statusConfirmed || !resultSynced) && attempt < maxRetries) {
+                // The server never confirmed the run's state (status call failed), so
+                // the run may still be executing. Keep reconnecting instead of
+                // reporting a failure the server has not reported.
+                attempt++;
+                appendLogLine('Could not confirm run status — reconnecting…', 'warn');
+                await new Promise(res => setTimeout(res, 3000));
+                continue;
+            }
+
+            if (!isTerminal) {
+                // The server confirmed (or retries ran out): nothing is executing,
+                // nothing is paused at a gate, and no report exists: the run died. Show the failure and the retry action
+                // instead of leaving a fake "running" timer on screen.
+                processRMSEEvent({
+                    event: 'error',
+                    message: 'Lost contact with the research run. It may have failed or the server restarted.'
+                });
+            }
             break;
 
         } catch (e) {
             if (e.name === 'AbortError') {
                 console.log('RM SSE stream aborted by user.');
-                break;
+                return isTerminal;
+            }
+            if (attempt === 0 && onConnected) {
+                // An explicit user action (e.g. approve/reject) failed on initial call.
+                // Re-throw so the caller can report the error and keep the gate active.
+                throw e;
             }
             attempt++;
             if (attempt > maxRetries) {
                 showToast('Connection lost. Auto-reconnect failed: ' + e.message, 'error');
-                break;
+                showRMFailureBanner('Connection lost. Auto-reconnect failed: ' + e.message);
+                return false;
             }
             showToast(`Connection dropped. Auto-reconnecting (attempt ${attempt})...`, 'warning');
             await new Promise(res => setTimeout(res, Math.min(1000 * Math.pow(1.5, attempt - 1), 10000)));
         }
+    }
+    return isTerminal;
+}
+
+let rmHealthPollTimer = null;
+
+function startRMHealthMonitor() {
+    stopRMHealthMonitor();
+    if (!state.rm.threadId) return;
+    rmHealthPollTimer = setInterval(async () => {
+        if (!state.rm.threadId || state.rm.status === 'completed' || state.rm.status === 'error') {
+            stopRMHealthMonitor();
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE_URL}/research-mode/pipeline-status/${state.rm.threadId}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.failed || data.outcome === 'failed') {
+                stopRMHealthMonitor();
+                processRMSEEvent({
+                    event: 'error',
+                    message: data.error || 'The research run failed server-side.'
+                });
+            } else if (data.completed || data.outcome === 'completed') {
+                stopRMHealthMonitor();
+                if (state.rm.status !== 'completed') {
+                    const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
+                    if (syncRes.ok) {
+                        const syncData = await syncRes.json();
+                        if (syncData.values) applyRMStatePayload(syncData.values);
+                    }
+                    renderRMPaperFinal();
+                }
+            } else if (data.outcome === 'checkpoint' && !state.rm.hitlCheckpointPending) {
+                // The stream missed the checkpoint event. Replay it with fresh server
+                // state so the gate, timer and monitor behave as on a normal arrival
+                // (and the gate is not rebuilt every poll, wiping typed feedback).
+                const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
+                const syncData = syncRes.ok ? await syncRes.json() : {};
+                processRMSEEvent({
+                    event: 'checkpoint',
+                    hitl_checkpoint: data.hitl_checkpoint || syncData.hitl_checkpoint,
+                    state: syncData.values || {}
+                });
+            }
+        } catch (e) {
+            console.debug('RM health poll transient check:', e);
+        }
+    }, 20000);
+}
+
+function stopRMHealthMonitor() {
+    if (rmHealthPollTimer) {
+        clearInterval(rmHealthPollTimer);
+        rmHealthPollTimer = null;
     }
 }
 
@@ -2536,6 +2821,7 @@ async function openRMEventStream(message) {
 async function reconnectRMStream() {
     if (!state.rm.threadId) return;
     appendLogLine('Reconnecting to live pipeline…', 'info');
+    startRMHealthMonitor();
     await openRMEventStream('');
 }
 
@@ -2592,7 +2878,14 @@ function openPaperInspector(paper) {
     const title = escapeHtml(paper.title || 'Paper Details');
     if (dom.modalPaperTitle) dom.modalPaperTitle.textContent = paper.title || 'Paper Details';
     if (dom.modalPaperBody) {
-        const authors = Array.isArray(paper.authors) ? paper.authors.map(escapeHtml).join(', ') : escapeHtml(paper.authors || 'N/A');
+        // ORCID iDs are only present for confident matches (ORCID_AUTHOR_ENRICHMENT=1).
+        const orcids = (paper.author_orcids && typeof paper.author_orcids === 'object') ? paper.author_orcids : {};
+        const authorHtml = (name) => {
+            const id = orcids[name];
+            if (typeof id !== 'string' || !/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(id)) return escapeHtml(name);
+            return `${escapeHtml(name)} <a href="https://orcid.org/${id}" target="_blank" rel="noopener noreferrer" title="ORCID ${id}"><img src="assets/orcid.svg" alt="ORCID ${id}" style="width: 14px; height: 14px; vertical-align: -2px;"></a>`;
+        };
+        const authors = Array.isArray(paper.authors) ? paper.authors.map(authorHtml).join(', ') : escapeHtml(paper.authors || 'N/A');
         const venue = escapeHtml(paper.venue || paper.journal || 'Academic Index');
         const year = escapeHtml(String(paper.year || 'N/A'));
         const doi = paper.doi ? `<a href="https://doi.org/${encodeURIComponent(paper.doi)}" target="_blank" rel="noopener noreferrer" style="color: var(--academic-blue);">${escapeHtml(paper.doi)}</a>` : 'N/A';
@@ -2642,8 +2935,23 @@ function processRMSEEvent(data) {
     // the tracker jumped backwards through nodes it had already passed.
     if (data.seq !== undefined && data.seq !== null) state.rm.lastSeq = data.seq;
 
-    if (data.event === 'node_start') {
+    if (data.event === 'screening_progress') {
+        const screened = data.screened || 0;
+        const total = data.total || 0;
+        const batchesDone = data.batches_done || 0;
+        const totalBatches = data.total_batches || 0;
+        if (dom.statScreened) {
+            dom.statScreened.textContent = `${screened}/${total}`;
+        }
+        if (dom.rmPipelineStatusTag) {
+            dom.rmPipelineStatusTag.textContent = `Screening: ${screened} of ${total} (${batchesDone}/${totalBatches} batches)`;
+        }
+        appendLogLine(`Screening progress: ${screened}/${total} candidate papers evaluated (${batchesDone}/${totalBatches} batches)`, 'info');
+        return data.event;
+    } else if (data.event === 'node_start') {
+        startRMHealthMonitor();
         rmTimer.resume();
+        expandRMTracker(true);
         updateRMPipelineTracker(data.node);
         updateRMTransitionLoaderNode(data.node);
         appendLogLine(`Node started: ${rmStageLabel(data.node)}`, 'info');
@@ -2655,7 +2963,9 @@ function processRMSEEvent(data) {
         // signal that a long node is still alive, so it drives the status tag.
         noteRMTokenActivity(data.node);
     } else if (data.event === 'resume') {
+        startRMHealthMonitor();
         rmTimer.resume();
+        expandRMTracker(true);
         appendLogLine('Pipeline resumed.', 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
@@ -2665,7 +2975,9 @@ function processRMSEEvent(data) {
         renderRMPaperLive();
         saveRMSession();
     } else if (data.event === 'checkpoint') {
+        stopRMHealthMonitor();
         rmTimer.pause();
+        collapseRMTracker(true);
         applyRMStatePayload(data.state || {});
         const cp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
         state.rm.hitlCheckpoint = cp;
@@ -2683,6 +2995,7 @@ function processRMSEEvent(data) {
         dom.rmHitlPanel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         saveRMSession();
     } else if (data.event === 'completed') {
+        stopRMHealthMonitor();
         state.rm.status = 'completed';
         state.rm.hitlCheckpointPending = false;
         state.rm.hitlApproved = true;
@@ -2696,12 +3009,16 @@ function processRMSEEvent(data) {
         renderRMPaperFinal();
         saveRMSession();
     } else if (data.event === 'error') {
+        stopRMHealthMonitor();
         rmTimer.stop();
         hideRMCheckpointTransitionLoader();
         appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         if (trackerContainer) trackerContainer.classList.remove('active-execution');
         if (paperCard) paperCard.classList.remove('active-execution');
-        if (dom.rmPipelineStatusTag) dom.rmPipelineStatusTag.textContent = 'Pipeline stopped — error';
+        if (dom.rmPipelineStatusTag) {
+            dom.rmPipelineStatusTag.textContent = 'Pipeline stopped — error';
+            dom.rmPipelineStatusTag.className = 'stepper-status-pill error';
+        }
         // A failed or rejected paper must not keep the completed-paper export
         // controls (a restored session may have rendered them before the check).
         [dom.rmCopyPaperBtn, dom.rmExportDropdown, dom.rmExportPdfBtn].forEach(el => {
@@ -2710,7 +3027,13 @@ function processRMSEEvent(data) {
         // The run is dead, so the "synthesizing" spinner must not keep spinning
         // forever. Show whatever was produced before the failure instead.
         state.rm.status = 'error';
+        state.rm.hitlCheckpointPending = false;
+        state.rm.hitlApproved = true;
         renderRMPaperLive(false);
+        showRMFailureBanner(
+            data.message || 'The research run failed before producing a report.',
+            { retryable: data.retryable !== false }
+        );
         showToast(data.message || 'Pipeline error occurred.', 'error');
         saveRMSession();
     }
@@ -3024,16 +3347,40 @@ function renderRMPaperFinal() {
 
 function getPaperMarkdown() {
     const s = state.rm;
+    const objectives = rmCleanItems(s.researchObjectives);
+    const questions = rmCleanItems(s.researchQuestions);
+    const researchGap = rmStripLeadingHeading(s.researchGap, /^#{1,3}\s*(?:3\.\s*)?Research Gap\s*/i);
+    const conceptualFramework = rmStripLeadingHeading(s.conceptualFramework, /^#{1,3}\s*(?:6\.\s*)?Conceptual Framework\s*/i);
     let md = `# ${s.title || 'Academic Research Report'}\n\n`;
     if (s.abstract) md += `## Abstract\n${s.abstract}\n\n`;
-    if (s.introduction) md += `## 1. Introduction\n${s.introduction}\n\n`;
-    if (s.literatureReview) md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
-    if (s.researchGap) md += `## 3. Research Gap\n${s.researchGap}\n\n`;
-    if (s.researchObjectives && s.researchObjectives.length) md += `## 4. Research Objectives\n${s.researchObjectives.map((o, i) => `${i+1}. ${o}`).join('\n')}\n\n`;
-    if (s.researchQuestions && s.researchQuestions.length) md += `## 5. Research Questions\n${s.researchQuestions.map((q, i) => `**RQ${i+1}**: ${q}`).join('\n\n')}\n\n`;
-    if (s.conceptualFramework) md += `## 6. Conceptual Framework\n${s.conceptualFramework}\n\n`;
+
+    // When previewing prior to Phase 5 writing, if objectives exist but Intro/LitReview are not yet written,
+    // display placeholders so numbering starts at 1, not 4.
+    const isWritingPhase = Boolean(s.introduction || s.literatureReview || s.results || s.discussion);
+    if (s.introduction) {
+        md += `## 1. Introduction\n${s.introduction}\n\n`;
+    } else if (!isWritingPhase && (objectives.length || questions.length || researchGap)) {
+        md += `## 1. Introduction\n*(Will be synthesized in Phase 5)*\n\n`;
+    }
+
+    if (s.literatureReview) {
+        md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
+    } else if (!isWritingPhase && (objectives.length || questions.length || researchGap)) {
+        md += `## 2. Literature Review\n*(Will be synthesized in Phase 5)*\n\n`;
+    }
+
+    if (researchGap) md += `## 3. Research Gap\n${researchGap}\n\n`;
+    if (objectives.length) md += `## 4. Research Objectives\n${objectives.map((o, i) => `${i+1}. ${o}`).join('\n')}\n\n`;
+    if (questions.length) md += `## 5. Research Questions\n${questions.map((q, i) => `**RQ${i+1}**: ${q}`).join('\n\n')}\n\n`;
+    if (conceptualFramework) md += `## 6. Conceptual Framework\n${conceptualFramework}\n\n`;
     if (s.hypotheses && s.hypotheses.length) md += `## 7. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
-    if (s.researchDesign) md += `## 8. Methodology\n### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan}\n\n`;
+    if (s.researchDesign) {
+        const ftCount = (s.corpus_stats && s.corpus_stats.fulltext_fetched != null) ? s.corpus_stats.fulltext_fetched : 0;
+        const ftNote = (ftCount === 0)
+            ? `> **Evidence Basis Note**: No open-access full-text PDFs could be retrieved for the included studies; evidence extraction and synthesis were conducted on included title and abstract records.\n\n`
+            : '';
+        md += `## 8. Methodology\n${ftNote}### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan || ''}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan || ''}\n\n`;
+    }
     if (s.results) md += `## 9. Results\n${s.results}\n\n`;
     if (s.discussion) md += `## 10. Discussion\n${s.discussion}\n\n${s.implications ? `### 10.1 Implications\n${s.implications}\n\n` : ''}`;
     if (s.limitations) md += `## 11. Limitations\n${s.limitations}\n\n`;
@@ -3041,7 +3388,7 @@ function getPaperMarkdown() {
     if (s.futureScope && s.futureScope.length) md += `## 13. Future Scope\n${Array.isArray(s.futureScope) ? s.futureScope.map(f => `- ${f}`).join('\n') : s.futureScope}\n\n`;
     if (s.references && s.references.length) md += `## 14. References\n${s.references.map(r => `- ${r}`).join('\n')}\n\n`;
     if (s.appendices) md += `## 15. Appendices\n${s.appendices}\n\n`;
-    return md;
+    return rmDedupeSections(md);
 }
 
 

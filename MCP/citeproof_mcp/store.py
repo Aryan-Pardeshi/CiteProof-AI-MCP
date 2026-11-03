@@ -5,7 +5,9 @@ One file per review under ``<home>/reviews/<review_id>.db``. This module owns th
 ``meta`` table only. Every tool module owns its own tables: it declares their
 ``CREATE TABLE IF NOT EXISTS`` statements once with :func:`register_schema`, and
 :func:`open_review` applies them the first time a review file is opened in this
-process. Modules never touch each other's tables; when one module needs another
+process. Modules may also declare dynamic schema hooks with :func:`register_schema_hook`
+which run inside the schema transaction after all statements have run. Modules
+never touch each other's tables; when one module needs another
 module's data it calls that module's public read function.
 
 Concurrency: files use WAL journaling and a 30 s busy timeout, and write
@@ -22,7 +24,7 @@ import secrets
 import sqlite3
 import threading
 import unicodedata
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -67,6 +69,7 @@ def _db_path(review_id: str) -> Path:
 # ---------------------------------------------------------------------------
 
 _SCHEMAS: list[str] = []
+_SCHEMA_HOOKS: list[Callable[[sqlite3.Connection], None]] = []
 _APPLIED: dict[str, int] = {}
 _SCHEMA_LOCK = threading.Lock()
 
@@ -80,6 +83,14 @@ def register_schema(statements: Sequence[str]) -> None:
                 _SCHEMAS.append(stmt)
 
 
+def register_schema_hook(fn: Callable[[sqlite3.Connection], None]) -> None:
+    """Declare a hook to run inside the schema transaction on a review connection after all schema
+    statements have run. Call once at import time."""
+    with _SCHEMA_LOCK:
+        if fn not in _SCHEMA_HOOKS:
+            _SCHEMA_HOOKS.append(fn)
+
+
 def _connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path, timeout=BUSY_TIMEOUT_SECONDS)
     conn.row_factory = sqlite3.Row
@@ -91,8 +102,10 @@ def _connect(path: Path) -> sqlite3.Connection:
 def _ensure_schema(conn: sqlite3.Connection, path: Path) -> None:
     key = str(path)
     with _SCHEMA_LOCK:
-        wanted = list(_SCHEMAS)
-    if _APPLIED.get(key) == len(wanted):
+        wanted_stmts = list(_SCHEMAS)
+        wanted_hooks = list(_SCHEMA_HOOKS)
+    wanted_count = len(wanted_stmts) + len(wanted_hooks)
+    if _APPLIED.get(key) == wanted_count:
         return
     try:
         # Files created before WAL was used are switched once; the setting is stored in the file.
@@ -101,7 +114,7 @@ def _ensure_schema(conn: sqlite3.Connection, path: Path) -> None:
         pass  # another connection holds the file; WAL is an optimisation, not a requirement
     conn.execute("BEGIN IMMEDIATE")
     try:
-        for stmt in wanted:
+        for stmt in wanted_stmts:
             try:
                 conn.execute(stmt)
             except sqlite3.OperationalError as exc:
@@ -109,11 +122,13 @@ def _ensure_schema(conn: sqlite3.Connection, path: Path) -> None:
                 # file that already has the column they fail harmlessly.
                 if not (stmt.lstrip().upper().startswith("ALTER TABLE") and "duplicate column" in str(exc)):
                     raise
+        for hook in wanted_hooks:
+            hook(conn)
         conn.commit()
     except BaseException:
         conn.rollback()
         raise
-    _APPLIED[key] = len(wanted)
+    _APPLIED[key] = wanted_count
 
 
 # ---------------------------------------------------------------------------

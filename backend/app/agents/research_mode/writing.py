@@ -540,6 +540,31 @@ async def research_design_agent(state: dict[str, Any]) -> dict[str, Any]:
     """Writer 2: Formulates proposed research design (explicitly framed as proposed future study)."""
     ps = state.get("problem_statement", "")
     hypotheses = state.get("hypotheses", [])
+    protocol = state.get("search_protocol") or {}
+    criteria = protocol.get("inclusion_criteria") if isinstance(protocol, dict) else None
+    protocol_text = (
+        f"{protocol.get('population', '')} {protocol.get('intervention', '')}"
+        if isinstance(protocol, dict) else ""
+    )
+    # Match clinical vocabulary in the topic and PICOC text, not mere field presence.
+    ps_lower = f"{ps} {protocol_text}".lower()
+    is_clinical = bool(
+        re.search(r"\b(clinical|trial|patient|insomnia|therapy|treatment|drug|pharmac|medical|disease|health|cbt|rct|placebo)\b", ps_lower)
+        or re.search(r"\b(systematic review|meta-analysis)\b", ps_lower)
+        or re.search(r"\brandomi[sz]ed\b", " ".join(map(str, criteria or [])).lower())
+    )
+
+    if is_clinical:
+        structure_guide = """Structure the section in Markdown:
+- 1. Study Design & Methodological Framework (e.g., PRISMA-compliant Systematic Review / Multi-arm Clinical Trial Protocol)
+- 2. Target Population, Intervention, Comparator & Setting (PICO Framework)
+- 3. Variable Operationalization, Outcome Measures & Quality Control Protocols"""
+    else:
+        structure_guide = """Structure the section in Markdown:
+- 1. Methodological Philosophy & Research Paradigm
+- 2. Experimental Architecture & Target Testbeds
+- 3. Variable Operationalization & Control Protocols"""
+
     llm = get_llm_for("planner", state, temperature=0.2)
 
     prompt = f"""You are an Expert Research Methodologist.
@@ -549,10 +574,7 @@ Topic: {ps}
 Hypotheses:
 {chr(10).join(f"- {h}" for h in hypotheses)}
 
-Structure the section in Markdown:
-- 1. Methodological Philosophy & Research Paradigm
-- 2. Experimental Architecture & Target Testbeds
-- 3. Variable Operationalization & Control Protocols
+{structure_guide}
 
 Instructions:
 - Write only the body of this section; do not write a document title, an abstract, or '#'/'##' headings; use '###' for subsections if needed.
