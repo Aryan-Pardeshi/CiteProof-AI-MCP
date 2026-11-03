@@ -121,6 +121,7 @@ class SerpBaseProvider(WebSearchProvider):
         max_results: int = 4,
         time_range: str | None = None,
     ) -> list[SearchResult]:
+        """Return SerpBase organic results, or fail fast on unsupported filters."""
         # SerpBase's documented request body has no time filter. Rather than
         # silently return results outside the requested period, fail so
         # run_search falls back to a provider that supports the restriction.

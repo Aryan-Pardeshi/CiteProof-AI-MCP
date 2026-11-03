@@ -374,6 +374,25 @@ def test_falls_back_to_the_next_configured_provider(clean_env, monkeypatch, fail
     assert "serpbase title 1" in text
 
 
+def test_time_restricted_search_falls_back_when_serpbase_is_listed_first(clean_env, monkeypatch):
+    clean_env.setenv("WEB_SEARCH_PROVIDERS", "serpbase,tavily")
+    clean_env.setenv("SERPBASE_API_KEY", "test-serpbase-key")
+    clean_env.setenv("TAVILY_API_KEY", "test-tavily-key")
+    captured: list[httpx.Request] = []
+    serpbase = _serpbase_provider(SERPBASE_PAYLOAD, captured=captured)
+    tavily = FakeProvider("tavily", results=[_result("tavily")])
+    monkeypatch.setitem(registry.PROVIDERS, "serpbase", serpbase)
+    monkeypatch.setitem(registry.PROVIDERS, "tavily", tavily)
+
+    text = search_web.invoke({"query": "ai", "time_range": "week"})
+
+    assert captured == []
+    assert tavily.calls
+    assert tavily.calls[0]["time_range"] == "week"
+    assert "provider: tavily" in text
+    assert "tavily title 1" in text
+
+
 def test_unconfigured_providers_are_skipped_silently(clean_env, monkeypatch):
     clean_env.setenv("WEB_SEARCH_PROVIDERS", "tavily,serpbase")
     clean_env.setenv("SERPBASE_API_KEY", "test-serpbase-key")  # no TAVILY_API_KEY
