@@ -267,7 +267,7 @@ Each gate genuinely pauses graph execution via LangGraph `interrupt()`, allowing
 | **Orchestration** | LangGraph (StateGraph, `interrupt()` HITL, `Send()` fan-out, SQLite persistence) |
 | **Structured LLM** | Pydantic v2 schemas + `ainvoke_structured_with_retry` |
 | **Academic Sources** | OpenAlex, Semantic Scholar, Crossref, PubMed, arXiv, Europe PMC, DOAJ, DataCite, OpenCitations |
-| **Author Enrichment** | Optional ORCID author-name canonicalization |
+| **Author Enrichment** | Optional ORCID author-name canonicalization and iD lookup |
 | **Full-Text Ingestion** | Unpaywall → Europe PMC → CORE fallback chain |
 | **Backend API** | FastAPI + Server-Sent Events (SSE) with keep-alive heartbeats |
 | **Frontend UI/UX** | Vanilla JS + CSS (Swiss Modernism 2.0, zero-build, responsive) |
@@ -290,7 +290,7 @@ Research Mode uses each academic API for a specific stage:
 | **Directory of Open Access Journals (DOAJ)** | Open-access journal discovery | No credentials |
 | **DataCite** | Research-output and dataset discovery | No credentials |
 | **OpenCitations** | Forward and backward citation-graph expansion | No credentials |
-| **ORCID** | Optional author identity enrichment | Set `ORCID_AUTHOR_ENRICHMENT=1` |
+| **ORCID** | Optional author identity enrichment | Set `ORCID_AUTHOR_ENRICHMENT=1`; optional `ORCID_MAX_AUTHORS` (default 2, max 10) |
 | **Unpaywall** | Open-access PDF resolution | Uses `OPENALEX_EMAIL` |
 | **CORE** | Optional full-text fallback | Optional `CORE_API_KEY` |
 
@@ -322,6 +322,7 @@ SEMANTIC_SCHOLAR_API_KEY="your_api_key_here"
 NCBI_API_KEY="your_api_key_here"
 CORE_API_KEY="your_api_key_here"
 ORCID_AUTHOR_ENRICHMENT=0
+ORCID_MAX_AUTHORS=2
 ```
 
 #### 2. Run with Docker

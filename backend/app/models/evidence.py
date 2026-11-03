@@ -253,6 +253,9 @@ class PaperRecord(BaseModel):
     arxiv_id: str | None = None
     title: str
     authors: list[str] = Field(default_factory=list)
+    # Author name (as it appears in `authors`) -> ORCID iD. Set only on a confident
+    # ORCID match (see tools/orcid_search.py); unmatched authors have no entry.
+    author_orcids: dict[str, str] = Field(default_factory=dict)
     year: str = "n.d."
     venue: str | None = None
     abstract: str = ""

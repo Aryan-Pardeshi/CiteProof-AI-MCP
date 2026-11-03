@@ -16,7 +16,7 @@ Endpoints used (verified against live API 2026-08):
         Used by fetch_orcid_profile() to canonicalize a known iD.
 
 ORCID raw field -> adapter output mapping (AuthorIdentity, adapter-local type;
-nothing here leaks into PaperRecord except canonical author name strings):
+only canonical author name strings and confidently matched iDs reach PaperRecord):
     expanded-result[].orcid-id         -> AuthorIdentity.orcid_id
     expanded-result[].given-names      -> AuthorIdentity.given_names
     expanded-result[].family-names     -> AuthorIdentity.family_names
@@ -31,13 +31,18 @@ nothing here leaks into PaperRecord except canonical author name strings):
                                           confidently matches the input name
                                           (same token set). Ambiguous or failed
                                           lookups leave the original untouched.
+    (derived)                          -> PaperRecord.author_orcids[name] =
+                                          AuthorIdentity.orcid_id, on the same
+                                          confident match only.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
+from collections import Counter
 from typing import Any
 
 import httpx
@@ -49,12 +54,26 @@ logger = logging.getLogger(__name__)
 
 ORCID_API_BASE = "https://pub.orcid.org/v3.0"
 ORCID_TIMEOUT = 8.0
+# Each enriched author costs one ORCID request, so the count is capped.
+ORCID_MAX_AUTHORS_DEFAULT = 2
+ORCID_MAX_AUTHORS_CAP = 10
 
 _JSON_HEADERS = {"Accept": "application/json"}
 
 
+def orcid_max_authors_from_env() -> int:
+    """Leading authors to enrich, from ORCID_MAX_AUTHORS (default 2, clamped to 1..10)."""
+    raw = os.getenv("ORCID_MAX_AUTHORS", "").strip()
+    try:
+        value = int(raw) if raw else ORCID_MAX_AUTHORS_DEFAULT
+    except ValueError:
+        logger.warning(f"Ignoring invalid ORCID_MAX_AUTHORS={raw!r}; using {ORCID_MAX_AUTHORS_DEFAULT}")
+        value = ORCID_MAX_AUTHORS_DEFAULT
+    return max(1, min(value, ORCID_MAX_AUTHORS_CAP))
+
+
 class AuthorIdentity(BaseModel):
-    """Adapter-local ORCID author identity (never stored on PaperRecord)."""
+    """Adapter-local ORCID author identity; only orcid_id and display_name reach PaperRecord."""
 
     orcid_id: str
     given_names: str | None = None
@@ -184,7 +203,7 @@ async def fetch_orcid_profile(
 
 async def enrich_record_authors(
     record: PaperRecord,
-    max_authors: int = 2,
+    max_authors: int = ORCID_MAX_AUTHORS_DEFAULT,
     client: httpx.AsyncClient | None = None,
 ) -> PaperRecord:
     """Canonicalize leading author names on a PaperRecord via ORCID.
@@ -192,7 +211,9 @@ async def enrich_record_authors(
     For each of the first `max_authors` authors, resolves the name against the
     ORCID public API; when exactly one candidate confidently matches (token
     subset, see _confident_match), the author string is replaced by the ORCID
-    display name. Ambiguous or failed lookups leave the original untouched.
+    display name and its iD is stored in author_orcids under that name.
+    Ambiguous or failed lookups leave the original untouched and store no iD,
+    and no iD is kept for a name that appears more than once on the paper.
 
     Returns a new PaperRecord (model_copy); the input record is never mutated.
     Intended for the metadata-validation stage; opt-in via
@@ -203,6 +224,7 @@ async def enrich_record_authors(
         return record
 
     updated = list(authors)
+    orcids = dict(record.author_orcids or {})
     changed = False
 
     if client is not None:
@@ -220,24 +242,31 @@ async def enrich_record_authors(
             identities = await resolve_orcid_authors(f'"{raw_name}"', limit=5, client=usable_client)
             confident = [i for i in identities if _confident_match(raw_name, i)]
             if len(confident) == 1:
-                canonical = confident[0].display_name
-                if canonical and canonical != raw_name:
-                    updated[idx] = canonical
-                    changed = True
+                canonical = confident[0].display_name or raw_name
+                updated[idx] = canonical
+                # Stored even when the name is already canonical.
+                orcids[canonical] = confident[0].orcid_id
+                changed = True
     except Exception as e:  # noqa: BLE001
         logger.debug(f"ORCID author enrichment skipped: {e}")
     finally:
         if own_client is not None:
             await own_client.aclose()
 
+    # author_orcids is keyed by name, so an iD is only safe when that name is
+    # unique on the paper; otherwise it would also be shown for a namesake.
+    name_counts = Counter(updated)
+    for name in [n for n in orcids if name_counts[n] > 1]:
+        del orcids[name]
+
     if not changed:
         return record
-    return record.model_copy(update={"authors": updated})
+    return record.model_copy(update={"authors": updated, "author_orcids": orcids})
 
 
 async def enrich_records_authors(
     records: list[PaperRecord],
-    max_authors: int = 2,
+    max_authors: int = ORCID_MAX_AUTHORS_DEFAULT,
     concurrency: int = 4,
     client: httpx.AsyncClient | None = None,
 ) -> list[PaperRecord]:
