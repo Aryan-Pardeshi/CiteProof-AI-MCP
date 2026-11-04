@@ -7,6 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/Aryan-Pardeshi/CiteProof-AI-MCP)](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/releases/latest)
 [![CI](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml/badge.svg)](https://github.com/Aryan-Pardeshi/CiteProof-AI-MCP/actions/workflows/mcp-npm.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![olud.ai](https://olud.ai/badge.php?tool=aryan-pardeshi-citeproof-ai-mcp)](https://olud.ai/project/aryan-pardeshi-citeproof-ai-mcp.html)
 
 **Research Web → [CiteProof.top](https://citeproof.top/)**
 
