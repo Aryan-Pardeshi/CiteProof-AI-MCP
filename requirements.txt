@@ -1,12 +1,12 @@
 fastapi[standard]==0.162.0
 uvicorn==0.54.0
-pydantic==2.14.1
+pydantic==2.14.2
 python-dotenv==1.2.4
-langchain==1.4.7
-langchain-core==1.7.0
+langchain==1.4.8
+langchain-core==1.7.4
 langchain-openai==1.7.3
 langchain-community==0.4.2
-langgraph==1.2.18
+langgraph==1.2.19
 langgraph-checkpoint==4.3.1
 langgraph-checkpoint-sqlite
 aiosqlite>=0.22.1
