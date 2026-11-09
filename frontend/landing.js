@@ -523,7 +523,7 @@ function initCardSpotlight() {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!finePointer || prefersReduced) return;
 
-  const cards = document.querySelectorAll('.step-card, .check-card, .mode-card, .checkpoint-card, .mcp-card');
+  const cards = document.querySelectorAll('.step-card, .check-card, .mode-card, .checkpoint-card, .mcp-card, .mcp-cap-card, .mcp-pillar, .mcp-setup-card');
 
   cards.forEach((card) => {
     card.addEventListener('pointermove', (e) => {
@@ -546,7 +546,7 @@ function initOutputWindowTilt() {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!finePointer || prefersReduced) return;
 
-  const windowEl = document.querySelector('.output-window');
+  const windowEl = document.querySelector('.output-window, .mcp-install');
   if (!windowEl) return;
 
   let frameId = null;

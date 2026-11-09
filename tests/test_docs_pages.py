@@ -530,11 +530,17 @@ def test_mcp_hub_hero_styles_and_copy_handler_exist() -> None:
         "prefers-reduced-motion",
     ):
         assert selector in css, selector
-    assert 'href="/mcp.css?v=2.2.0"' in text(HUB)
+    assert 'href="/mcp.css?v=3.1.1"' in text(HUB)
     script = text("docs.js")
     assert "[data-copy-target]" in script
     assert "Copied to clipboard" in script
     assert "data-mcp-command" in script
+
+
+def test_mcp_hub_grid_pulse_is_loaded_and_respects_reduced_motion() -> None:
+    assert 'class="mcp-grid-pulse" aria-hidden="true"' in text(HUB)
+    assert 'src="/js/grid-pulse.js?v=' in text(HUB)
+    assert "prefers-reduced-motion: reduce" in text("js/grid-pulse.js")
 
 
 def test_docs_search_index_matches_headings() -> None:

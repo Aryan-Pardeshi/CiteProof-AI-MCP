@@ -330,6 +330,17 @@
     block.appendChild(button);
   });
 
+  /* The tool-name strip on /mcp moves on its own, so it needs a visible pause. */
+  var toolsPause = document.getElementById('mcp-tools-pause');
+  if (toolsPause) {
+    toolsPause.addEventListener('click', function () {
+      var paused = toolsPause.getAttribute('aria-pressed') !== 'true';
+      toolsPause.setAttribute('aria-pressed', String(paused));
+      toolsPause.textContent = paused ? 'Play' : 'Pause';
+      toolsPause.parentElement.classList.toggle('is-paused', paused);
+    });
+  }
+
   /* Buttons that copy a named element or a supplied string. The visible label
      and a polite live region both report the result. */
   Array.prototype.forEach.call(
