@@ -411,5 +411,3 @@ MIT, see [LICENSE](LICENSE). Two files inside the MCP server are adapted from An
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=aryan-pardeshi/citeproof-ai-mcp&type=date&legend=top-left" />
  </picture>
 </a>
-
-osai-verify: 080f4e11994cae9a0128
