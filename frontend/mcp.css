@@ -1190,8 +1190,7 @@ body {
     animation: mcp-marquee 90s linear infinite;
   }
 
-  .mcp-tools-strip:hover .mcp-tools-track,
-  .mcp-tools-strip:focus-within .mcp-tools-track,
+  .mcp-tools-window:hover .mcp-tools-track,
   .mcp-tools-strip.is-paused .mcp-tools-track {
     animation-play-state: paused;
   }
@@ -1468,6 +1467,8 @@ body {
   }
 
   .mcp-tools-track {
+    min-width: 0;
+    flex: 1 1 0;
     flex-wrap: wrap;
     gap: var(--cp-space-2) var(--cp-space-4);
     white-space: normal;
